@@ -197,58 +197,70 @@ id, referrer_operator_id, referred_operator_id, signup_date, is_active, commissi
 ## Design Direction
 
 ### Brand Family: PCR Ecosystem
-PCR Booking and PCR Leads are sister companies. The design should feel like they belong together — same DNA, slightly different personality.
+PCR Booking and PCR Leads are sister companies — same brand DNA, different mode.
+- PCR Leads (join.pcrleads.com): dark aggressive marketing site
+- PCR Booking: light, clean professional product dashboard
 
-### PCR Leads Branding (source of truth from join.pcrleads.com)
-- Background: `#080812` (near black, slight blue tint)
-- Surface/card background: `#0c0c1c`
-- Darkest bg: `#050509`
-- Primary accent: `#2EBD6B` (green — their main CTA color)
-- Error/alert: `#ef4444`
-- Font: **Inter** (Google Fonts, weights 400–900)
-- Aesthetic: Dark, modern, fintech/tech — clean and premium
+### Inspiration
+Competitors Wheelbase, HQ Rental, and TopRentApp all use **light/white dashboards** with dark accents. That's the right approach for software people use daily to manage money. Think: Vercel Dashboard, Linear, Stripe Dashboard.
 
-### PCR Booking Design (match + differentiate)
-- **Same base:** Keep the deep dark background family (`#080812`, `#0c0c1c`)
-- **Add white/light:** Introduce white and light gray surfaces to make it feel like an *app dashboard* vs a marketing page. PCR Leads is a landing page — PCR Booking is a product people live in daily.
-  - Card backgrounds: `#111120` with subtle `#ffffff08` borders
-  - Sidebar/nav: `#0c0c1c`
-  - Content areas: `#080812`
-  - Use `white/5`, `white/10`, `white/20` for layering (Tailwind opacity utilities)
-- **Primary accent:** Keep `#2EBD6B` green — same as PCR Leads, signals same ecosystem
-- **Secondary accent:** Add a soft white/silver highlight for labels, secondary text, borders
-- **Success states (Hot Lead):** `#2EBD6B` green glow/badge
-- **Disqualified:** `#ef4444` red badge
-- **Pending/neutral:** `#94a3b8` (slate-400)
-- **Font:** Inter — exact same as PCR Leads
+### Color Palette
 
-### Tailwind Config Additions
+**Content areas (light):**
+- Page background: `#F8F9FC` (soft off-white — not blinding, easy on eyes)
+- Cards: `#FFFFFF` with `box-shadow: 0 1px 3px rgba(0,0,0,0.08)`
+- Card borders: `#E5E7EB`
+- Body text: `#374151`
+- Muted/label text: `#6B7280`
+
+**Navigation (dark — PCR brand identity):**
+- Sidebar background: `#0c0c1c` (same as PCR Leads nav)
+- Sidebar text: `#FFFFFF`
+- Active nav item: `#2EBD6B` left border + text
+
+**Brand accents:**
+- Primary green: `#2EBD6B` (exact same as PCR Leads — visual thread connecting both brands)
+- Green hover/dark: `#1a9952`
+- Dark heading/logo accent: `#080812`
+
+**Status colors:**
+- Hot Lead: `#2EBD6B` green badge
+- Disqualified: `#ef4444` red badge
+- Pending/New: `#94a3b8` slate badge
+- Error: `#ef4444`
+
+**Font:** Inter (Google Fonts, 400–900) — same as PCR Leads
+
+### Tailwind Config
 ```js
 colors: {
   brand: {
     green: '#2EBD6B',
     greenDark: '#1a9952',
-    bg: '#080812',
-    surface: '#0c0c1c',
-    card: '#111120',
-    border: 'rgba(255,255,255,0.08)',
+    dark: '#080812',
+    nav: '#0c0c1c',
+    bg: '#F8F9FC',
+    card: '#FFFFFF',
+    border: '#E5E7EB',
+    text: '#374151',
+    muted: '#6B7280',
   }
 }
 ```
 
-### Feel
-- PCR Leads: dark marketing page, aggressive, "get leads now"
-- PCR Booking: dark product dashboard, clean, professional, "you're in control"
-- Same family, different mood — like how Stripe's homepage vs Stripe Dashboard both feel like Stripe
+### Component Styles
+- **Sidebar:** `#0c0c1c` bg, white text, `#2EBD6B` active left-border indicator
+- **Top bar:** white bg, `#E5E7EB` bottom border, page title + user avatar
+- **Stat cards:** white bg, light shadow, green icon accents
+- **Buttons (primary):** `#2EBD6B` fill, white text, rounded-lg
+- **Buttons (secondary):** white bg, `#E5E7EB` border, `#374151` text
+- **Badges:** pill shape, color-coded (green/red/slate)
+- **Tables:** white bg, `#F8F9FC` alternating rows, `#E5E7EB` column borders
+- **Mobile bottom nav:** `#0c0c1c` bg, white icons, `#2EBD6B` active dot
+- shadcn/ui components throughout — override default theme with above
 
-### Components Style
-- Cards: dark bg with thin white/8 border, subtle shadow
-- Buttons (primary): `#2EBD6B` fill with white text, slight glow on hover
-- Buttons (secondary): transparent with white/10 border
-- Badges: pill shape, color-coded (green/red/slate)
-- Tables: striped with white/5 rows
-- Nav (mobile bottom): `#0c0c1c` with green active indicator
-- shadcn/ui components throughout — override default theme with above colors
+### The Vibe
+Light and trustworthy like a bank app. Dark sidebar keeps the PCR identity. Green accent ties it visually to PCR Leads. When an operator sees both sites they know it's the same company — just different tools.
 
 ---
 
@@ -283,4 +295,4 @@ NEXT_PUBLIC_APP_URL=https://pcrbooking.com
 14. Build webhook endpoints (/api/leads, /api/webhooks/lead-result)
 15. Build embeddable widget (widget.js)
 16. Stripe subscription integration
-17. Make everything mobile-responsive and dark mode
+17. Make everything mobile-responsive. Light/white content areas, dark sidebar (#0c0c1c), green (#2EBD6B) accents. NOT full dark mode — light dashboard with dark nav.
