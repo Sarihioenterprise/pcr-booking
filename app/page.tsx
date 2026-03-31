@@ -190,7 +190,7 @@ export default function HomePage() {
             <Link href="#pricing">
               <Button
                 variant="outline"
-                className="h-12 border-white/20 px-8 text-base font-semibold text-white hover:bg-white/10 hover:text-white"
+                className="h-12 border-2 border-[#2EBD6B] px-8 text-base font-semibold text-[#2EBD6B] hover:bg-[#2EBD6B] hover:text-white"
               >
                 See Pricing
               </Button>

@@ -1,7 +1,7 @@
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export default async function DashboardLayout({
             <h2 className="text-lg font-semibold text-gray-900">Dashboard</h2>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <Avatar size="default">
               <AvatarFallback className="bg-[#2EBD6B]/10 text-[#2EBD6B] text-xs font-semibold">
                 OP

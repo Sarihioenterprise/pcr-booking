@@ -8,17 +8,39 @@ import {
   CalendarDays,
   Car,
   Users,
+  UserCircle,
   Settings,
   Share2,
   LogOut,
+  Calendar,
+  FileText,
+  ClipboardCheck,
+  Wrench,
+  HeadphonesIcon,
+  DollarSign,
+  BarChart3,
+  MapPin,
+  Target,
+  Upload,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/bookings", label: "Bookings", icon: CalendarDays },
+  { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
   { href: "/dashboard/fleet", label: "Fleet", icon: Car },
-  { href: "/dashboard/leads", label: "Leads", icon: Users },
+  { href: "/dashboard/renters", label: "Renters", icon: UserCircle },
+  { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
+  { href: "/dashboard/agreements", label: "Agreements", icon: FileText },
+  { href: "/dashboard/inspections", label: "Inspections", icon: ClipboardCheck },
+  { href: "/dashboard/maintenance", label: "Maintenance", icon: Wrench },
+  { href: "/dashboard/support", label: "Support", icon: HeadphonesIcon },
+  { href: "/dashboard/leads", label: "Lead Pipeline", icon: Target },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/locations", label: "Locations", icon: MapPin },
+  { href: "/dashboard/importer", label: "Import Tool", icon: Upload },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
   { href: "/dashboard/affiliates", label: "Affiliates", icon: Share2 },
 ];
@@ -28,7 +50,8 @@ export function Sidebar() {
   const router = useRouter();
 
   async function handleSignOut() {
-    // Sign out logic — placeholder
+    const supabase = createClient();
+    await supabase.auth.signOut();
     router.push("/");
   }
 
@@ -47,7 +70,7 @@ export function Sidebar() {
       <Separator className="bg-white/10" />
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -63,7 +86,6 @@ export function Sidebar() {
                   : "text-white/60 hover:text-white hover:bg-white/5"
               )}
             >
-              {/* Active left border indicator */}
               {isActive && (
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-[#2EBD6B]" />
               )}

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, CalendarDays } from "lucide-react";
 
 const statusColors: Record<string, string> = {
+  inquiry: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   pending: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   confirmed: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   active: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",

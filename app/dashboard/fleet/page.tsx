@@ -1,121 +1,164 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const vehicles = [
-  {
-    id: "1",
-    make: "Toyota",
-    model: "Camry",
-    year: 2024,
-    color: "White",
-    plate: "ABC-1234",
-    dailyRate: 65,
-    status: "active" as const,
-  },
-  {
-    id: "2",
-    make: "Honda",
-    model: "Civic",
-    year: 2023,
-    color: "Black",
-    plate: "XYZ-5678",
-    dailyRate: 55,
-    status: "maintenance" as const,
-  },
-  {
-    id: "3",
-    make: "Nissan",
-    model: "Altima",
-    year: 2024,
-    color: "Silver",
-    plate: "DEF-9012",
-    dailyRate: 60,
-    status: "inactive" as const,
-  },
-];
+import { Plus, Car, Gauge, Fuel } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { getOperator } from "@/lib/get-operator";
+import type { Vehicle } from "@/lib/types";
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  inactive: "bg-slate-100 text-slate-600",
-  maintenance: "bg-yellow-100 text-yellow-700",
+  active: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  inactive: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+  maintenance: "bg-amber-500/10 text-amber-600 border-amber-500/20",
 };
 
-export default function FleetPage() {
-  return (
-    <div className="min-h-screen bg-[#F8F9FC] p-6">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Fleet</h1>
-          <Link href="/dashboard/fleet/new">
-            <Button className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
-              Add Vehicle
-            </Button>
-          </Link>
-        </div>
+export default async function FleetPage() {
+  const operator = await getOperator();
+  const supabase = await createClient();
 
-        {/* Vehicle Grid */}
-        {vehicles.length === 0 ? (
-          <Card className="bg-white">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <p className="mb-2 text-lg font-medium text-gray-500">
-                No vehicles yet
-              </p>
-              <p className="mb-4 text-sm text-gray-400">
-                Add your first vehicle to get started.
-              </p>
-              <Link href="/dashboard/fleet/new">
-                <Button className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
-                  Add Vehicle
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {vehicles.map((vehicle) => (
-              <Card key={vehicle.id} className="bg-white">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">
-                      {vehicle.make} {vehicle.model}
-                    </CardTitle>
+  const { data: vehicles } = await supabase
+    .from("vehicles")
+    .select("*, locations(name)")
+    .eq("operator_id", operator.id)
+    .order("created_at", { ascending: false });
+
+  const typedVehicles = (vehicles ?? []) as (Vehicle & {
+    locations: { name: string } | null;
+  })[];
+
+  const activeCount = typedVehicles.filter((v) => v.status === "active").length;
+  const maintenanceCount = typedVehicles.filter(
+    (v) => v.status === "maintenance"
+  ).length;
+  const inactiveCount = typedVehicles.filter(
+    (v) => v.status === "inactive"
+  ).length;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Fleet</h1>
+          <p className="text-muted-foreground">
+            {typedVehicles.length} vehicles &middot; {activeCount} active
+          </p>
+        </div>
+        <Link href="/dashboard/fleet/new">
+          <Button className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Vehicle
+          </Button>
+        </Link>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-0 bg-white shadow-sm ring-0">
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Active</p>
+            <p className="text-2xl font-bold text-emerald-600">{activeCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 bg-white shadow-sm ring-0">
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">In Maintenance</p>
+            <p className="text-2xl font-bold text-amber-600">
+              {maintenanceCount}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 bg-white shadow-sm ring-0">
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Inactive</p>
+            <p className="text-2xl font-bold text-slate-500">{inactiveCount}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Vehicle Grid */}
+      {typedVehicles.length === 0 ? (
+        <Card className="border-0 bg-white shadow-sm ring-0">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Car className="mb-4 h-12 w-12 text-muted-foreground" />
+            <p className="mb-2 text-lg font-medium text-gray-500">
+              No vehicles yet
+            </p>
+            <p className="mb-4 text-sm text-gray-400">
+              Add your first vehicle to get started.
+            </p>
+            <Link href="/dashboard/fleet/new">
+              <Button className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
+                Add Vehicle
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {typedVehicles.map((vehicle) => (
+            <Link
+              key={vehicle.id}
+              href={`/dashboard/fleet/${vehicle.id}`}
+              className="group"
+            >
+              <Card className="border-0 bg-white shadow-sm ring-0 transition-shadow hover:shadow-md">
+                {/* Photo */}
+                {vehicle.photo_url ? (
+                  <div className="aspect-video w-full overflow-hidden rounded-t-lg bg-gray-100">
+                    <img
+                      src={vehicle.photo_url}
+                      alt={`${vehicle.make} ${vehicle.model}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex aspect-video w-full items-center justify-center rounded-t-lg bg-gray-50">
+                    <Car className="h-12 w-12 text-gray-300" />
+                  </div>
+                )}
+
+                <CardContent className="pt-4">
+                  <div className="mb-3 flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {vehicle.plate || "No plate"}
+                      </p>
+                    </div>
                     <Badge
+                      variant="outline"
                       className={statusStyles[vehicle.status]}
                     >
                       {vehicle.status}
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Year</span>
-                      <span className="font-medium text-gray-900">
-                        {vehicle.year}
+
+                  <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="font-semibold text-foreground">
+                        ${Number(vehicle.daily_rate).toFixed(0)}
                       </span>
+                      /day
                     </div>
-                    <div className="flex justify-between">
-                      <span>Plate</span>
-                      <span className="font-medium text-gray-900">
-                        {vehicle.plate}
-                      </span>
+                    <div className="flex items-center gap-1">
+                      <Gauge className="h-3 w-3" />
+                      {vehicle.mileage?.toLocaleString() ?? "—"}
                     </div>
-                    <div className="flex justify-between">
-                      <span>Daily Rate</span>
-                      <span className="font-medium text-gray-900">
-                        ${vehicle.dailyRate}/day
-                      </span>
+                    <div className="flex items-center gap-1">
+                      <Fuel className="h-3 w-3" />
+                      {vehicle.fuel_level || "—"}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
-      </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

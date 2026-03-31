@@ -7,16 +7,16 @@ import {
   LayoutDashboard,
   CalendarDays,
   Car,
-  Users,
-  Settings,
+  DollarSign,
+  BarChart3,
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/dashboard/bookings", label: "Bookings", icon: CalendarDays },
   { href: "/dashboard/fleet", label: "Fleet", icon: Car },
-  { href: "/dashboard/leads", label: "Leads", icon: Users },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 export function BottomNav() {
@@ -40,7 +40,6 @@ export function BottomNav() {
             >
               <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
-              {/* Active dot indicator */}
               {isActive && (
                 <span className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-[#2EBD6B]" />
               )}
