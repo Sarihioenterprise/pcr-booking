@@ -1,172 +1,137 @@
-import Link from "next/link"
-
 export const metadata = {
   title: "Privacy Policy | PCR Booking",
   description: "Privacy Policy for PCR Booking",
-}
+};
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 px-4 py-4">
-        <div className="mx-auto max-w-4xl flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2EBD6B]">
-              <span className="text-sm font-bold text-white">P</span>
-            </div>
-            <span className="font-semibold text-gray-900">PCR Booking</span>
-          </Link>
-          <Link href="/" className="text-sm text-gray-500 hover:text-gray-900">← Back to Home</Link>
-        </div>
-      </header>
+      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+        <h1 className="mb-2 text-3xl font-bold text-gray-900">Privacy Policy</h1>
+        <p className="mb-10 text-sm text-gray-500">Last updated: March 31, 2026</p>
 
-      {/* Content */}
-      <main className="mx-auto max-w-4xl px-4 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-8">Last updated: March 31, 2026</p>
-
-        <div className="prose prose-gray max-w-none space-y-8">
+        <div className="prose prose-gray max-w-none space-y-8 text-gray-700">
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Introduction</h2>
-            <p className="text-gray-600 leading-relaxed">
-              Sarihio Enterprise LLC ("we," "us," or "our") operates PCR Booking at pcrbooking.com. This Privacy Policy explains how we collect, use, disclose, and protect information about you when you use our Service. By using PCR Booking, you consent to the practices described in this policy.
-            </p>
+            <h2 className="text-xl font-semibold text-gray-900">1. Overview</h2>
+            <p>PCR Booking ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and protect information when you use PCR Booking (pcrbooking.com). By using our Service, you agree to the practices described here.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">2. Information We Collect</h2>
-            <h3 className="text-base font-semibold text-gray-800 mb-2">Information You Provide</h3>
-            <ul className="list-disc pl-6 text-gray-600 space-y-2 mb-4">
-              <li>Account information: name, email address, phone number, business name</li>
-              <li>Billing information: processed and stored by Stripe (we do not store card numbers)</li>
-              <li>Business data: vehicle information, booking records, renter information you enter</li>
-              <li>Communications: messages you send us via support channels</li>
+            <h2 className="text-xl font-semibold text-gray-900">2. Information We Collect</h2>
+            <h3 className="mt-4 font-semibold text-gray-800">Information you provide directly:</h3>
+            <ul className="mt-2 list-disc pl-6 space-y-1">
+              <li>Account information (name, email, business name, phone number)</li>
+              <li>Fleet data (vehicle details, photos, documents)</li>
+              <li>Customer/renter information you enter into the platform</li>
+              <li>Payment information (processed and stored by Stripe — we never see full card numbers)</li>
+              <li>Rental agreements and inspection records</li>
             </ul>
-            <h3 className="text-base font-semibold text-gray-800 mb-2">Information Collected Automatically</h3>
-            <ul className="list-disc pl-6 text-gray-600 space-y-2">
-              <li>Log data: IP address, browser type, pages visited, time spent on pages</li>
-              <li>Device information: device type, operating system</li>
-              <li>Cookies and similar tracking technologies for session management and analytics</li>
+            <h3 className="mt-4 font-semibold text-gray-800">Information collected automatically:</h3>
+            <ul className="mt-2 list-disc pl-6 space-y-1">
+              <li>Usage data (pages visited, features used, session duration)</li>
+              <li>Device and browser information</li>
+              <li>IP address and approximate location</li>
+              <li>Cookies and similar tracking technologies</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">3. How We Use Your Information</h2>
-            <p className="text-gray-600 leading-relaxed mb-3">We use your information to:</p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-2">
-              <li>Provide, operate, and maintain the Service</li>
-              <li>Process payments and manage your subscription</li>
-              <li>Send transactional emails (booking confirmations, receipts, account alerts)</li>
-              <li>Respond to your support requests</li>
-              <li>Improve and develop the Service</li>
-              <li>Comply with legal obligations</li>
+            <h2 className="text-xl font-semibold text-gray-900">3. How We Use Your Information</h2>
+            <p>We use collected information to:</p>
+            <ul className="mt-2 list-disc pl-6 space-y-1">
+              <li>Provide, maintain, and improve the Service</li>
+              <li>Process payments and manage subscriptions</li>
+              <li>Send transactional emails (booking confirmations, receipts, alerts)</li>
+              <li>Provide customer support</li>
               <li>Detect and prevent fraud or abuse</li>
+              <li>Comply with legal obligations</li>
+              <li>Send product updates and marketing (you can opt out anytime)</li>
             </ul>
+            <p className="mt-3">We do not sell your personal data to third parties. Ever.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">4. Renter Data</h2>
-            <p className="text-gray-600 leading-relaxed">
-              As an operator using PCR Booking, you collect and manage data about your renters (their names, phone numbers, emails, driver's license information, etc.). You are the data controller for your renters' information. We process this data on your behalf as a data processor. You are responsible for obtaining appropriate consent from your renters and complying with applicable privacy laws regarding their data.
-            </p>
+            <h2 className="text-xl font-semibold text-gray-900">4. Renter Data</h2>
+            <p>When operators use PCR Booking to manage their customers, the renter's personal information (name, phone, email, license) is stored on our platform. Operators are the data controllers for their renter data. PCR Booking processes this data only on behalf of the operator to provide the Service. Renters who wish to access, correct, or delete their data should contact the operator directly.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">5. Information Sharing</h2>
-            <p className="text-gray-600 leading-relaxed mb-3">We do not sell your personal information. We may share information with:</p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-2">
-              <li><strong>Stripe:</strong> Payment processing. Stripe's privacy policy governs their use of your billing data.</li>
-              <li><strong>Supabase:</strong> Database infrastructure for storing your account and business data.</li>
-              <li><strong>Vercel:</strong> Hosting infrastructure.</li>
-              <li><strong>Twilio:</strong> SMS notifications (if enabled). Only phone numbers you provide are shared.</li>
-              <li><strong>Law enforcement:</strong> When required by law or to protect our rights.</li>
+            <h2 className="text-xl font-semibold text-gray-900">5. Data Sharing</h2>
+            <p>We share data only in the following circumstances:</p>
+            <ul className="mt-2 list-disc pl-6 space-y-1">
+              <li><strong>Stripe</strong> — for payment processing</li>
+              <li><strong>Supabase</strong> — for database hosting and authentication</li>
+              <li><strong>Vercel</strong> — for application hosting</li>
+              <li><strong>Twilio</strong> — for SMS notifications (if enabled)</li>
+              <li><strong>Legal requirements</strong> — if required by law, court order, or government authority</li>
+              <li><strong>Business transfers</strong> — in the event of a merger, acquisition, or sale of assets</li>
             </ul>
+            <p className="mt-3">All third-party providers are contractually required to protect your data and use it only to provide their respective services.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">6. Data Security</h2>
-            <p className="text-gray-600 leading-relaxed">
-              We implement industry-standard security measures to protect your data, including encryption in transit (TLS/SSL), row-level security on our database, and secure authentication. However, no method of transmission over the internet is 100% secure. We cannot guarantee absolute security.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">7. Data Retention</h2>
-            <p className="text-gray-600 leading-relaxed">
-              We retain your account data for as long as your account is active. If you cancel your account, we will retain your data for 30 days during which you may export it. After 30 days, your data will be permanently deleted from our systems, except where retention is required by law.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">8. Cookies</h2>
-            <p className="text-gray-600 leading-relaxed">
-              We use cookies and similar technologies for authentication (keeping you logged in), session management, and basic analytics. You can control cookies through your browser settings. Disabling cookies may affect the functionality of the Service.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">9. Your Rights</h2>
-            <p className="text-gray-600 leading-relaxed mb-3">You have the right to:</p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-2">
-              <li><strong>Access:</strong> Request a copy of the personal data we hold about you</li>
-              <li><strong>Correction:</strong> Request correction of inaccurate data</li>
-              <li><strong>Deletion:</strong> Request deletion of your account and associated data</li>
-              <li><strong>Export:</strong> Download your data in a portable format from your account settings</li>
-              <li><strong>Opt-out:</strong> Unsubscribe from marketing emails at any time</li>
+            <h2 className="text-xl font-semibold text-gray-900">6. Data Security</h2>
+            <p>We implement industry-standard security measures including:</p>
+            <ul className="mt-2 list-disc pl-6 space-y-1">
+              <li>HTTPS encryption for all data in transit</li>
+              <li>Row-level security on all database tables</li>
+              <li>Encrypted storage for sensitive credentials</li>
+              <li>Regular security reviews</li>
             </ul>
-            <p className="text-gray-600 leading-relaxed mt-3">
-              To exercise these rights, contact us at support@pcrbooking.com.
-            </p>
+            <p className="mt-3">No system is 100% secure. In the event of a data breach that affects your personal information, we will notify you as required by applicable law.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">10. Children's Privacy</h2>
-            <p className="text-gray-600 leading-relaxed">
-              The Service is not directed to individuals under the age of 18. We do not knowingly collect personal information from children. If you believe we have inadvertently collected information from a child, please contact us immediately.
-            </p>
+            <h2 className="text-xl font-semibold text-gray-900">7. Cookies</h2>
+            <p>We use cookies and similar technologies to maintain your session, remember preferences, and analyze usage. You can disable cookies in your browser settings, though some features may not function properly without them.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">11. Third-Party Links</h2>
-            <p className="text-gray-600 leading-relaxed">
-              The Service may contain links to third-party websites. We are not responsible for the privacy practices of those sites and encourage you to review their privacy policies.
-            </p>
+            <h2 className="text-xl font-semibold text-gray-900">8. Data Retention</h2>
+            <p>We retain your account data for as long as your account is active. If you cancel your account, we retain your data for 30 days before deletion, in case you wish to reactivate. You can request immediate deletion by contacting us. Some data may be retained longer if required by law.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">12. Changes to This Policy</h2>
-            <p className="text-gray-600 leading-relaxed">
-              We may update this Privacy Policy from time to time. We will notify you of material changes via email or an in-app notice at least 14 days before the changes take effect. Continued use of the Service after changes constitutes acceptance of the revised policy.
-            </p>
+            <h2 className="text-xl font-semibold text-gray-900">9. Your Rights</h2>
+            <p>Depending on your location, you may have the right to:</p>
+            <ul className="mt-2 list-disc pl-6 space-y-1">
+              <li>Access the personal data we hold about you</li>
+              <li>Correct inaccurate data</li>
+              <li>Request deletion of your data</li>
+              <li>Object to or restrict processing of your data</li>
+              <li>Export your data in a portable format</li>
+              <li>Opt out of marketing communications</li>
+            </ul>
+            <p className="mt-3">To exercise any of these rights, contact us at <a href="mailto:support@pcrbooking.com" className="text-[#2EBD6B] underline">support@pcrbooking.com</a>.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">13. Contact Us</h2>
-            <p className="text-gray-600 leading-relaxed">
-              For privacy-related questions or requests, contact us at:
-            </p>
-            <div className="mt-3 text-gray-600">
-              <p>Sarihio Enterprise LLC</p>
-              <p>Locust Grove, Georgia</p>
-              <p>Email: support@pcrbooking.com</p>
-            </div>
+            <h2 className="text-xl font-semibold text-gray-900">10. Children's Privacy</h2>
+            <p>PCR Booking is not directed at children under 18. We do not knowingly collect personal information from minors. If you believe a minor has provided us with personal information, contact us and we will delete it.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900">11. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. We will notify you of significant changes via email or in-app notification. Continued use of the Service after changes constitutes acceptance of the updated policy.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900">12. Contact Us</h2>
+            <p>For privacy-related questions or requests, contact us at:</p>
+            <p className="mt-2"><strong>PCR Leads LLC</strong><br />
+            Email: <a href="mailto:support@pcrbooking.com" className="text-[#2EBD6B] underline">support@pcrbooking.com</a><br />
+            Website: <a href="https://pcrbooking.com" className="text-[#2EBD6B] underline">pcrbooking.com</a></p>
           </section>
 
         </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 px-4 py-6 mt-12">
-        <div className="mx-auto max-w-4xl flex items-center justify-between text-sm text-gray-500">
-          <span>© 2026 Sarihio Enterprise LLC. All rights reserved.</span>
-          <div className="flex gap-4">
-            <Link href="/terms" className="hover:text-gray-900">Terms</Link>
-            <Link href="/privacy" className="hover:text-gray-900">Privacy</Link>
-          </div>
+        <div className="mt-12 border-t pt-6 text-sm text-gray-500">
+          <a href="/" className="text-[#2EBD6B] hover:underline">← Back to PCR Booking</a>
+          <span className="mx-3">·</span>
+          <a href="/terms" className="text-[#2EBD6B] hover:underline">Terms of Service</a>
         </div>
-      </footer>
+      </div>
     </div>
-  )
+  );
 }
