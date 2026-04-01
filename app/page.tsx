@@ -117,9 +117,7 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#080812]/95 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2EBD6B]">
-              <Car className="h-5 w-5 text-white" />
-            </div>
+            <img src="/icon.png" alt="PCR Logo" className="h-8 w-8" />
             <span className="text-lg font-bold tracking-tight">
               PCR Booking
             </span>
