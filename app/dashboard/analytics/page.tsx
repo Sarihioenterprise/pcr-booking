@@ -132,7 +132,7 @@ export default async function AnalyticsPage() {
     .slice(0, 10);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
