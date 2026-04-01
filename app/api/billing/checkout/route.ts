@@ -10,7 +10,7 @@ const PRICE_IDS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const stripe = getStripe();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com";
 
-    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+    const sessionParams: any = {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
