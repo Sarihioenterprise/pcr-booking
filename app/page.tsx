@@ -417,9 +417,7 @@ export default function HomePage() {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <Link href="/" className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#2EBD6B]">
-                  <Car className="h-4 w-4 text-white" />
-                </div>
+                <img src="/icon.png" alt="PCR Logo" className="h-7 w-7" />
                 <span className="font-bold">PCR Booking</span>
               </Link>
               <p className="mt-3 text-sm text-gray-500">
