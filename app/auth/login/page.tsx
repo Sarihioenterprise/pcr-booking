@@ -62,6 +62,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#F8F9FC] px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
+          <div className="flex justify-center mb-4">
+            <img src="/icon.png" alt="PCR Logo" className="h-12 w-12" />
+          </div>
           <h1 className="text-2xl font-bold tracking-tight text-[#080812]">
             PCR Booking
           </h1>

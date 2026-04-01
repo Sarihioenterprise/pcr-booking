@@ -59,9 +59,7 @@ export function Sidebar() {
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 z-30 bg-[#0c0c1c]">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-6 py-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2EBD6B]">
-          <Car className="h-4 w-4 text-white" />
-        </div>
+        <img src="/icon.png" alt="PCR Logo" className="h-8 w-8" />
         <span className="text-lg font-semibold text-white tracking-tight">
           PCR Booking
         </span>

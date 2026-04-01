@@ -22,10 +22,19 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <head>
+        <link rel="icon" type="image/png" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#2EBD6B" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* Rewardful affiliate tracking */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,r){w._rwq=r;w[r]=w[r]||function(){(w[r].q=w[r].q||[]).push(arguments)}})(window,'rewardful');`,
+          }}
+        />
+        <script async src="https://r.wdfl.co/rw.js" data-rewardful="4b7799" />
       </head>
       <body className="min-h-full flex flex-col font-sans">
         {children}

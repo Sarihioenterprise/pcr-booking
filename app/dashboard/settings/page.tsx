@@ -161,6 +161,38 @@ export default function SettingsPage() {
     setTimeout(() => setSuccessMsg(""), 3000);
   }, []);
 
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+
+  const handleUpgrade = useCallback(async (plan: string) => {
+    setUpgradingPlan(plan);
+    try {
+      // Grab Rewardful referral ID if present
+      const referral =
+        typeof window !== "undefined" &&
+        (window as unknown as { rewardful?: (cmd: string, cb: (data: { referral?: string }) => void) => void }).rewardful
+          ? await new Promise<string | null>((resolve) => {
+              (window as unknown as { rewardful: (cmd: string, cb: (data: { referral?: string }) => void) => void }).rewardful("ready", ({ referral }) => resolve(referral || null));
+            })
+          : null;
+
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, referral }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Something went wrong. Please try again.");
+      }
+    } catch {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setUpgradingPlan(null);
+    }
+  }, []);
+
   // Load operator data
   useEffect(() => {
     async function load() {
@@ -1074,9 +1106,15 @@ export default function SettingsPage() {
                         ))}
                       </ul>
                       {!isCurrent && (
-                        <Button variant="outline" className="w-full mt-4" size="sm">
+                        <Button
+                          variant="outline"
+                          className="w-full mt-4"
+                          size="sm"
+                          disabled={upgradingPlan === key}
+                          onClick={() => handleUpgrade(key)}
+                        >
                           <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                          Upgrade
+                          {upgradingPlan === key ? "Redirecting…" : "Upgrade"}
                         </Button>
                       )}
                     </div>
