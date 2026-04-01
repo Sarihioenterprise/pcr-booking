@@ -132,8 +132,8 @@ export default async function AnalyticsPage() {
     .slice(0, 10);
 
   return (
-    <div className="space-y-6 overflow-x-hidden">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 overflow-x-hidden w-screen">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-[#2EBD6B]" />
@@ -143,7 +143,9 @@ export default async function AnalyticsPage() {
             Business performance overview
           </p>
         </div>
-        <AnalyticsClient operatorId={operator.id} />
+        <div className="w-full sm:w-auto">
+          <AnalyticsClient operatorId={operator.id} />
+        </div>
       </div>
 
       {/* Summary Cards */}

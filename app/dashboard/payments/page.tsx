@@ -451,7 +451,7 @@ export default function PaymentSchedulesPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen space-y-6 overflow-x-hidden" style={{ backgroundColor: "#F8F9FC" }}>
+    <div className="min-h-screen space-y-6 w-screen overflow-hidden" style={{ backgroundColor: "#F8F9FC" }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
