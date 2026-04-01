@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} h-full antialiased overflow-x-hidden`}>
       <head>
         <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
         <link rel="icon" type="image/png" href="/icon.png?v=2" />
@@ -37,7 +37,7 @@ export default function RootLayout({
         />
         <script async src="https://r.wdfl.co/rw.js" data-rewardful="4b7799" />
       </head>
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="min-h-full flex flex-col font-sans overflow-x-hidden">
         {children}
         <script
           dangerouslySetInnerHTML={{
