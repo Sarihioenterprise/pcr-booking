@@ -173,7 +173,7 @@ export default function PricingPage() {
               }`}
             >
               {tier.highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
                   <Badge className="bg-[#2EBD6B] text-white">
                     Most Popular
                   </Badge>
