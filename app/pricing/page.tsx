@@ -166,7 +166,7 @@ export default function PricingPage() {
           {pricingTiers.map((tier) => (
             <Card
               key={tier.name}
-              className={`flex flex-col bg-white shadow-sm overflow-visible ${
+              className={`flex flex-col bg-white shadow-sm ${
                 tier.highlighted
                   ? "ring-2 ring-[#2EBD6B] shadow-md"
                   : "ring-1 ring-[#E5E7EB]"
