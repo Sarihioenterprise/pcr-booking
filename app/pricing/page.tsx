@@ -172,9 +172,9 @@ export default function PricingPage() {
                   : "ring-1 ring-[#E5E7EB]"
               }`}
             >
-              <CardHeader className="relative">
+              <CardHeader className={tier.highlighted ? "pt-12" : ""}>
                 {tier.highlighted && (
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2">
+                  <div className="flex justify-center mb-3">
                     <Badge className="bg-[#2EBD6B] text-white">
                       Most Popular
                     </Badge>
