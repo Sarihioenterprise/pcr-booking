@@ -166,20 +166,20 @@ export default function PricingPage() {
           {pricingTiers.map((tier) => (
             <Card
               key={tier.name}
-              className={`relative flex flex-col bg-white shadow-sm ${
+              className={`flex flex-col bg-white shadow-sm ${
                 tier.highlighted
                   ? "ring-2 ring-[#2EBD6B] shadow-md"
                   : "ring-1 ring-[#E5E7EB]"
               }`}
             >
-              {tier.highlighted && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-                  <Badge className="bg-[#2EBD6B] text-white">
-                    Most Popular
-                  </Badge>
-                </div>
-              )}
-              <CardHeader>
+              <CardHeader className="relative">
+                {tier.highlighted && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-[#2EBD6B] text-white">
+                      Most Popular
+                    </Badge>
+                  </div>
+                )}
                 <CardTitle className="text-xl text-[#080812]">
                   {tier.name}
                 </CardTitle>
