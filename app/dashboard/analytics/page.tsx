@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getOperator } from "@/lib/get-operator";
 import {
@@ -6,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   DollarSign,
   CalendarDays,
@@ -132,7 +134,7 @@ export default async function AnalyticsPage() {
     .slice(0, 10);
 
   return (
-    <div className="space-y-6 overflow-x-hidden w-screen">
+    <div className="space-y-6 overflow-x-hidden w-full">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -143,7 +145,13 @@ export default async function AnalyticsPage() {
             Business performance overview
           </p>
         </div>
-        <div className="w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Link href="/dashboard/fleet/revenue">
+            <Button variant="outline" size="sm">
+              <Car className="mr-2 h-4 w-4" />
+              Revenue by Vehicle
+            </Button>
+          </Link>
           <AnalyticsClient operatorId={operator.id} />
         </div>
       </div>

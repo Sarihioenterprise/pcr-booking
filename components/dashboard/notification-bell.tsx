@@ -161,7 +161,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 w-96 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+          <div className="fixed left-1/2 -translate-x-1/2 mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden" style={{ top: '3.5rem' }}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-900">
                 Notifications

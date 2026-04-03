@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { SMSButton } from "@/components/dashboard/sms-button";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,14 +178,19 @@ export default function RenterDetailPage() {
           <h1 className="text-2xl font-bold">{renter.name}</h1>
           <p className="text-muted-foreground">Renter profile</p>
         </div>
-        {renter.is_blacklisted && (
-          <Badge
-            variant="outline"
-            className="bg-red-500/10 text-red-500 border-red-500/20"
-          >
-            Blacklisted
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {renter.phone && (
+            <SMSButton phone={renter.phone} renterName={renter.name} />
+          )}
+          {renter.is_blacklisted && (
+            <Badge
+              variant="outline"
+              className="bg-red-500/10 text-red-500 border-red-500/20"
+            >
+              Blacklisted
+            </Badge>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="profile">

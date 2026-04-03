@@ -3,6 +3,7 @@ import { BottomNav } from "@/components/dashboard/bottom-nav";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserMenu } from "@/components/dashboard/user-menu";
+import { getOperator } from "@/lib/get-operator";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await getOperator();
+
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
       {/* Desktop Sidebar */}

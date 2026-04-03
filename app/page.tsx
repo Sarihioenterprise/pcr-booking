@@ -20,6 +20,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { HomePricingSection } from "./_components/HomePricingSection";
 
 const features = [
   {
@@ -68,47 +69,6 @@ const steps = [
   },
 ];
 
-const pricingTiers = [
-  {
-    name: "Growth",
-    price: "$79",
-    description: "For solo operators getting started",
-    features: [
-      "Up to 15 vehicles",
-      "Booking widget",
-      "Fleet management",
-      "Lead tracking",
-      "Email support",
-    ],
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    price: "$149",
-    description: "For growing rental businesses",
-    features: [
-      "Up to 40 vehicles",
-      "Everything in Growth",
-      "Multi-location support",
-      "AI qualification bot",
-      "Priority support",
-    ],
-    highlighted: true,
-  },
-  {
-    name: "Scale",
-    price: "$249",
-    description: "For established fleet operators",
-    features: [
-      "Unlimited vehicles",
-      "Everything in Pro",
-      "White-label branding",
-      "API access",
-      "Dedicated account manager",
-    ],
-    highlighted: false,
-  },
-];
 
 export default function HomePage() {
   return (
@@ -170,13 +130,13 @@ export default function HomePage() {
             Now in Early Access
           </Badge>
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            The Booking Platform Built for{" "}
-            <span className="text-[#2EBD6B]">Private Rental Operators</span>
+            Built for{" "}
+            <span className="text-[#2EBD6B]">Private Rental Car Operators</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-400">
-            Stop losing 30% to Turo. Manage your fleet, automate lead
-            qualification, and take bookings directly from your website — all
-            from one dashboard.
+            Whether you run 3 cars or 50, PCR Booking gives you everything you
+            need to manage bookings, qualify renters, and grow your business —
+            without paying a cut to any platform.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href="/auth/signup">
@@ -201,15 +161,18 @@ export default function HomePage() {
       <section className="border-y border-white/10 bg-[#0c0c1c] px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Giving Turo 30% of every booking?
+            Stop letting platforms own your business.
           </h2>
           <p className="mt-4 text-xl text-[#2EBD6B] font-semibold">
-            Keep 100% with your own system.
+            Keep 100% of your revenue with your own system.
           </p>
           <p className="mx-auto mt-6 max-w-xl text-gray-400 leading-relaxed">
-            Platforms like Turo take a massive cut, control your pricing, and own
-            your customer relationships. PCR Booking gives you everything you
-            need to run bookings independently — no middleman, no commission.
+            Platforms like Turo take 25–35% of every booking, control your
+            pricing, and own your customer relationships. Independent operators
+            — whether you learned from a mentor, grew your own fleet, or are
+            moving off platforms — deserve better tools. PCR Booking gives you
+            everything you need to run bookings directly, no middleman, no
+            commission.
           </p>
         </div>
       </section>
@@ -291,69 +254,10 @@ export default function HomePage() {
             No hidden fees. No per-booking commission. Just a flat monthly rate.
           </p>
 
-          <div className="mx-auto mt-16 grid max-w-5xl gap-6 lg:grid-cols-3">
-            {pricingTiers.map((tier) => (
-              <Card
-                key={tier.name}
-                className={`flex flex-col border-white/10 bg-white/5 text-white ${
-                  tier.highlighted
-                    ? "ring-2 ring-[#2EBD6B] relative"
-                    : ""
-                }`}
-              >
-                {tier.highlighted && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-[#2EBD6B] text-white">
-                      Most Popular
-                    </Badge>
-                  </div>
-                )}
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-white">
-                    {tier.name}
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    {tier.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col">
-                  <div className="mb-6">
-                    <span className="text-4xl font-extrabold text-white">
-                      {tier.price}
-                    </span>
-                    <span className="text-gray-400">/mo</span>
-                  </div>
-                  <ul className="flex flex-col gap-3">
-                    {tier.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-center gap-2 text-sm text-gray-300"
-                      >
-                        <Check className="h-4 w-4 shrink-0 text-[#2EBD6B]" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Link href="/auth/signup" className="w-full">
-                    <Button
-                      className={`w-full h-10 font-semibold ${
-                        tier.highlighted
-                          ? "bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-                          : "bg-white/10 text-white hover:bg-white/20"
-                      }`}
-                    >
-                      Start Free Trial
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+          <HomePricingSection />
 
           <p className="mt-8 text-center text-sm text-gray-500">
-            All plans include a 14-day free trial. No credit card required.
+            All plans include a 14-day free trial. Card required — cancel anytime.
           </p>
         </div>
       </section>
@@ -376,12 +280,12 @@ export default function HomePage() {
             year. No cap on referrals.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/auth/signup">
+            <a href="https://pcr-booking.getrewardful.com/signup" target="_blank" rel="noopener noreferrer">
               <Button className="h-11 bg-[#2EBD6B] px-6 font-semibold text-white hover:bg-[#1a9952]">
                 <Users className="mr-2 h-4 w-4" />
                 Join the Affiliate Program
               </Button>
-            </Link>
+            </a>
             <Link
               href="/affiliates"
               className="text-sm text-gray-400 underline underline-offset-4 transition-colors hover:text-white"

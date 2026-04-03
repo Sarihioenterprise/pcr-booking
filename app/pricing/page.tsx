@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import {
   Car,
@@ -15,8 +18,11 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-const pricingTiers = [
+type PlanId = "growth" | "pro" | "scale";
+
+const pricingTiers: { id: PlanId; name: string; price: string; period: string; description: string; features: string[]; highlighted: boolean }[] = [
   {
+    id: "growth",
     name: "Growth",
     price: "$79",
     period: "/mo",
@@ -31,6 +37,7 @@ const pricingTiers = [
     highlighted: false,
   },
   {
+    id: "pro",
     name: "Pro",
     price: "$149",
     period: "/mo",
@@ -46,6 +53,7 @@ const pricingTiers = [
     highlighted: true,
   },
   {
+    id: "scale",
     name: "Scale",
     price: "$249",
     period: "/mo",
@@ -66,7 +74,7 @@ const faqs = [
   {
     question: "Is there a free trial?",
     answer:
-      "Yes. Every plan comes with a 14-day free trial. No credit card required to start. You can explore all features before committing.",
+      "Yes. Every plan comes with a 14-day free trial. Your card is captured upfront but you won't be charged until the trial ends. Cancel anytime.",
   },
   {
     question: "Can I switch plans later?",
@@ -96,6 +104,27 @@ const faqs = [
 ];
 
 export default function PricingPage() {
+  const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  async function handleStartTrial(plan: PlanId) {
+    setCheckoutError(null);
+    setLoadingPlan(plan);
+    try {
+      const res = await fetch("/api/billing/checkout-public", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to start checkout");
+      window.location.href = data.url;
+    } catch (err: unknown) {
+      setCheckoutError(err instanceof Error ? err.message : "Something went wrong");
+      setLoadingPlan(null);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
       {/* Navigation */}
@@ -138,11 +167,13 @@ export default function PricingPage() {
             >
               Login
             </Link>
-            <Link href="/auth/signup">
-              <Button className="h-9 bg-[#2EBD6B] px-4 text-sm font-semibold text-white hover:bg-[#1a9952]">
-                Sign Up
-              </Button>
-            </Link>
+            <Button
+              className="h-9 bg-[#2EBD6B] px-4 text-sm font-semibold text-white hover:bg-[#1a9952]"
+              onClick={() => handleStartTrial("growth")}
+              disabled={loadingPlan !== null}
+            >
+              Start Free Trial
+            </Button>
           </div>
         </div>
       </nav>
@@ -209,25 +240,29 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Link href="/auth/signup" className="w-full">
-                  <Button
-                    className={`w-full h-10 font-semibold ${
-                      tier.highlighted
-                        ? "bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-                        : "bg-[#080812] text-white hover:bg-[#080812]/90"
-                    }`}
-                  >
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+                <Button
+                  className={`w-full h-10 font-semibold ${
+                    tier.highlighted
+                      ? "bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+                      : "bg-[#080812] text-white hover:bg-[#080812]/90"
+                  }`}
+                  disabled={loadingPlan !== null}
+                  onClick={() => handleStartTrial(tier.id)}
+                >
+                  {loadingPlan === tier.id ? "Redirecting..." : "Start Free Trial"}
+                  {loadingPlan !== tier.id && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
 
+        {checkoutError && (
+          <p className="mt-4 text-center text-sm text-red-500">{checkoutError}</p>
+        )}
+
         <p className="mt-8 text-center text-sm text-[#6B7280]">
-          All plans include a 14-day free trial. No credit card required.
+          All plans include a 14-day free trial. Card required — cancel anytime before trial ends.
         </p>
       </section>
 
@@ -271,12 +306,14 @@ export default function PricingPage() {
             Join operators who are keeping 100% of their revenue. Start your
             free trial today.
           </p>
-          <Link href="/auth/signup">
-            <Button className="mt-6 h-11 bg-[#2EBD6B] px-6 text-base font-semibold text-white hover:bg-[#1a9952]">
-              Get Started Free
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+          <Button
+            className="mt-6 h-11 bg-[#2EBD6B] px-6 text-base font-semibold text-white hover:bg-[#1a9952]"
+            onClick={() => handleStartTrial("pro")}
+            disabled={loadingPlan !== null}
+          >
+            {loadingPlan === "pro" ? "Redirecting..." : "Get Started Free"}
+            {loadingPlan !== "pro" && <ArrowRight className="ml-2 h-4 w-4" />}
+          </Button>
         </div>
       </section>
 

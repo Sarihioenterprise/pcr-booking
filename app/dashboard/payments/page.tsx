@@ -451,7 +451,7 @@ export default function PaymentSchedulesPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen space-y-6 w-screen overflow-hidden" style={{ backgroundColor: "#F8F9FC" }}>
+    <div className="min-h-screen space-y-6 w-full overflow-hidden" style={{ backgroundColor: "#F8F9FC" }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -541,7 +541,7 @@ export default function PaymentSchedulesPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="schedules">
-        <TabsList>
+        <TabsList className="flex w-full overflow-x-auto overflow-y-hidden">
           <TabsTrigger value="schedules" className="gap-1.5">
             <CreditCard className="h-4 w-4" />
             Payment Schedules

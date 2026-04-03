@@ -5,7 +5,9 @@ let _stripe: Stripe | null = null;
 export function getStripe(): Stripe {
   if (!_stripe) {
     _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: "2026-03-25.dahlia",
+      apiVersion: "2025-02-24.acacia",
+      maxNetworkRetries: 0, // disable SDK retries — we handle errors ourselves
+      timeout: 10000,       // 10s timeout
     });
   }
   return _stripe;

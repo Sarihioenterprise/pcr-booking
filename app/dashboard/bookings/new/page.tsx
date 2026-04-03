@@ -355,7 +355,7 @@ export default function NewBookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC]">
+    <div className="min-h-screen bg-[#F8F9FC] w-full overflow-x-hidden">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8 flex items-center gap-4">
@@ -456,7 +456,7 @@ export default function NewBookingPage() {
             {/* --- Vehicle Selection --- */}
             <Card className="border-0 bg-white shadow-sm">
               <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
                       <Car className="h-3.5 w-3.5 text-[#2EBD6B]" />
@@ -473,7 +473,7 @@ export default function NewBookingPage() {
                   </CardTitle>
 
                   {/* Toggle */}
-                  <div className="flex items-center rounded-lg border border-gray-200 bg-[#F8F9FC] p-0.5">
+                  <div className="flex shrink-0 items-center rounded-lg border border-gray-200 bg-[#F8F9FC] p-0.5">
                     <button
                       type="button"
                       onClick={() => handleModeSwitch(false)}
@@ -483,7 +483,7 @@ export default function NewBookingPage() {
                           : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
-                      Single Vehicle
+                      Single
                     </button>
                     <button
                       type="button"
@@ -494,7 +494,7 @@ export default function NewBookingPage() {
                           : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
-                      Multi-Vehicle
+                      Multi
                     </button>
                   </div>
                 </div>
@@ -568,7 +568,7 @@ export default function NewBookingPage() {
             </Card>
 
             {/* --- Booking Details --- */}
-            <Card className="border-0 bg-white shadow-sm">
+            <Card className="border-0 bg-white shadow-sm overflow-hidden">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
@@ -578,7 +578,7 @@ export default function NewBookingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 pr-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="start_date">Start Date</Label>
                     <Input

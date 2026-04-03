@@ -56,7 +56,33 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // Check if there's a Stripe session to link
+    const stripeSessionId = sessionStorage.getItem("stripe_session_id");
+
+    if (stripeSessionId) {
+      try {
+        const res = await fetch("/api/billing/link-subscription", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: stripeSessionId }),
+        });
+
+        if (res.ok) {
+          sessionStorage.removeItem("stripe_session_id");
+          router.push("/dashboard");
+          return;
+        } else {
+          const data = await res.json();
+          console.error("[onboarding] link-subscription failed:", data.error);
+          // Fall through to plan page so user can retry billing
+        }
+      } catch (err) {
+        console.error("[onboarding] link-subscription error:", err);
+        // Fall through to plan page
+      }
+    }
+
+    router.push("/onboarding/plan");
   }
 
   return (

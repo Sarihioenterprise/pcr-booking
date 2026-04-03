@@ -54,6 +54,8 @@ import {
   Eye,
   EyeOff,
   Settings,
+  Bell,
+  Globe,
 } from "lucide-react";
 import type {
   Operator,
@@ -152,6 +154,16 @@ export default function SettingsPage() {
   // Widget
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
+  // Notification preferences
+  const [notifPaymentReminder3Days, setNotifPaymentReminder3Days] = useState(false);
+  const [notifPaymentReminderDayOf, setNotifPaymentReminderDayOf] = useState(false);
+  const [notifPaymentOverdue, setNotifPaymentOverdue] = useState(false);
+  const [notifBookingConfirmation, setNotifBookingConfirmation] = useState(false);
+
+  // Booking page slug
+  const [bookingSlug, setBookingSlug] = useState("");
+  const [copiedSlug, setCopiedSlug] = useState(false);
+
   // Saving state
   const [saving, setSaving] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -222,6 +234,18 @@ export default function SettingsPage() {
         setDepositAmount(String(op.deposit_amount ?? 0));
         setDepositAutoReleaseDays(String(op.deposit_auto_release_days ?? 14));
 
+        // Booking slug
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setBookingSlug((op as any).booking_slug || op.referral_code || "");
+
+        // Notification preferences (stored in JSON field or separate columns)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const notifPrefs = (op as any).notification_preferences || {};
+        setNotifPaymentReminder3Days(notifPrefs.payment_reminder_3_days ?? false);
+        setNotifPaymentReminderDayOf(notifPrefs.payment_reminder_day_of ?? false);
+        setNotifPaymentOverdue(notifPrefs.payment_overdue ?? false);
+        setNotifBookingConfirmation(notifPrefs.booking_confirmation ?? false);
+
         // Load related data
         const [teamRes, templatesRes, webhooksRes] = await Promise.all([
           supabase.from("team_members").select("*").eq("operator_id", op.id).order("created_at"),
@@ -275,6 +299,40 @@ export default function SettingsPage() {
 
     setSaving("");
     if (!error) showSuccess("Branding saved");
+  }
+
+  // Save notification preferences
+  async function saveNotificationPrefs() {
+    if (!operator) return;
+    setSaving("notifications");
+    const { error } = await supabase
+      .from("operators")
+      .update({
+        notification_preferences: {
+          payment_reminder_3_days: notifPaymentReminder3Days,
+          payment_reminder_day_of: notifPaymentReminderDayOf,
+          payment_overdue: notifPaymentOverdue,
+          booking_confirmation: notifBookingConfirmation,
+        },
+      } as unknown as Record<string, unknown>)
+      .eq("id", operator.id);
+    setSaving("");
+    if (!error) showSuccess("Notification preferences saved");
+  }
+
+  // Save booking slug
+  async function saveBookingSlug() {
+    if (!operator) return;
+    const cleaned = bookingSlug.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    setBookingSlug(cleaned);
+    setSaving("booking_slug");
+    const { error } = await supabase
+      .from("operators")
+      .update({ booking_slug: cleaned } as unknown as Record<string, unknown>)
+      .eq("id", operator.id);
+    setSaving("");
+    if (!error) showSuccess("Booking page URL saved");
+    else showSuccess("Could not save slug — try again");
   }
 
   // Save payment settings
@@ -528,6 +586,8 @@ export default function SettingsPage() {
           <TabsTrigger value="webhooks"><Webhook className="h-3.5 w-3.5 mr-1.5" />Webhooks</TabsTrigger>
           <TabsTrigger value="widget"><Code className="h-3.5 w-3.5 mr-1.5" />Widget</TabsTrigger>
           <TabsTrigger value="subscription"><Crown className="h-3.5 w-3.5 mr-1.5" />Plan</TabsTrigger>
+          <TabsTrigger value="notifications"><Bell className="h-3.5 w-3.5 mr-1.5" />Notifications</TabsTrigger>
+          <TabsTrigger value="booking_page"><Globe className="h-3.5 w-3.5 mr-1.5" />Booking Page</TabsTrigger>
         </TabsList>
 
         {/* ── Business Profile ── */}
@@ -1121,6 +1181,134 @@ export default function SettingsPage() {
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {/* ── Notifications ── */}
+        <TabsContent value="notifications">
+          <Card className="border-0 bg-white shadow-sm ring-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Automated SMS Reminders
+              </CardTitle>
+              <CardDescription>
+                Configure automatic SMS notifications sent to renters. Requires Twilio credentials.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {[
+                {
+                  label: "Payment reminder — 3 days before due",
+                  desc: "Sends an SMS reminder 3 days before a payment is due.",
+                  value: notifPaymentReminder3Days,
+                  set: setNotifPaymentReminder3Days,
+                },
+                {
+                  label: "Payment reminder — day of due",
+                  desc: "Sends an SMS on the day a payment is due.",
+                  value: notifPaymentReminderDayOf,
+                  set: setNotifPaymentReminderDayOf,
+                },
+                {
+                  label: "Payment overdue notice",
+                  desc: "Sends an SMS when a payment is past due.",
+                  value: notifPaymentOverdue,
+                  set: setNotifPaymentOverdue,
+                },
+                {
+                  label: "Booking confirmation",
+                  desc: "Sends a confirmation SMS when a booking is created.",
+                  value: notifBookingConfirmation,
+                  set: setNotifBookingConfirmation,
+                },
+              ].map((item) => (
+                <div key={item.label} className="flex items-start justify-between gap-4 py-2 border-b last:border-0">
+                  <div>
+                    <p className="font-medium text-sm">{item.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => item.set(!item.value)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                      item.value ? "bg-[#2EBD6B]" : "bg-gray-200"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                        item.value ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+              <Button
+                onClick={saveNotificationPrefs}
+                disabled={saving === "notifications"}
+                className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+              >
+                {saving === "notifications" ? "Saving..." : "Save Preferences"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Booking Page ── */}
+        <TabsContent value="booking_page">
+          <Card className="border-0 bg-white shadow-sm ring-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Public Booking Page
+              </CardTitle>
+              <CardDescription>
+                Share this page with renters so they can browse your fleet and request bookings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="bookingSlug">Your Booking Page URL</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">pcrbooking.com/book/</span>
+                  <Input
+                    id="bookingSlug"
+                    value={bookingSlug}
+                    onChange={(e) => setBookingSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    placeholder="your-business-name"
+                    className="max-w-xs"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Letters, numbers, and hyphens only.</p>
+              </div>
+
+              {bookingSlug && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 border">
+                  <span className="text-sm font-mono flex-1 truncate">
+                    https://pcrbooking.com/book/{bookingSlug}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://pcrbooking.com/book/${bookingSlug}`);
+                      setCopiedSlug(true);
+                      setTimeout(() => setCopiedSlug(false), 2000);
+                    }}
+                  >
+                    {copiedSlug ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                    {copiedSlug ? "Copied!" : "Copy"}
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                onClick={saveBookingSlug}
+                disabled={saving === "booking_slug" || !bookingSlug}
+                className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+              >
+                {saving === "booking_slug" ? "Saving..." : "Save URL"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

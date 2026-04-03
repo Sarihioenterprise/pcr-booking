@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Car, Gauge, Fuel } from "lucide-react";
+import { Plus, Car, Gauge, Fuel, BarChart3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOperator } from "@/lib/get-operator";
 import type { Vehicle } from "@/lib/types";
@@ -45,12 +45,20 @@ export default async function FleetPage() {
             {typedVehicles.length} vehicles &middot; {activeCount} active
           </p>
         </div>
-        <Link href="/dashboard/fleet/new">
-          <Button className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Vehicle
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/fleet/revenue">
+            <Button variant="outline" size="sm">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Revenue Report
+            </Button>
+          </Link>
+          <Link href="/dashboard/fleet/new">
+            <Button className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Vehicle
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Summary Cards */}

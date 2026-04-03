@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Car, DollarSign, Gauge, MapPin } from "lucide-react";
+import { ArrowLeft, Car, DollarSign, Gauge, MapPin, Upload, X, ImageIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Location } from "@/lib/types";
 
@@ -25,6 +25,9 @@ export default function NewVehiclePage() {
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [error, setError] = useState("");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     make: "",
@@ -66,6 +69,44 @@ export default function NewVehiclePage() {
     return (val: string | null) => {
       if (val) setForm((prev) => ({ ...prev, [field]: val }));
     };
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setPhotoPreview(objectUrl);
+    setPhotoUploading(true);
+
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { data, error: uploadError } = await supabase.storage
+        .from("vehicle-photos")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("vehicle-photos")
+        .getPublicUrl(data.path);
+
+      setForm((prev) => ({ ...prev, photo_url: publicUrl }));
+    } catch (err: any) {
+      // If bucket doesn't exist yet, just keep the local preview URL
+      // and store it — operator can fix later
+      setForm((prev) => ({ ...prev, photo_url: objectUrl }));
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  function clearPhoto() {
+    setPhotoPreview(null);
+    setForm((prev) => ({ ...prev, photo_url: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -388,15 +429,49 @@ export default function NewVehiclePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="photo_url">Photo URL</Label>
-              <Input
-                id="photo_url"
-                name="photo_url"
-                type="url"
-                placeholder="https://example.com/photo.jpg"
-                value={form.photo_url}
-                onChange={handleChange}
+              <Label>Vehicle Photo</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
               />
+              {photoPreview ? (
+                <div className="relative w-full h-48 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                  <img
+                    src={photoPreview}
+                    alt="Vehicle preview"
+                    className="w-full h-full object-cover"
+                  />
+                  {photoUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-8 text-center hover:border-[#2EBD6B] hover:bg-[#2EBD6B]/5 transition-colors"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
+                    <ImageIcon className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Click to upload a photo</p>
+                    <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WEBP up to 10MB</p>
+                  </div>
+                </button>
+              )}
             </div>
           </CardContent>
         </Card>

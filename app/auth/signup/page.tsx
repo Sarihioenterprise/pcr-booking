@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -16,11 +16,19 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 
+const PLAN_NAMES: Record<string, string> = {
+  growth: "Growth",
+  pro: "Pro",
+  scale: "Scale",
+};
+
 export default function SignupPage(props: {
-  searchParams: Promise<{ referral_code?: string }>;
+  searchParams: Promise<{ referral_code?: string; session_id?: string; plan?: string }>;
 }) {
   const searchParams = use(props.searchParams);
   const referralCode = searchParams.referral_code ?? "";
+  const sessionId = searchParams.session_id ?? "";
+  const planParam = searchParams.plan ?? "";
 
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -28,6 +36,32 @@ export default function SignupPage(props: {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [stripeSessionLoading, setStripeSessionLoading] = useState(false);
+  const [stripeEmail, setStripeEmail] = useState<string | null>(null);
+  const [stripePlan, setStripePlan] = useState<string | null>(planParam || null);
+
+  // Fetch Stripe session data if session_id is present
+  useEffect(() => {
+    if (!sessionId) return;
+    setStripeSessionLoading(true);
+    fetch(`/api/billing/checkout-session?session_id=${sessionId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.email) {
+          setEmail(data.email);
+          setStripeEmail(data.email);
+        }
+        if (data.plan) {
+          setStripePlan(data.plan);
+        }
+      })
+      .catch(() => {
+        // Non-critical — user can still sign up manually
+      })
+      .finally(() => {
+        setStripeSessionLoading(false);
+      });
+  }, [sessionId]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -63,11 +97,20 @@ export default function SignupPage(props: {
       return;
     }
 
+    // Store stripe session_id so onboarding can link the subscription
+    if (sessionId) {
+      sessionStorage.setItem("stripe_session_id", sessionId);
+    }
+
     router.push("/auth/onboarding");
   }
 
   async function handleGoogleSignup() {
     setError(null);
+    // Store stripe session_id before OAuth redirect
+    if (sessionId) {
+      sessionStorage.setItem("stripe_session_id", sessionId);
+    }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -96,11 +139,26 @@ export default function SignupPage(props: {
           </p>
         </div>
 
+        {/* Stripe trial active banner */}
+        {sessionId && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+            <p className="text-sm font-semibold text-green-800">
+              ✓ Your 14-day free trial is active.{" "}
+              {stripePlan && PLAN_NAMES[stripePlan]
+                ? `You selected the ${PLAN_NAMES[stripePlan]} plan. `
+                : ""}
+              Finish setting up your account.
+            </p>
+          </div>
+        )}
+
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Create your account</CardTitle>
             <CardDescription>
-              Get started with PCR Booking today
+              {sessionId
+                ? "Your trial is ready — just create a password to continue."
+                : "Get started with PCR Booking today"}
             </CardDescription>
           </CardHeader>
 
@@ -114,8 +172,14 @@ export default function SignupPage(props: {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={stripeSessionLoading || !!stripeEmail}
                   required
                 />
+                {stripeEmail && (
+                  <p className="text-xs text-muted-foreground">
+                    Pre-filled from your Stripe checkout.
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -161,7 +225,7 @@ export default function SignupPage(props: {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || stripeSessionLoading}
                 className="w-full bg-[#2EBD6B] text-white hover:bg-[#2EBD6B]/90"
                 size="lg"
               >
@@ -186,6 +250,7 @@ export default function SignupPage(props: {
               className="w-full"
               size="lg"
               onClick={handleGoogleSignup}
+              disabled={stripeSessionLoading}
             >
               <svg className="mr-2 size-4" viewBox="0 0 24 24">
                 <path

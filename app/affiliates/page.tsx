@@ -25,9 +25,17 @@ export default function AffiliatesPage() {
             Months
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Refer private rental operators to PCR Booking and earn 30% of their
-            subscription fee every month for a full year.
+            Refer private rental car operators to PCR Booking and earn 30% of their
+            subscription every month for a full year. No cap. No limit.
           </p>
+          <div className="mt-6">
+            <a href="https://pcr-booking.getrewardful.com/signup" target="_blank" rel="noopener noreferrer">
+              <Button size="lg" className="bg-[#2EBD6B] hover:bg-[#1a9952] text-white px-8 text-base">
+                Join the Affiliate Program — It&apos;s Free
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-16">
@@ -83,13 +91,27 @@ export default function AffiliatesPage() {
           </div>
         </div>
 
-        <div className="text-center">
-          <Link href="/auth/signup">
-            <Button size="lg" className="text-lg px-8">
-              Sign Up & Get Your Referral Code
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+        <div className="text-center space-y-4">
+          <p className="text-lg font-semibold text-gray-800">Ready to start earning?</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="https://pcr-booking.getrewardful.com/signup" target="_blank" rel="noopener noreferrer">
+              <Button size="lg" className="text-lg px-8 bg-[#2EBD6B] hover:bg-[#1a9952] text-white">
+                Join the Affiliate Program
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </a>
+            <Link href="/auth/signup">
+              <Button size="lg" variant="outline" className="text-lg px-8">
+                I&apos;m a Rental Operator →
+              </Button>
+            </Link>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Already an affiliate?{" "}
+            <a href="https://pcr-booking.getrewardful.com" className="text-[#2EBD6B] underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+              Log in to your dashboard
+            </a>
+          </p>
         </div>
       </div>
     </div>

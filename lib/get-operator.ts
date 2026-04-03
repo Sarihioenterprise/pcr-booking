@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import type { Operator } from "@/lib/types";
 
 export async function getOperator(): Promise<Operator> {
@@ -18,6 +19,16 @@ export async function getOperator(): Promise<Operator> {
     .single();
 
   if (!operator) redirect("/auth/onboarding");
+
+  // If no subscription yet, redirect to plan selection
+  // EXCEPTION: if we're already in the onboarding flow (prevent redirect loops)
+  if (!operator.stripe_subscription_id) {
+    const headersList = await headers();
+    const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || "";
+    if (!pathname.includes("/onboarding")) {
+      redirect("/onboarding/plan");
+    }
+  }
 
   return operator as Operator;
 }

@@ -2,6 +2,7 @@
 
 import { use, useState, useCallback } from "react";
 import Link from "next/link";
+import { SMSButton } from "@/components/dashboard/sms-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -706,9 +707,18 @@ export default function BookingDetailPage({
                       </div>
                       <Separator />
                       <div className="space-y-2.5">
-                        <div className="flex items-center gap-2.5 text-slate-600">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{booking.renter_phone || "—"}</span>
+                        <div className="flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 text-slate-600">
+                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                            <span>{booking.renter_phone || "—"}</span>
+                          </div>
+                          {booking.renter_phone && (
+                            <SMSButton
+                              phone={booking.renter_phone}
+                              renterName={booking.renter_name}
+                              bookingId={booking.id}
+                            />
+                          )}
                         </div>
                         <div className="flex items-center gap-2.5 text-slate-600">
                           <Mail className="h-3.5 w-3.5 text-slate-400" />
