@@ -182,6 +182,7 @@ export default async function SupportPage({
                   <TableHead>Booking</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>AI</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -216,6 +217,16 @@ export default async function SupportPage({
                       >
                         {statusLabels[ticket.status] || ticket.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {ticket.auto_resolved && (
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-100 text-emerald-700 border-emerald-200"
+                        >
+                          AI Resolved
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDate(ticket.created_at)}

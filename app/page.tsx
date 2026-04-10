@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HomePricingSection } from "./_components/HomePricingSection";
+import { ChatWidget } from "@/components/chat-widget";
 
 const features = [
   {
@@ -95,6 +96,12 @@ export default function HomePage() {
               className="text-sm text-gray-400 transition-colors hover:text-white"
             >
               Pricing
+            </Link>
+            <Link
+              href="/blog"
+              className="text-sm text-gray-400 transition-colors hover:text-white"
+            >
+              Blog
             </Link>
             <Link
               href="#affiliates"
@@ -356,6 +363,14 @@ export default function HomePage() {
                 </li>
                 <li>
                   <Link
+                    href="/blog"
+                    className="text-sm text-gray-500 hover:text-white"
+                  >
+                    Blog
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/affiliates"
                     className="text-sm text-gray-500 hover:text-white"
                   >
@@ -415,6 +430,8 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      <ChatWidget />
     </div>
   );
 }

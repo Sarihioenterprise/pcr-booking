@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Send } from "lucide-react";
+import { Send, Wand2 } from "lucide-react";
 import type { TicketMessage } from "@/lib/types";
 
 export function TicketThread({
@@ -36,6 +36,42 @@ export function TicketThread({
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState(currentStatus);
   const [priority, setPriority] = useState(currentPriority);
+  const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
+
+  // Get the first message from renter (ticket content)
+  const ticketSubject = messages.find((m) => m.sender_type === "renter")?.content || "";
+
+  async function suggestAIResponse() {
+    if (aiSuggestLoading) return;
+    setAiSuggestLoading(true);
+
+    try {
+      const response = await fetch("/api/support/auto-resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticketId,
+          subject: "Support Ticket",
+          message: ticketSubject,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.resolved && data.response) {
+        setReply(data.response);
+      } else {
+        alert(
+          "Could not generate a suggestion. Please write a response manually."
+        );
+      }
+    } catch (err) {
+      console.error("AI suggestion error:", err);
+      alert("Error getting AI suggestion. Please try again.");
+    } finally {
+      setAiSuggestLoading(false);
+      router.refresh();
+    }
+  }
 
   async function sendReply(e: React.FormEvent) {
     e.preventDefault();
@@ -169,18 +205,27 @@ export function TicketThread({
 
       {/* Reply Form */}
       <Card className="border-0 bg-white shadow-sm ring-0">
-        <CardContent className="p-4">
-          <form onSubmit={sendReply} className="flex items-end gap-3">
-            <div className="flex-1">
-              <Textarea
-                placeholder="Type your reply..."
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                rows={3}
-              />
-            </div>
+        <CardContent className="p-4 space-y-3">
+          <Textarea
+            placeholder="Type your reply..."
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            rows={3}
+          />
+          <div className="flex gap-2 justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={suggestAIResponse}
+              disabled={aiSuggestLoading}
+              className="gap-2"
+            >
+              <Wand2 className="h-4 w-4" />
+              {aiSuggestLoading ? "Generating..." : "AI Suggest Response"}
+            </Button>
             <Button
               type="submit"
+              onClick={sendReply}
               disabled={sending || !reply.trim()}
               style={{ backgroundColor: "#2EBD6B" }}
               className="gap-2"
@@ -188,7 +233,7 @@ export function TicketThread({
               <Send className="h-4 w-4" />
               {sending ? "Sending..." : "Reply"}
             </Button>
-          </form>
+          </div>
         </CardContent>
       </Card>
     </div>

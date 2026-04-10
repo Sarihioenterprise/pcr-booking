@@ -17,6 +17,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { AnalyticsClient } from "./analytics-client";
+import { PCRLeadsUpsell } from "@/components/dashboard/pcr-leads-upsell";
 
 export default async function AnalyticsPage() {
   const operator = await getOperator();
@@ -26,6 +27,9 @@ export default async function AnalyticsPage() {
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
   const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
   const thisYearStart = new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0];
+
+  // Last 30 days
+  const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   // Total bookings this year
   const { data: allBookings } = await supabase
@@ -47,6 +51,11 @@ export default async function AnalyticsPage() {
   // This month's bookings
   const thisMonthBookings = bookings.filter(
     (b) => b.start_date >= thisMonthStart && b.start_date <= thisMonthEnd
+  );
+
+  // Last 30 days bookings
+  const last30DaysBookings = bookings.filter(
+    (b) => b.start_date >= last30DaysStart
   );
 
   // Revenue calculations (completed + active)
@@ -155,6 +164,12 @@ export default async function AnalyticsPage() {
           <AnalyticsClient operatorId={operator.id} />
         </div>
       </div>
+
+      {/* PCR Leads Upsell Banner */}
+      <PCRLeadsUpsell
+        operatorCreatedAt={operator.created_at}
+        bookingsLast30Days={last30DaysBookings.length}
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
