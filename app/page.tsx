@@ -107,7 +107,7 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <Link
               href="/auth/login"
-              className="hidden text-sm text-gray-400 transition-colors hover:text-white sm:block"
+              className="text-sm text-gray-400 transition-colors hover:text-white"
             >
               Login
             </Link>
@@ -258,6 +258,12 @@ export default function HomePage() {
 
           <p className="mt-8 text-center text-sm text-gray-500">
             All plans include a 14-day free trial. Card required — cancel anytime.
+          </p>
+          <p className="mt-3 text-center text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link href="/auth/login" className="text-[#2EBD6B] hover:underline">
+              Log in here
+            </Link>
           </p>
         </div>
       </section>
