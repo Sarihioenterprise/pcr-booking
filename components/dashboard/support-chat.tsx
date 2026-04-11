@@ -83,7 +83,7 @@ export function SupportChat() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#2EBD6B] hover:bg-[#1a9952] text-white px-4 py-3 rounded-full shadow-lg transition-all"
+        className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-2 bg-[#2EBD6B] hover:bg-[#1a9952] text-white px-4 py-3 rounded-full shadow-lg transition-all"
       >
         {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
         {!open && <span className="text-sm font-semibold">Talk to Support</span>}
@@ -92,8 +92,8 @@ export function SupportChat() {
       {/* Chat window */}
       {open && (
         <div
-          className="fixed bottom-20 right-6 z-50 w-80 sm:w-96 rounded-2xl shadow-2xl bg-white border border-gray-200 flex flex-col overflow-hidden"
-          style={{ maxHeight: "480px" }}
+          className="fixed bottom-20 right-3 left-3 sm:left-auto sm:right-6 sm:w-96 z-50 rounded-2xl shadow-2xl bg-white border border-gray-200 flex flex-col overflow-hidden"
+          style={{ maxHeight: "calc(100vh - 120px)" }}
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-[#2EBD6B]">
