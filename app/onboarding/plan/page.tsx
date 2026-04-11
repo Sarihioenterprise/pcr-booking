@@ -47,7 +47,7 @@ const plans = [
       "Unlimited cars",
       "Everything in Pro",
       "White-label branding",
-      "Dedicated account manager",
+      "Custom booking page branding",
       "API access",
       "Custom integrations",
     ],

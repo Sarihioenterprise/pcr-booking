@@ -45,7 +45,7 @@ export const PLANS = {
     features: [
       "Unlimited vehicles",
       "White-label solution",
-      "Dedicated account manager",
+      "Custom booking page branding",
       "API access",
       "Priority support",
     ],

@@ -78,7 +78,7 @@ const pricingTiers: { id: PlanId; name: string; price: string; period: string; d
       "Everything in Pro",
       "White-label branding",
       "API access",
-      "Dedicated account manager",
+      "Custom booking page branding",
       "Custom integrations",
     ],
     highlighted: false,
