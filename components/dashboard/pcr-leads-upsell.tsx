@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Rocket } from "lucide-react";
+import { X, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 interface PCRLeadsUpsellProps {
   operatorCreatedAt?: string;
@@ -18,17 +17,14 @@ export function PCRLeadsUpsell({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if banner has been dismissed
     const dismissed = localStorage.getItem("pcr-leads-upsell-dismissed");
     if (dismissed === "true") {
       setIsLoading(false);
       return;
     }
 
-    // Check if operator should see the banner
     let shouldShow = false;
 
-    // Check if operator has been active > 7 days
     if (operatorCreatedAt) {
       const createdDate = new Date(operatorCreatedAt);
       const now = new Date();
@@ -39,7 +35,6 @@ export function PCRLeadsUpsell({
       }
     }
 
-    // Check if operator has 0 bookings in last 30 days
     if (bookingsLast30Days === 0) {
       shouldShow = true;
     }
@@ -58,42 +53,52 @@ export function PCRLeadsUpsell({
   }
 
   return (
-    <Card className="border-[#2EBD6B]/30 bg-gradient-to-r from-[#2EBD6B]/5 to-transparent">
-      <div className="p-4 flex items-start gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
-          <Rocket className="h-5 w-5 text-[#2EBD6B]" />
+    <div className="relative rounded-xl overflow-hidden border border-[#2EBD6B]/40 bg-[#0a1f14]">
+      {/* Solid green left accent bar */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#2EBD6B]" />
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 pl-6">
+        {/* Icon */}
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/20 border border-[#2EBD6B]/30">
+          <TrendingUp className="h-5 w-5 text-[#2EBD6B]" />
         </div>
 
-        <div className="flex-1">
-          <h3 className="font-semibold text-white">
-            🚀 Want more bookings?
+        {/* Text */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-bold text-white leading-snug">
+            Want More Bookings?
           </h3>
-          <p className="mt-1 text-sm text-gray-400">
-            Let <strong>PCR Leads</strong> run Google & Facebook ads for your
-            rental business. Operators using our ads see{" "}
-            <strong>3-5x more bookings</strong>.
+          <p className="mt-1 text-sm text-gray-300 leading-relaxed">
+            Let <span className="font-semibold text-white">PCR Leads</span> run Google & Facebook ads for your rental business.
+            Operators using our ads see{" "}
+            <span className="font-semibold text-[#2EBD6B]">3–5x more bookings</span>.
           </p>
         </div>
 
-        <div className="flex shrink-0 gap-2">
-          <a href="https://join.pcrleads.com?ref=pcrbooking" target="_blank" rel="noopener noreferrer">
+        {/* CTA + Dismiss */}
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="https://join.pcrleads.com?ref=pcrbooking"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto"
+          >
             <Button
               size="sm"
-              style={{ backgroundColor: "#2EBD6B" }}
-              className="text-white hover:bg-[#1a9952]"
+              className="w-full sm:w-auto bg-[#2EBD6B] hover:bg-[#1a9952] text-white font-semibold px-5"
             >
-              Get More Bookings →
+              Get More Bookings
             </Button>
           </a>
           <button
             onClick={handleDismiss}
-            className="p-1.5 hover:bg-white/10 rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 rounded transition-colors flex-shrink-0"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4 text-gray-400" />
           </button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
