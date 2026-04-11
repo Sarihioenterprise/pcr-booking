@@ -82,7 +82,8 @@ export default function OnboardingPage() {
       }
     }
 
-    router.push("/onboarding/plan");
+    // FREE plan users go to dashboard onboarding wizard
+    router.push("/dashboard/onboarding");
   }
 
   return (

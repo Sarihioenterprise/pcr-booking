@@ -8,6 +8,7 @@ import Link from "next/link";
 
 export default function WidgetPage() {
   const [operatorId, setOperatorId] = useState("");
+  const [bookingSlug, setBookingSlug] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -18,18 +19,22 @@ export default function WidgetPage() {
       if (!user) return;
       const { data } = await supabase
         .from("operators")
-        .select("id")
+        .select("id, booking_slug")
         .eq("user_id", user.id)
         .single();
-      if (data) setOperatorId(data.id);
+      if (data) {
+        setOperatorId(data.id);
+        setBookingSlug(data.booking_slug || "");
+      }
     }
     load();
   }, []);
 
   const embedCode = `<script src="${process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com"}/widget.js" data-operator="${operatorId}"></script>`;
+  const bookingLink = `${process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com"}/rent/${bookingSlug}`;
 
-  function handleCopy() {
-    navigator.clipboard.writeText(embedCode);
+  function handleCopy(text: string) {
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -44,6 +49,38 @@ export default function WidgetPage() {
         </Link>
         <h1 className="text-2xl font-bold">Booking Widget</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Direct Booking Link</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Share this link with renters on WhatsApp, Facebook, or by text. No website needed.
+          </p>
+          {bookingSlug ? (
+            <div className="relative">
+              <div className="bg-secondary p-4 rounded-md font-mono text-sm overflow-x-auto pr-12 break-all">
+                {bookingLink}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2"
+                onClick={() => handleCopy(bookingLink)}
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-success" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">Booking slug not yet configured. Please complete your profile setup.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -62,7 +99,7 @@ export default function WidgetPage() {
               variant="ghost"
               size="icon"
               className="absolute top-2 right-2"
-              onClick={handleCopy}
+              onClick={() => handleCopy(embedCode)}
             >
               {copied ? (
                 <Check className="h-4 w-4 text-success" />

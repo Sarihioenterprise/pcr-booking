@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HomePricingSection } from "./_components/HomePricingSection";
+import { ROICalculator } from "./_components/ROICalculator";
 import { ChatWidget } from "@/components/chat-widget";
 
 const features = [
@@ -377,15 +378,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pricing Preview */}
-      <section id="pricing" className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            Simple, Transparent Pricing
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-gray-400">
-            No hidden fees. No per-booking commission. Just a flat monthly rate.
-          </p>
+      {/* ROI Calculator */}
+      <ROICalculator />
+
+      {/* Pricing Section */}
+      <section id="pricing" className="border-t border-white/10 bg-[#080812] px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Simple, transparent pricing
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-center text-gray-400">
+              No hidden fees. No per-booking commission. Just a flat monthly rate.
+            </p>
+          </div>
 
           <HomePricingSection />
 

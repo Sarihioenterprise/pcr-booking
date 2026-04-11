@@ -14,10 +14,32 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Car, DollarSign, Gauge, MapPin, Upload, X, ImageIcon } from "lucide-react";
+import { ArrowLeft, Car, DollarSign, Gauge, MapPin, Upload, X, ImageIcon, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Location } from "@/lib/types";
+import type { Location, Operator } from "@/lib/types";
+
+const PLAN_LIMITS = {
+  free: 3,
+  growth: 15,
+  pro: 40,
+  scale: Infinity,
+};
+
+const NEXT_PLAN = {
+  free: "growth",
+  growth: "pro",
+  pro: "scale",
+  scale: "scale",
+};
 
 export default function NewVehiclePage() {
   const router = useRouter();
@@ -28,6 +50,9 @@ export default function NewVehiclePage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [operator, setOperator] = useState<Operator | null>(null);
+  const [vehicleCount, setVehicleCount] = useState(0);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [form, setForm] = useState({
     make: "",
@@ -51,14 +76,33 @@ export default function NewVehiclePage() {
   });
 
   useEffect(() => {
-    async function loadLocations() {
-      const { data } = await supabase
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Load operator
+      const { data: operatorData } = await supabase
+        .from("operators")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      if (operatorData) setOperator(operatorData as Operator);
+
+      // Load locations
+      const { data: locationsData } = await supabase
         .from("locations")
         .select("*")
         .order("name");
-      if (data) setLocations(data as Location[]);
+      if (locationsData) setLocations(locationsData as Location[]);
+
+      // Load vehicle count
+      const { count } = await supabase
+        .from("vehicles")
+        .select("id", { count: "exact", head: true })
+        .eq("operator_id", operatorData?.id);
+      if (count !== null) setVehicleCount(count);
     }
-    loadLocations();
+    load();
   }, [supabase]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -115,7 +159,18 @@ export default function NewVehiclePage() {
     setError("");
 
     try {
+      if (!operator) throw new Error("Operator not found");
+
+      // Check vehicle limit
+      const planLimit = PLAN_LIMITS[operator.plan as keyof typeof PLAN_LIMITS] || 3;
+      if (vehicleCount >= planLimit) {
+        setShowUpgradeModal(true);
+        setLoading(false);
+        return;
+      }
+
       const { error: insertError } = await supabase.from("vehicles").insert({
+        operator_id: operator.id,
         make: form.make,
         model: form.model,
         year: parseInt(form.year, 10),
@@ -498,6 +553,43 @@ export default function NewVehiclePage() {
           </Link>
         </div>
       </form>
+
+      {/* Upgrade Modal */}
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <AlertCircle className="h-6 w-6 text-yellow-600 mb-2" />
+            <DialogTitle>Vehicle Limit Reached</DialogTitle>
+            <DialogDescription>
+              You've reached your {operator?.plan || "free"} plan limit of{" "}
+              {PLAN_LIMITS[operator?.plan as keyof typeof PLAN_LIMITS] || 3} vehicles.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Upgrade to {NEXT_PLAN[operator?.plan as keyof typeof NEXT_PLAN] || "growth"} to add more vehicles
+              and unlock additional features.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowUpgradeModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+              onClick={() => router.push("/onboarding/plan")}
+            >
+              Upgrade Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
