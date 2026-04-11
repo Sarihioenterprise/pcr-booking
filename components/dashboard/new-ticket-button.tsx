@@ -11,6 +11,7 @@ export function NewTicketButton() {
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState("normal");
   const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,56 +20,65 @@ export function NewTicketButton() {
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { alert("Not logged in"); return; }
 
-      const { data: operator } = await supabase
+      const { data: operator, error: opError } = await supabase
         .from("operators")
-        .select("id, business_name, contact_name")
+        .select("id, business_name")
         .eq("user_id", user.id)
         .single();
 
-      if (!operator) return;
+      if (opError || !operator) {
+        alert("Could not find your account: " + (opError?.message || "unknown"));
+        return;
+      }
 
-      // Insert ticket (renter_name = operator's name since this is operator-submitted)
-      const { data: ticket, error } = await supabase
+      const senderName = (operator as { business_name?: string }).business_name
+        || user.email?.split("@")[0]
+        || "Operator";
+
+      const { data: ticket, error: ticketError } = await supabase
         .from("support_tickets")
         .insert({
           operator_id: operator.id,
           subject: subject.trim(),
           priority,
           status: "open",
-          renter_name: (operator as { business_name?: string; contact_name?: string }).contact_name
-            || (operator as { business_name?: string }).business_name
-            || user.email?.split("@")[0]
-            || "Operator",
+          renter_name: senderName,
         })
         .select()
         .single();
 
-      if (error || !ticket) {
-        console.error("Ticket insert error:", error);
-        alert("Failed to submit ticket: " + (error?.message || "Unknown error"));
+      if (ticketError || !ticket) {
+        alert("Failed to create ticket: " + (ticketError?.message || "unknown error"));
         return;
       }
 
-      // Insert the message into ticket_messages
-      await supabase.from("ticket_messages").insert({
+      const { error: msgError } = await supabase.from("ticket_messages").insert({
         ticket_id: ticket.id,
         sender_type: "operator",
-        sender_name: (operator as { contact_name?: string; business_name?: string }).contact_name
-          || (operator as { business_name?: string }).business_name
-          || "Operator",
+        sender_name: senderName,
         content: message.trim(),
       });
 
-      setSubject("");
-      setMessage("");
-      setPriority("normal");
-      setOpen(false);
-      window.location.reload();
+      if (msgError) {
+        alert("Ticket created but message failed: " + msgError.message);
+        return;
+      }
+
+      setDone(true);
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleClose() {
+    setOpen(false);
+    setDone(false);
+    setSubject("");
+    setMessage("");
+    setPriority("normal");
+    if (done) window.location.reload();
   }
 
   return (
@@ -84,81 +94,71 @@ export function NewTicketButton() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">Submit Support Request</h2>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-              >
+              <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. Payment not collecting"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/40 focus:border-[#2EBD6B]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
-                </label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/40 focus:border-[#2EBD6B] bg-white"
-                >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Describe the issue in detail..."
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/40 focus:border-[#2EBD6B] resize-none"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-3 pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-[#2EBD6B] hover:bg-[#1a9952] text-white"
-                  disabled={saving}
-                >
-                  {saving ? "Submitting..." : "Submit Ticket"}
+            {done ? (
+              <div className="px-6 py-10 text-center space-y-3">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 mx-auto">
+                  <svg className="w-7 h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Ticket Submitted!</h3>
+                <p className="text-sm text-gray-500">We&apos;ll get back to you as soon as possible. You can track your ticket in the support list.</p>
+                <Button onClick={handleClose} className="mt-2 bg-[#2EBD6B] hover:bg-[#1a9952] text-white w-full">
+                  Done
                 </Button>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. Payment not collecting"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/40 focus:border-[#2EBD6B]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/40 focus:border-[#2EBD6B] bg-white"
+                  >
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Describe the issue in detail..."
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/40 focus:border-[#2EBD6B] resize-none"
+                    required
+                  />
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <Button type="button" variant="outline" className="flex-1" onClick={handleClose}>Cancel</Button>
+                  <Button type="submit" className="flex-1 bg-[#2EBD6B] hover:bg-[#1a9952] text-white" disabled={saving}>
+                    {saving ? "Submitting..." : "Submit Ticket"}
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

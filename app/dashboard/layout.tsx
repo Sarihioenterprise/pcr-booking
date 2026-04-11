@@ -3,6 +3,7 @@ import { BottomNav } from "@/components/dashboard/bottom-nav";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserMenu } from "@/components/dashboard/user-menu";
+import { SupportChat } from "@/components/dashboard/support-chat";
 import { getOperator } from "@/lib/get-operator";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,9 @@ export default async function DashboardLayout({
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
+
+      {/* Support Chat — floats on every dashboard page */}
+      <SupportChat />
     </div>
   );
 }
