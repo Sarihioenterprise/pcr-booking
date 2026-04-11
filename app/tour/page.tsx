@@ -119,45 +119,45 @@ export default function TourPage() {
                 <span className="text-xs text-gray-500 ml-3">pcrbooking.com/dashboard</span>
               </div>
 
-              <div className="flex h-[500px]">
-                {/* Sidebar */}
-                <div className="w-48 bg-[#0c0c1c] border-r border-white/10 p-6 space-y-1">
-                  <div className="text-xs font-bold text-gray-600 uppercase mb-4">Dashboard</div>
-                  <div className="text-sm text-white py-2 px-3 rounded bg-[#2EBD6B]/20 text-[#2EBD6B]">Dashboard</div>
-                  <div className="text-sm text-gray-400 py-2 px-3 rounded hover:bg-white/5 cursor-pointer">Bookings</div>
-                  <div className="text-sm text-gray-400 py-2 px-3 rounded hover:bg-white/5 cursor-pointer">Fleet</div>
-                  <div className="text-sm text-gray-400 py-2 px-3 rounded hover:bg-white/5 cursor-pointer">Renters</div>
-                  <div className="text-sm text-gray-400 py-2 px-3 rounded hover:bg-white/5 cursor-pointer">Payments</div>
-                  <div className="text-sm text-gray-400 py-2 px-3 rounded hover:bg-white/5 cursor-pointer">Support</div>
-                  <div className="text-sm text-gray-400 py-2 px-3 rounded hover:bg-white/5 cursor-pointer">Analytics</div>
+              {/* Mobile: stacked layout, Desktop: sidebar + content */}
+              <div className="flex flex-col sm:flex-row" style={{ minHeight: '400px' }}>
+                {/* Sidebar — hidden on mobile, visible sm+ */}
+                <div className="hidden sm:block w-40 bg-[#0c0c1c] border-r border-white/10 p-4 space-y-1 flex-shrink-0">
+                  <div className="text-xs font-bold text-gray-600 uppercase mb-3">Menu</div>
+                  <div className="text-xs text-white py-1.5 px-2 rounded bg-[#2EBD6B]/20 text-[#2EBD6B]">Dashboard</div>
+                  <div className="text-xs text-gray-400 py-1.5 px-2 rounded">Bookings</div>
+                  <div className="text-xs text-gray-400 py-1.5 px-2 rounded">Fleet</div>
+                  <div className="text-xs text-gray-400 py-1.5 px-2 rounded">Renters</div>
+                  <div className="text-xs text-gray-400 py-1.5 px-2 rounded">Payments</div>
+                  <div className="text-xs text-gray-400 py-1.5 px-2 rounded">Analytics</div>
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 p-8 space-y-8">
-                  {/* Stat Cards */}
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-4">
+                <div className="flex-1 p-4 sm:p-6 space-y-4 bg-[#080812]">
+                  {/* Stat Cards — 2 cols on mobile, 4 on desktop */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-3">
                       <div className="text-xs text-gray-500 mb-1">Active Rentals</div>
-                      <div className="text-2xl font-bold text-[#2EBD6B]">12</div>
+                      <div className="text-xl font-bold text-[#2EBD6B]">12</div>
                     </div>
-                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-4">
+                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-3">
                       <div className="text-xs text-gray-500 mb-1">This Month</div>
-                      <div className="text-2xl font-bold text-[#2EBD6B]">$4,280</div>
+                      <div className="text-xl font-bold text-[#2EBD6B]">$4,280</div>
                     </div>
-                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-4">
-                      <div className="text-xs text-gray-500 mb-1">Pending Payments</div>
-                      <div className="text-2xl font-bold text-yellow-500">3</div>
+                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">Pending</div>
+                      <div className="text-xl font-bold text-yellow-500">3</div>
                     </div>
-                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-4">
+                    <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-3">
                       <div className="text-xs text-gray-500 mb-1">Fleet Size</div>
-                      <div className="text-2xl font-bold text-white">8</div>
+                      <div className="text-xl font-bold text-white">8</div>
                     </div>
                   </div>
 
                   {/* Mini Chart */}
                   <div className="bg-[#0c0c1c] border border-white/10 rounded-lg p-4">
-                    <div className="text-sm font-semibold mb-4">Revenue Last 7 Days</div>
-                    <div className="flex items-end gap-2 h-20">
+                    <div className="text-sm font-semibold mb-3">Revenue Last 7 Days</div>
+                    <div className="flex items-end gap-1.5 h-16">
                       <div className="flex-1 bg-[#2EBD6B]/40 rounded-t-sm" style={{ height: '60%' }}></div>
                       <div className="flex-1 bg-[#2EBD6B]/60 rounded-t-sm" style={{ height: '85%' }}></div>
                       <div className="flex-1 bg-[#2EBD6B]/40 rounded-t-sm" style={{ height: '50%' }}></div>
@@ -336,7 +336,7 @@ export default function TourPage() {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                     <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
