@@ -8,7 +8,7 @@ export interface Operator {
   state: string | null;
   logo_url: string | null;
   notification_phone: string | null;
-  plan: "growth" | "pro" | "scale";
+  plan: "free" | "growth" | "pro" | "scale";
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   stripe_account_id: string | null;
@@ -234,7 +234,7 @@ export interface Subscription {
   operator_id: string;
   stripe_subscription_id: string | null;
   stripe_customer_id: string | null;
-  plan: "growth" | "pro" | "scale";
+  plan: "free" | "growth" | "pro" | "scale";
   status: "active" | "canceled" | "past_due" | "trialing";
   current_period_start: string | null;
   current_period_end: string | null;
