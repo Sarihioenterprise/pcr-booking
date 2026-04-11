@@ -18,9 +18,24 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-type PlanId = "growth" | "pro" | "scale";
+type PlanId = "free" | "growth" | "pro" | "scale";
 
 const pricingTiers: { id: PlanId; name: string; price: string; period: string; description: string; features: string[]; highlighted: boolean }[] = [
+  {
+    id: "free",
+    name: "Free",
+    price: "$0",
+    period: "",
+    description: "Get started with the essentials",
+    features: [
+      "Up to 3 vehicles",
+      "Booking widget",
+      "Basic fleet management",
+      "Email support",
+      "Perfect for getting started",
+    ],
+    highlighted: false,
+  },
   {
     id: "growth",
     name: "Growth",
@@ -74,7 +89,7 @@ const faqs = [
   {
     question: "Is there a free trial?",
     answer:
-      "Yes. Every plan comes with a 14-day free trial. Your card is captured upfront but you won't be charged until the trial ends. Cancel anytime.",
+      "Yes. We offer a free forever plan with up to 3 vehicles. Paid plans include a 14-day free trial — no credit card required. Cancel anytime.",
   },
   {
     question: "Can I switch plans later?",
@@ -111,6 +126,12 @@ export default function PricingPage() {
     setCheckoutError(null);
     setLoadingPlan(plan);
     try {
+      // Free plan goes straight to signup
+      if (plan === "free") {
+        window.location.href = "/auth/signup";
+        return;
+      }
+
       const res = await fetch("/api/billing/checkout-public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,7 +246,8 @@ export default function PricingPage() {
                   <span className="text-5xl font-extrabold text-[#080812]">
                     {tier.price}
                   </span>
-                  <span className="text-lg text-[#6B7280]">{tier.period}</span>
+                  {tier.period && <span className="text-lg text-[#6B7280]">{tier.period}</span>}
+                  {!tier.period && <span className="text-lg text-[#6B7280]">forever</span>}
                 </div>
                 <ul className="flex flex-col gap-3">
                   {tier.features.map((feature) => (
@@ -262,7 +284,7 @@ export default function PricingPage() {
         )}
 
         <p className="mt-8 text-center text-sm text-[#6B7280]">
-          All plans include a 14-day free trial. Card required — cancel anytime before trial ends.
+          All paid plans include a 14-day free trial. No credit card required — cancel anytime.
         </p>
       </section>
 

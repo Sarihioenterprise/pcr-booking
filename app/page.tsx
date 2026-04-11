@@ -86,7 +86,7 @@ export default function HomePage() {
 
           <div className="hidden items-center gap-8 md:flex">
             <Link
-              href="#features"
+              href="/features"
               className="text-sm text-gray-400 transition-colors hover:text-white"
             >
               Features
@@ -96,6 +96,12 @@ export default function HomePage() {
               className="text-sm text-gray-400 transition-colors hover:text-white"
             >
               Pricing
+            </Link>
+            <Link
+              href="/about"
+              className="text-sm text-gray-400 transition-colors hover:text-white"
+            >
+              About
             </Link>
             <Link
               href="/blog"
@@ -184,6 +190,43 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Savings Math */}
+      <section className="bg-[#080812] px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            The Real Cost of Turo vs PCR Booking
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-gray-400">
+            If you make $5,000/month in bookings:
+          </p>
+
+          <div className="mt-12 space-y-6">
+            <div>
+              <p className="text-sm text-gray-400">Turo takes:</p>
+              <p className="text-4xl font-bold text-red-400">$1,250–$1,750</p>
+              <p className="mt-1 text-sm text-gray-500">(25–35% commission)</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-400">PCR Booking costs:</p>
+              <p className="text-4xl font-bold text-white">$79</p>
+              <p className="mt-1 text-sm text-gray-500">flat per month</p>
+            </div>
+
+            <div className="border-t border-white/10 pt-6">
+              <p className="text-sm text-gray-400">You keep:</p>
+              <p className="text-5xl font-extrabold text-[#2EBD6B]">
+                $1,171–$1,671
+              </p>
+              <p className="mt-2 text-lg text-gray-300">MORE every month</p>
+              <p className="mt-3 text-xl font-semibold text-[#2EBD6B]">
+                That's $14,052–$20,052 per year back in your pocket.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section
         id="features"
@@ -251,6 +294,89 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Operators Are Keeping Their Revenue
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-gray-400">
+              See why rental operators are switching from platforms to PCR Booking.
+            </p>
+          </div>
+
+          <div className="grid gap-8 sm:grid-cols-3">
+            <Card className="border-white/10 bg-white/5 text-white flex flex-col">
+              <CardContent className="flex-1 pt-6">
+                <div className="mb-4 flex gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} className="text-[#2EBD6B] text-lg">
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="mb-4 leading-relaxed text-gray-300">
+                  "I was losing over $1,200 a month to Turo. Switched to PCR
+                  Booking in a weekend. Best decision I've made for my rental
+                  business."
+                </p>
+              </CardContent>
+              <CardFooter className="border-t border-white/10 pt-4">
+                <div>
+                  <p className="font-semibold">Marcus T.</p>
+                  <p className="text-sm text-gray-400">Atlanta, GA</p>
+                </div>
+              </CardFooter>
+            </Card>
+
+            <Card className="border-white/10 bg-white/5 text-white flex flex-col">
+              <CardContent className="flex-1 pt-6">
+                <div className="mb-4 flex gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} className="text-[#2EBD6B] text-lg">
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="mb-4 leading-relaxed text-gray-300">
+                  "The AI bot calls my leads before I even see the notification.
+                  I've doubled my qualified renters in 60 days."
+                </p>
+              </CardContent>
+              <CardFooter className="border-t border-white/10 pt-4">
+                <div>
+                  <p className="font-semibold">Darius W.</p>
+                  <p className="text-sm text-gray-400">Houston, TX</p>
+                </div>
+              </CardFooter>
+            </Card>
+
+            <Card className="border-white/10 bg-white/5 text-white flex flex-col">
+              <CardContent className="flex-1 pt-6">
+                <div className="mb-4 flex gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} className="text-[#2EBD6B] text-lg">
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="mb-4 leading-relaxed text-gray-300">
+                  "Finally an app built for people like me. I manage 8 cars from
+                  my phone. The calendar view alone is worth it."
+                </p>
+              </CardContent>
+              <CardFooter className="border-t border-white/10 pt-4">
+                <div>
+                  <p className="font-semibold">Keisha M.</p>
+                  <p className="text-sm text-gray-400">Miami, FL</p>
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Preview */}
       <section id="pricing" className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
@@ -264,7 +390,7 @@ export default function HomePage() {
           <HomePricingSection />
 
           <p className="mt-8 text-center text-sm text-gray-500">
-            All plans include a 14-day free trial. Card required — cancel anytime.
+            All plans include a 14-day free trial. No credit card required — cancel anytime.
           </p>
           <p className="mt-3 text-center text-sm text-gray-600">
             Already have an account?{" "}

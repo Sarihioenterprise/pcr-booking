@@ -13,9 +13,23 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-type PlanId = "growth" | "pro" | "scale";
+type PlanId = "free" | "growth" | "pro" | "scale";
 
 const pricingTiers: { id: PlanId; name: string; price: string; description: string; features: string[]; highlighted: boolean }[] = [
+  {
+    id: "free",
+    name: "Free",
+    price: "$0",
+    description: "Get started with the essentials",
+    features: [
+      "Up to 3 vehicles",
+      "Booking widget",
+      "Basic fleet management",
+      "Email support",
+      "14-day trial on paid plans",
+    ],
+    highlighted: false,
+  },
   {
     id: "growth",
     name: "Growth",
@@ -68,6 +82,12 @@ export function HomePricingSection() {
     setCheckoutError(null);
     setLoadingPlan(plan);
     try {
+      // Free plan goes straight to signup
+      if (plan === "free") {
+        window.location.href = "/auth/signup";
+        return;
+      }
+
       const res = await fetch("/api/billing/checkout-public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
