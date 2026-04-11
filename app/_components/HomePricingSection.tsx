@@ -20,13 +20,13 @@ const pricingTiers: { id: PlanId; name: string; price: string; description: stri
     id: "free",
     name: "Free",
     price: "$0",
-    description: "Get started with the essentials",
+    description: "Get started — no credit card needed",
     features: [
       "Up to 3 vehicles",
       "Booking widget",
       "Basic fleet management",
       "Email support",
-      "14-day trial on paid plans",
+      "Free forever",
     ],
     highlighted: false,
   },
@@ -53,7 +53,7 @@ const pricingTiers: { id: PlanId; name: string; price: string; description: stri
       "Up to 40 vehicles",
       "Everything in Growth",
       "Multi-location support",
-      "AI qualification bot",
+      "Instant notifications",
       "Priority support",
     ],
     highlighted: true,
@@ -103,7 +103,7 @@ export function HomePricingSection() {
   }
 
   return (
-    <div className="mx-auto mt-16 grid max-w-5xl gap-6 lg:grid-cols-3">
+    <div className="mx-auto mt-16 grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {pricingTiers.map((tier) => (
         <Card
           key={tier.name}
@@ -116,34 +116,34 @@ export function HomePricingSection() {
               <Badge className="bg-[#2EBD6B] text-white">Most Popular</Badge>
             </div>
           )}
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-white">{tier.name}</CardTitle>
-            <CardDescription className="text-gray-400">
+          <CardHeader className="pb-2 px-4 pt-5">
+            <CardTitle className="text-base text-white">{tier.name}</CardTitle>
+            <CardDescription className="text-gray-400 text-xs leading-snug">
               {tier.description}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col">
-            <div className="mb-6">
-              <span className="text-4xl font-extrabold text-white">
+          <CardContent className="flex flex-1 flex-col px-4">
+            <div className="mb-4">
+              <span className="text-3xl font-extrabold text-white">
                 {tier.price}
               </span>
-              <span className="text-gray-400">/mo</span>
+              <span className="text-gray-400 text-sm">/mo</span>
             </div>
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2">
               {tier.features.map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-center gap-2 text-sm text-gray-300"
+                  className="flex items-center gap-2 text-xs text-gray-300"
                 >
-                  <Check className="h-4 w-4 shrink-0 text-[#2EBD6B]" />
+                  <Check className="h-3.5 w-3.5 shrink-0 text-[#2EBD6B]" />
                   {feature}
                 </li>
               ))}
             </ul>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="px-4 pb-4">
             <Button
-              className={`w-full h-10 font-semibold ${
+              className={`w-full h-9 text-sm font-semibold ${
                 tier.highlighted
                   ? "bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
                   : "bg-white/10 text-white hover:bg-white/20"
@@ -151,7 +151,7 @@ export function HomePricingSection() {
               disabled={loadingPlan !== null}
               onClick={() => handleStartTrial(tier.id)}
             >
-              {loadingPlan === tier.id ? "Redirecting..." : "Start Free Trial"}
+              {loadingPlan === tier.id ? "Redirecting..." : tier.id === "free" ? "Get Started Free" : "Start Free Trial"}
             </Button>
           </CardFooter>
         </Card>
