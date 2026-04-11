@@ -23,6 +23,7 @@ export interface Operator {
   deposit_auto_release_days: number;
   require_booking_approval: boolean;
   default_pickup_instructions: string | null;
+  booking_slug: string | null;
   created_at: string;
   updated_at: string;
 }
