@@ -11,9 +11,10 @@ export default async function DirectBookingLink({ params }: Params) {
   const supabase = await createClient();
 
   // Find operator by booking_slug or referral_code
+  // Also fetch white label branding fields (Scale plan only — applied client-side)
   const { data: operator } = await supabase
     .from("operators")
-    .select("id, business_name, logo_url, brand_color")
+    .select("id, business_name, logo_url, brand_color, brand_logo_url, brand_primary_color, brand_company_name, plan")
     .or(`booking_slug.eq.${slug},referral_code.eq.${slug}`)
     .single();
 

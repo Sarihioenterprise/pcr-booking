@@ -56,6 +56,9 @@ import {
   Settings,
   Bell,
   Globe,
+  Lock,
+  Upload,
+  ImageIcon,
 } from "lucide-react";
 import type {
   Operator,
@@ -120,9 +123,15 @@ export default function SettingsPage() {
   const [timezone, setTimezone] = useState("America/New_York");
   const [defaultPickupInstructions, setDefaultPickupInstructions] = useState("");
 
-  // Branding
+  // Branding (basic — logo_url and brand_color used by widget/portal)
   const [logoUrl, setLogoUrl] = useState("");
   const [brandColor, setBrandColor] = useState("#2EBD6B");
+
+  // White label branding (Scale plan — applied to public /rent/[slug] page)
+  const [wlLogoUrl, setWlLogoUrl] = useState("");
+  const [wlPrimaryColor, setWlPrimaryColor] = useState("#2EBD6B");
+  const [wlCompanyName, setWlCompanyName] = useState("");
+  const [wlLogoUploading, setWlLogoUploading] = useState(false);
 
   // Payment settings
   const [taxRate, setTaxRate] = useState("0");
@@ -230,6 +239,11 @@ export default function SettingsPage() {
         setDefaultPickupInstructions(op.default_pickup_instructions || "");
         setLogoUrl(op.logo_url || "");
         setBrandColor(op.brand_color || "#2EBD6B");
+
+        // White label
+        setWlLogoUrl((op as unknown as { brand_logo_url?: string }).brand_logo_url || "");
+        setWlPrimaryColor((op as unknown as { brand_primary_color?: string }).brand_primary_color || "#2EBD6B");
+        setWlCompanyName((op as unknown as { brand_company_name?: string }).brand_company_name || "");
         setTaxRate(String(op.tax_rate ?? 0));
         setDepositAmount(String(op.deposit_amount ?? 0));
         setDepositAutoReleaseDays(String(op.deposit_auto_release_days ?? 14));
@@ -299,6 +313,48 @@ export default function SettingsPage() {
 
     setSaving("");
     if (!error) showSuccess("Branding saved");
+  }
+
+  // Upload logo to operator-assets bucket
+  async function handleWlLogoUpload(file: File) {
+    if (!operator) return;
+    setWlLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `${operator.id}/brand-logo-${Date.now()}.${ext}`;
+      const { data, error: uploadError } = await supabase.storage
+        .from("operator-assets")
+        .upload(fileName, file, { cacheControl: "3600", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("operator-assets")
+        .getPublicUrl(data.path);
+
+      setWlLogoUrl(publicUrl);
+    } catch {
+      alert("Logo upload failed. Please try again.");
+    } finally {
+      setWlLogoUploading(false);
+    }
+  }
+
+  // Save white label branding (Scale plan only)
+  async function saveWhiteLabel() {
+    if (!operator) return;
+    setSaving("white_label");
+    const { error } = await supabase
+      .from("operators")
+      .update({
+        brand_logo_url: wlLogoUrl || null,
+        brand_primary_color: wlPrimaryColor,
+        brand_company_name: wlCompanyName || null,
+      } as unknown as Record<string, unknown>)
+      .eq("id", operator.id);
+
+    setSaving("");
+    if (!error) showSuccess("White label branding saved");
   }
 
   // Save notification preferences
@@ -665,62 +721,215 @@ export default function SettingsPage() {
 
         {/* ── Branding ── */}
         <TabsContent value="branding">
-          <Card className="border-0 bg-white shadow-sm ring-0">
-            <CardHeader>
-              <CardTitle>Branding</CardTitle>
-              <CardDescription>Customize your brand appearance for the booking widget and portal.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="logoUrl">Logo URL</Label>
-                <Input id="logoUrl" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
-                {logoUrl && (
-                  <div className="mt-2 p-4 border rounded-lg bg-slate-50">
-                    <p className="text-xs text-muted-foreground mb-2">Preview:</p>
-                    <img src={logoUrl} alt="Logo preview" className="max-h-16 object-contain" />
+          <div className="space-y-6">
+            {/* Basic branding (all plans) */}
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader>
+                <CardTitle>Branding</CardTitle>
+                <CardDescription>Customize your brand appearance for the booking widget and portal.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="logoUrl">Logo URL</Label>
+                  <Input id="logoUrl" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
+                  {logoUrl && (
+                    <div className="mt-2 p-4 border rounded-lg bg-slate-50">
+                      <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                      <img src={logoUrl} alt="Logo preview" className="max-h-16 object-contain" />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandColor">Brand Color</Label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={brandColor}
+                      onChange={(e) => setBrandColor(e.target.value)}
+                      className="h-10 w-14 cursor-pointer rounded border-0 p-0"
+                    />
+                    <Input
+                      id="brandColor"
+                      value={brandColor}
+                      onChange={(e) => setBrandColor(e.target.value)}
+                      placeholder="#2EBD6B"
+                      className="max-w-[140px] font-mono"
+                    />
+                  </div>
+                  <div className="mt-3 p-4 border rounded-lg bg-slate-50">
+                    <p className="text-xs text-muted-foreground mb-3">Preview:</p>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg" style={{ backgroundColor: brandColor }} />
+                      <button
+                        className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                        style={{ backgroundColor: brandColor }}
+                      >
+                        Book Now
+                      </button>
+                      <span className="text-sm font-medium" style={{ color: brandColor }}>
+                        Link Text
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={saveBranding} disabled={saving === "branding"} className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white">
+                    {saving === "branding" ? "Saving..." : "Save Branding"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* White Label Branding (Scale plan only) */}
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-[#2EBD6B]" />
+                  White Label Branding
+                  <Badge className="bg-purple-100 text-purple-700 border-purple-200 ml-1">Scale</Badge>
+                </CardTitle>
+                <CardDescription>
+                  Apply your own logo, colors, and company name to the public renter booking page. Renters will see your brand, not PCR Booking.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {currentPlan !== "scale" ? (
+                  /* Locked state for non-Scale plans */
+                  <div className="flex flex-col items-center justify-center py-10 text-center gap-4">
+                    <div className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center">
+                      <Lock className="h-7 w-7 text-slate-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Upgrade to Scale to unlock custom branding</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm">
+                        Show your logo and brand colors on your public booking page. Renters see your brand — not PCR Booking.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => handleUpgrade("scale")}
+                      disabled={upgradingPlan === "scale"}
+                      className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white"
+                    >
+                      <Crown className="h-4 w-4 mr-2" />
+                      {upgradingPlan === "scale" ? "Redirecting…" : "Upgrade to Scale"}
+                    </Button>
+                  </div>
+                ) : (
+                  /* Scale plan — editable fields */
+                  <div className="space-y-6">
+                    {/* Logo Upload */}
+                    <div className="space-y-2">
+                      <Label>Logo</Label>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1 space-y-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={wlLogoUploading}
+                              onClick={() => document.getElementById("wl-logo-input")?.click()}
+                            >
+                              <Upload className="h-3.5 w-3.5 mr-1.5" />
+                              {wlLogoUploading ? "Uploading..." : "Upload Logo"}
+                            </Button>
+                            <input
+                              id="wl-logo-input"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleWlLogoUpload(file);
+                              }}
+                            />
+                          </label>
+                          <p className="text-xs text-muted-foreground">PNG, JPG, SVG — recommended 200×60px or wider</p>
+                          {wlLogoUrl && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Input
+                                value={wlLogoUrl}
+                                onChange={(e) => setWlLogoUrl(e.target.value)}
+                                placeholder="https://..."
+                                className="text-xs font-mono"
+                              />
+                              <Button variant="ghost" size="sm" onClick={() => setWlLogoUrl("")} className="shrink-0 text-red-500 hover:text-red-600">
+                                ✕
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-16 w-32 border rounded-lg bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden">
+                          {wlLogoUrl ? (
+                            <img src={wlLogoUrl} alt="Logo preview" className="max-h-14 max-w-full object-contain" />
+                          ) : (
+                            <ImageIcon className="h-6 w-6 text-slate-300" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Brand Color */}
+                    <div className="space-y-2">
+                      <Label htmlFor="wlPrimaryColor">Brand Primary Color</Label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={wlPrimaryColor}
+                          onChange={(e) => setWlPrimaryColor(e.target.value)}
+                          className="h-10 w-14 cursor-pointer rounded border-0 p-0"
+                        />
+                        <Input
+                          id="wlPrimaryColor"
+                          value={wlPrimaryColor}
+                          onChange={(e) => setWlPrimaryColor(e.target.value)}
+                          placeholder="#2EBD6B"
+                          className="max-w-[140px] font-mono"
+                        />
+                      </div>
+                      <div className="mt-2 p-3 border rounded-lg bg-slate-50">
+                        <p className="text-xs text-muted-foreground mb-2">Button preview:</p>
+                        <button
+                          className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                          style={{ backgroundColor: wlPrimaryColor }}
+                        >
+                          Request to Book
+                        </button>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Company Display Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="wlCompanyName">Company Display Name</Label>
+                      <Input
+                        id="wlCompanyName"
+                        value={wlCompanyName}
+                        onChange={(e) => setWlCompanyName(e.target.value)}
+                        placeholder={businessName || "Your Company Name"}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shown as the page title/header on your booking page. Defaults to your business name if left blank.
+                      </p>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={saveWhiteLabel}
+                        disabled={saving === "white_label"}
+                        className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white"
+                      >
+                        {saving === "white_label" ? "Saving..." : "Save White Label Branding"}
+                      </Button>
+                    </div>
                   </div>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brandColor">Brand Color</Label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={brandColor}
-                    onChange={(e) => setBrandColor(e.target.value)}
-                    className="h-10 w-14 cursor-pointer rounded border-0 p-0"
-                  />
-                  <Input
-                    id="brandColor"
-                    value={brandColor}
-                    onChange={(e) => setBrandColor(e.target.value)}
-                    placeholder="#2EBD6B"
-                    className="max-w-[140px] font-mono"
-                  />
-                </div>
-                <div className="mt-3 p-4 border rounded-lg bg-slate-50">
-                  <p className="text-xs text-muted-foreground mb-3">Preview:</p>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg" style={{ backgroundColor: brandColor }} />
-                    <button
-                      className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                      style={{ backgroundColor: brandColor }}
-                    >
-                      Book Now
-                    </button>
-                    <span className="text-sm font-medium" style={{ color: brandColor }}>
-                      Link Text
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={saveBranding} disabled={saving === "branding"} className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white">
-                  {saving === "branding" ? "Saving..." : "Save Branding"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ── Payment Settings ── */}

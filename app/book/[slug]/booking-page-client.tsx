@@ -28,11 +28,18 @@ interface Vehicle {
   photos?: { url: string; is_primary: boolean }[];
 }
 
+const SCALE_PLAN = "scale";
+
 interface Operator {
   id: string;
   business_name: string;
   logo_url: string | null;
   brand_color: string;
+  // White label branding (Scale plan only)
+  plan?: string;
+  brand_logo_url?: string | null;
+  brand_primary_color?: string | null;
+  brand_company_name?: string | null;
 }
 
 interface Props {
@@ -64,7 +71,11 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  const accent = operator.brand_color || "#2EBD6B";
+  // White label: if operator is on Scale plan and has set brand values, use them
+  const isScale = operator.plan === SCALE_PLAN;
+  const accent = (isScale && operator.brand_primary_color) || operator.brand_color || "#2EBD6B";
+  const displayName = (isScale && operator.brand_company_name) || operator.business_name;
+  const displayLogo = (isScale && operator.brand_logo_url) || operator.logo_url;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,22 +116,25 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC]">
+    <div className="min-h-screen bg-[#F8F9FC]" style={{ "--brand-primary": accent } as React.CSSProperties}>
+      {/* Inject CSS variable for brand color — used by accent elements throughout */}
+      <style>{`:root { --brand-primary: ${accent}; }`}</style>
+
       {/* Header */}
       <header className="bg-white border-b shadow-sm">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center gap-3">
-          {operator.logo_url ? (
-            <img src={operator.logo_url} alt={operator.business_name} className="h-10 w-auto object-contain" />
+          {displayLogo ? (
+            <img src={displayLogo} alt={displayName} className="h-10 w-auto object-contain" />
           ) : (
             <div
               className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
               style={{ backgroundColor: accent }}
             >
-              {operator.business_name[0]}
+              {displayName[0]}
             </div>
           )}
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{operator.business_name}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
             <p className="text-sm text-gray-500">Available Vehicles</p>
           </div>
         </div>
@@ -302,7 +316,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
               <p className="text-gray-600">
-                Your request has been submitted! <strong>{operator.business_name}</strong> will contact you shortly.
+                Your request has been submitted! <strong>{displayName}</strong> will contact you shortly.
               </p>
             </div>
             <Button

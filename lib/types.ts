@@ -24,6 +24,10 @@ export interface Operator {
   require_booking_approval: boolean;
   default_pickup_instructions: string | null;
   booking_slug: string | null;
+  // White label branding (Scale plan only) — applies to /rent/[slug] renter-facing page
+  brand_logo_url: string | null;
+  brand_primary_color: string | null;
+  brand_company_name: string | null;
   created_at: string;
   updated_at: string;
 }
