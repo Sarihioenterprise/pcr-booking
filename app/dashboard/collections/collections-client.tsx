@@ -223,191 +223,194 @@ export function CollectionsClient() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ background: "#F8F9FC", minHeight: "100%" }}>
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-white">Collections</h1>
-        <p className="text-sm text-white/50 mt-1">Track and manage overdue payments</p>
+        <h1 className="text-2xl font-bold text-gray-900">Collections</h1>
+        <p className="text-sm text-gray-500 mt-1">Track and manage overdue payments</p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-white/50 flex items-center gap-2">
-              <DollarSign className="h-4 w-4" /> Total Overdue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-400">${totalOverdue.toFixed(2)}</p>
+        <Card className="border-0 bg-white shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100">
+              <DollarSign className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-red-600">${totalOverdue.toFixed(2)}</p>
+              <p className="text-sm text-gray-500">Total Overdue</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-white/50 flex items-center gap-2">
-              <Users className="h-4 w-4" /> Overdue Accounts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-white">{overdue.length}</p>
+        <Card className="border-0 bg-white shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
+              <Users className="h-6 w-6 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{overdue.length}</p>
+              <p className="text-sm text-gray-500">Overdue Accounts</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-white/50 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Collected This Month
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-[#2EBD6B]">${paidThisMonth.toFixed(2)}</p>
+        <Card className="border-0 bg-white shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
+              <TrendingUp className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-emerald-600">${paidThisMonth.toFixed(2)}</p>
+              <p className="text-sm text-gray-500">Collected This Month</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-white/50 flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Avg Days Overdue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-white">{avgDaysOverdue}</p>
+        <Card className="border-0 bg-white shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+              <Clock className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{avgDaysOverdue}</p>
+              <p className="text-sm text-gray-500">Avg Days Overdue</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Overdue Payments Table */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="border-0 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-white text-base flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-400" /> Overdue Payments
+          <CardTitle className="text-gray-900 text-base flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-500" /> Overdue Payments
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="px-6 py-8 text-center text-white/40 text-sm">Loading...</div>
+            <div className="px-6 py-8 text-center text-gray-400 text-sm">Loading...</div>
           ) : overdue.length === 0 ? (
-            <div className="px-6 py-8 text-center text-white/40 text-sm">No overdue payments</div>
+            <div className="px-6 py-8 text-center text-gray-400 text-sm">No overdue payments — you&apos;re all caught up!</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-white/50">Renter</TableHead>
-                  <TableHead className="text-white/50">Vehicle</TableHead>
-                  <TableHead className="text-white/50">Amount Due</TableHead>
-                  <TableHead className="text-white/50">Days Overdue</TableHead>
-                  <TableHead className="text-white/50">Late Fee</TableHead>
-                  <TableHead className="text-white/50">Stage</TableHead>
-                  <TableHead className="text-white/50">Last Reminder</TableHead>
-                  <TableHead className="text-white/50">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {overdue.map((p) => {
-                  const days = daysOverdue(p.due_date);
-                  return (
-                    <TableRow key={p.id} className="border-white/10 hover:bg-white/5">
-                      <TableCell className="text-white font-medium">{p.renter_name}</TableCell>
-                      <TableCell className="text-white/70">{p.vehicle_label}</TableCell>
-                      <TableCell className="text-white">
-                        ${(p.amount + p.late_fee_amount).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`font-semibold ${overdueColor(days)}`}>{days}d</span>
-                      </TableCell>
-                      <TableCell className="text-white/70">
-                        {p.late_fee_amount > 0 ? `$${p.late_fee_amount.toFixed(2)}` : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={stageBadgeVariant(p.dunning_stage)}>
-                          {stageLabel(p.dunning_stage)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-white/50 text-sm">
-                        {p.last_reminder_sent_at
-                          ? new Date(p.last_reminder_sent_at).toLocaleDateString()
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs border-white/20 text-white/70 hover:text-white hover:bg-white/10"
-                            disabled={sendingId === p.id}
-                            onClick={() => handleSendSMS(p.id)}
-                          >
-                            <MessageSquare className="h-3 w-3 mr-1" />
-                            {sendingId === p.id ? "Sending…" : "Send SMS"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs border-[#2EBD6B]/40 text-[#2EBD6B] hover:bg-[#2EBD6B]/10"
-                            disabled={markingPaidId === p.id}
-                            onClick={() => handleMarkPaid(p.id)}
-                          >
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            {markingPaidId === p.id ? "Saving…" : "Mark Paid"}
-                          </Button>
-                          <Link href={`/dashboard/bookings/${p.booking_id}`}>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-100 hover:bg-transparent">
+                    <TableHead className="text-gray-500">Renter</TableHead>
+                    <TableHead className="text-gray-500">Vehicle</TableHead>
+                    <TableHead className="text-gray-500">Amount Due</TableHead>
+                    <TableHead className="text-gray-500">Days Overdue</TableHead>
+                    <TableHead className="text-gray-500">Late Fee</TableHead>
+                    <TableHead className="text-gray-500">Stage</TableHead>
+                    <TableHead className="text-gray-500">Last Reminder</TableHead>
+                    <TableHead className="text-gray-500">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {overdue.map((p) => {
+                    const days = daysOverdue(p.due_date);
+                    return (
+                      <TableRow key={p.id} className="border-gray-100 hover:bg-gray-50">
+                        <TableCell className="text-gray-900 font-medium">{p.renter_name}</TableCell>
+                        <TableCell className="text-gray-600">{p.vehicle_label}</TableCell>
+                        <TableCell className="text-gray-900 font-semibold">
+                          ${(p.amount + p.late_fee_amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`font-semibold ${overdueColor(days)}`}>{days}d</span>
+                        </TableCell>
+                        <TableCell className="text-gray-600">
+                          {p.late_fee_amount > 0 ? `$${p.late_fee_amount.toFixed(2)}` : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={stageBadgeVariant(p.dunning_stage)}>
+                            {stageLabel(p.dunning_stage)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-500 text-sm">
+                          {p.last_reminder_sent_at
+                            ? new Date(p.last_reminder_sent_at).toLocaleDateString()
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
                             <Button
                               size="sm"
-                              variant="ghost"
-                              className="h-7 text-xs text-white/40 hover:text-white"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              disabled={sendingId === p.id}
+                              onClick={() => handleSendSMS(p.id)}
                             >
-                              <ExternalLink className="h-3 w-3" />
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              {sendingId === p.id ? "Sending…" : "Send SMS"}
                             </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs bg-[#2EBD6B] hover:bg-[#1a9952] text-white"
+                              disabled={markingPaidId === p.id}
+                              onClick={() => handleMarkPaid(p.id)}
+                            >
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              {markingPaidId === p.id ? "Saving…" : "Mark Paid"}
+                            </Button>
+                            <Link href={`/dashboard/bookings/${p.booking_id}`}>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400 hover:text-gray-700">
+                                <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            </Link>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Dunning Log */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="border-0 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-white text-base">Recent Dunning Activity</CardTitle>
+          <CardTitle className="text-gray-900 text-base">Recent Dunning Activity</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {dunningLog.length === 0 ? (
-            <div className="px-6 py-8 text-center text-white/40 text-sm">No messages sent yet</div>
+            <div className="px-6 py-8 text-center text-gray-400 text-sm">No messages sent yet</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-white/50">Renter</TableHead>
-                  <TableHead className="text-white/50">Stage</TableHead>
-                  <TableHead className="text-white/50">Channel</TableHead>
-                  <TableHead className="text-white/50">Message</TableHead>
-                  <TableHead className="text-white/50">Sent At</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dunningLog.map((log) => (
-                  <TableRow key={log.id} className="border-white/10 hover:bg-white/5">
-                    <TableCell className="text-white font-medium">{log.renter_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">{stageLabel(log.stage)}</Badge>
-                    </TableCell>
-                    <TableCell className="text-white/70 text-sm capitalize">{log.channel}</TableCell>
-                    <TableCell className="text-white/50 text-xs max-w-xs truncate">
-                      {log.message_sent ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-white/50 text-sm">
-                      {new Date(log.sent_at).toLocaleString()}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-100 hover:bg-transparent">
+                    <TableHead className="text-gray-500">Renter</TableHead>
+                    <TableHead className="text-gray-500">Stage</TableHead>
+                    <TableHead className="text-gray-500">Channel</TableHead>
+                    <TableHead className="text-gray-500">Message</TableHead>
+                    <TableHead className="text-gray-500">Sent At</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dunningLog.map((log) => (
+                    <TableRow key={log.id} className="border-gray-100 hover:bg-gray-50">
+                      <TableCell className="text-gray-900 font-medium">{log.renter_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">{stageLabel(log.stage)}</Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-600 text-sm capitalize">{log.channel}</TableCell>
+                      <TableCell className="text-gray-500 text-xs max-w-xs truncate">
+                        {log.message_sent ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-gray-500 text-sm">
+                        {new Date(log.sent_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
