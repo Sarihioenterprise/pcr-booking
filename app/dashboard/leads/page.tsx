@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Lead } from "@/lib/types";
+import { PCRLeadsUpsell } from "@/components/dashboard/pcr-leads-upsell";
 
 type FollowupStatus = Lead["followup_status"];
 type ViewMode = "pipeline" | "table";
@@ -364,6 +365,9 @@ export default function LeadsPage() {
       style={{ background: "#F8F9FC", minHeight: "100%" }}
     >
       {showAddModal && <AddLeadModal />}
+
+      {/* PCR Leads Upsell Banner */}
+      <PCRLeadsUpsell />
 
       {/* Header */}
       <div className="flex items-center justify-between">
