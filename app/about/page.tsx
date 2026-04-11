@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AboutPhoto } from "@/components/about-photo";
 
 export default function AboutPage() {
   return (
@@ -86,21 +87,7 @@ export default function AboutPage() {
           <div className="mb-16 flex flex-col items-center gap-8 sm:flex-row">
             {/* Photo */}
             <div className="flex-shrink-0">
-              <div className="relative h-56 w-56 rounded-full border-4 border-[#2EBD6B] bg-[#0c0c1c] flex items-center justify-center overflow-hidden">
-                <img
-                  src="/alton.jpg"
-                  alt="Alton Guyton"
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = "none";
-                    target.nextElementSibling?.classList.remove("hidden");
-                  }}
-                />
-                <div className="hidden absolute inset-0 flex items-center justify-center bg-[#2EBD6B]/10">
-                  <span className="text-5xl font-bold text-[#2EBD6B]">AG</span>
-                </div>
-              </div>
+              <AboutPhoto />
             </div>
 
             {/* Text */}
