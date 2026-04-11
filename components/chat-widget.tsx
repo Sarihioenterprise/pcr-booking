@@ -23,7 +23,7 @@ All plans include a 14-day free trial. No credit card required to start.`,
   features: `Here are PCR Booking's key features:
 • **Booking Widget** — Embed a booking form on your website
 • **Fleet Management** — Track vehicles, set rates, manage availability
-• **AI Qualification Bot** — Auto-screen leads for license & age
+• **Instant Notifications** — Get alerted the moment someone books
 • **Mobile Dashboard** — Manage everything on your phone
 • **Payment Processing** — Built-in Stripe integration
 • **Support Tickets** — Unified support system

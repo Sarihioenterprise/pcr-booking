@@ -3,7 +3,7 @@ import {
   ArrowRight,
   CalendarCheck,
   Car,
-  Bot,
+  Bell,
   Smartphone,
   CreditCard,
   BarChart3,
@@ -44,15 +44,15 @@ const features = [
     ],
   },
   {
-    icon: Bot,
-    title: "AI Qualification Bot",
+    icon: Bell,
+    title: "Instant Booking Notifications",
     description:
-      "Sarah calls every lead and screens them before you even see the notification.",
+      "The moment a renter submits a booking request, you get notified instantly via SMS and email. No delays, no missed bookings.",
     bullets: [
-      "Screens for valid license, age, rideshare approval",
-      "Records call for your review",
-      "Auto-updates lead status",
-      "You only talk to qualified renters",
+      "SMS alert to your phone within seconds",
+      "Email confirmation with renter details",
+      "Push notification on mobile",
+      "Customize notification preferences in settings",
     ],
   },
   {

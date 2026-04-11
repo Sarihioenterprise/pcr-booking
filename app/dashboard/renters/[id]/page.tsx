@@ -35,6 +35,11 @@ import {
   MessageSquare,
   FileText,
   User,
+  AlertCircle,
+  CheckCircle,
+  AlertTriangle,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import type {
@@ -42,6 +47,15 @@ import type {
   Booking,
   RenterCommunication,
 } from "@/lib/types";
+
+interface RenterDocument {
+  id: string;
+  document_name: string;
+  document_type: "insurance" | "license" | "other";
+  file_url: string | null;
+  expiry_date: string | null;
+  created_at: string;
+}
 
 const bookingStatusColors: Record<string, string> = {
   pending: "bg-amber-500/10 text-amber-400 border-amber-500/20",
@@ -67,6 +81,7 @@ export default function RenterDetailPage() {
   const [communications, setCommunications] = useState<RenterCommunication[]>(
     []
   );
+  const [documents, setDocuments] = useState<RenterDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Blacklist state
@@ -78,6 +93,14 @@ export default function RenterDetailPage() {
   const [commSubject, setCommSubject] = useState("");
   const [commContent, setCommContent] = useState("");
   const [addingComm, setAddingComm] = useState(false);
+
+  // Document form
+  const [docName, setDocName] = useState("");
+  const [docType, setDocType] = useState<"insurance" | "license" | "other">("insurance");
+  const [docUrl, setDocUrl] = useState("");
+  const [docExpiry, setDocExpiry] = useState("");
+  const [addingDoc, setAddingDoc] = useState(false);
+  const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -107,6 +130,18 @@ export default function RenterDetailPage() {
         .order("created_at", { ascending: false });
 
       if (c) setCommunications(c as RenterCommunication[]);
+
+      // Fetch documents for all bookings of this renter
+      if (b && b.length > 0) {
+        const bookingIds = (b as Booking[]).map(booking => booking.id);
+        const { data: docs } = await supabase
+          .from("renter_documents")
+          .select("*")
+          .in("booking_id", bookingIds)
+          .order("created_at", { ascending: false });
+
+        if (docs) setDocuments(docs as RenterDocument[]);
+      }
 
       setLoading(false);
     }
@@ -159,6 +194,71 @@ export default function RenterDetailPage() {
     }
 
     setAddingComm(false);
+  }
+
+  async function addDocument(e: React.FormEvent) {
+    e.preventDefault();
+    if (!docName.trim() || !bookings.length) return;
+    setAddingDoc(true);
+
+    try {
+      const res = await fetch(`/api/renters/${id}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          document_name: docName.trim(),
+          document_type: docType,
+          file_url: docUrl.trim() || null,
+          expiry_date: docExpiry || null,
+          booking_id: bookings[0].id, // Link to first booking
+        }),
+      });
+
+      if (res.ok) {
+        const newDoc = await res.json();
+        setDocuments((prev) => [newDoc, ...prev]);
+        setDocName("");
+        setDocUrl("");
+        setDocExpiry("");
+        setDocType("insurance");
+      }
+    } catch (err) {
+      console.error("Failed to add document:", err);
+    }
+
+    setAddingDoc(false);
+  }
+
+  async function deleteDocument(docId: string) {
+    try {
+      const res = await fetch(`/api/renters/${id}/documents/${docId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        setDocuments((prev) => prev.filter(d => d.id !== docId));
+        setDeleteDocId(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+    }
+  }
+
+  function getExpiryStatus(expiryDate: string | null) {
+    if (!expiryDate) return null;
+
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilExpiry < 0) {
+      return { status: "expired", label: "Expired", color: "bg-red-500/10 text-red-600", icon: AlertCircle };
+    } else if (daysUntilExpiry <= 30) {
+      return { status: "expiring", label: `Expires in ${daysUntilExpiry}d`, color: "bg-yellow-500/10 text-yellow-600", icon: AlertTriangle };
+    } else {
+      return { status: "valid", label: "Valid", color: "bg-green-500/10 text-green-600", icon: CheckCircle };
+    }
   }
 
   if (loading)
@@ -507,38 +607,159 @@ export default function RenterDetailPage() {
 
         {/* DOCUMENTS TAB */}
         <TabsContent value="documents">
-          <Card className="border-0 bg-white shadow-sm ring-0">
-            <CardHeader>
-              <CardTitle>Driver&apos;s License</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {renter.drivers_license_url ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    License document uploaded:
-                  </p>
-                  <a
-                    href={renter.drivers_license_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-[#2EBD6B] hover:underline"
+          <div className="space-y-6">
+            {/* Add Document Form */}
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader>
+                <CardTitle>Add Insurance & Document</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={addDocument} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="doc-name">Document Name *</Label>
+                      <Input
+                        id="doc-name"
+                        placeholder="e.g., Auto Insurance Policy"
+                        value={docName}
+                        onChange={(e) => setDocName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="doc-type">Type</Label>
+                      <Select
+                        value={docType}
+                        onValueChange={(val) => { if (val) setDocType(val as "insurance" | "license" | "other"); }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="insurance">Insurance</SelectItem>
+                          <SelectItem value="license">License</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="doc-url">Document URL</Label>
+                      <Input
+                        id="doc-url"
+                        placeholder="Paste Google Drive or Dropbox link"
+                        value={docUrl}
+                        onChange={(e) => setDocUrl(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="doc-expiry">Expiry Date</Label>
+                      <Input
+                        id="doc-expiry"
+                        type="date"
+                        value={docExpiry}
+                        onChange={(e) => setDocExpiry(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={addingDoc || !docName.trim() || !bookings.length}
+                    style={{ backgroundColor: "#2EBD6B" }}
                   >
-                    <FileText className="h-4 w-4" />
-                    View Document
-                  </a>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8">
+                    <Upload className="h-4 w-4 mr-2" />
+                    {addingDoc ? "Adding..." : "Add Document"}
+                  </Button>
+                  {!bookings.length && (
+                    <p className="text-sm text-muted-foreground">No bookings found. Documents are linked to bookings.</p>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Documents List */}
+            {documents.length === 0 ? (
+              <Card className="border-0 bg-white shadow-sm ring-0">
+                <CardContent className="flex flex-col items-center justify-center py-12">
                   <FileText className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="font-semibold mb-1">No documents</h3>
                   <p className="text-sm text-muted-foreground">
-                    No driver&apos;s license document has been uploaded for
-                    this renter.
+                    Add documents above to track insurance and other renter files.
                   </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {documents.map((doc) => {
+                  const expiryStatus = getExpiryStatus(doc.expiry_date);
+                  const StatusIcon = expiryStatus?.icon;
+
+                  return (
+                    <Card
+                      key={doc.id}
+                      className="border-0 bg-white shadow-sm ring-0"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="font-semibold text-sm">
+                                {doc.document_name}
+                              </h4>
+                              <Badge variant="outline" className="text-xs">
+                                {doc.document_type}
+                              </Badge>
+                            </div>
+
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              {doc.expiry_date && (
+                                <div className="flex items-center gap-2">
+                                  {expiryStatus && StatusIcon && (
+                                    <>
+                                      <StatusIcon className="h-4 w-4" />
+                                      <span className={`font-medium ${expiryStatus.color}`}>
+                                        {expiryStatus.label}
+                                      </span>
+                                      <span>({doc.expiry_date})</span>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+
+                              {doc.file_url && (
+                                <a
+                                  href={doc.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[#2EBD6B] hover:underline text-xs"
+                                >
+                                  View Document →
+                                </a>
+                              )}
+
+                              <p className="text-xs">
+                                Added {new Date(doc.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => deleteDocument(doc.id)}
+                            className="p-2 hover:bg-red-50 rounded text-red-500 hover:text-red-600"
+                            title="Delete document"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Car,
   CalendarCheck,
-  Bot,
+  Bell,
   Smartphone,
   ArrowRight,
   Check,
@@ -37,10 +37,10 @@ const features = [
       "Track every vehicle in your fleet. Set daily rates, toggle availability, and view booking history at a glance.",
   },
   {
-    icon: Bot,
-    title: "AI Qualification Bot",
+    icon: Bell,
+    title: "Instant Notifications",
     description:
-      "Automated calling bot screens leads for license, age, and rideshare approval — so you only talk to qualified renters.",
+      "Get notified the moment a renter submits a booking request — via SMS and email. Never miss a booking again.",
   },
   {
     icon: Smartphone,

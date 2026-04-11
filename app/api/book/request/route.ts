@@ -20,27 +20,52 @@ export async function POST(request: NextRequest) {
       : start_date || "";
 
     // Insert as a lead
-    const { error } = await supabase.from("leads").insert({
+    const { data: leadData, error } = await supabase.from("leads").insert({
       operator_id,
       name,
       phone: phone || null,
       email: email || null,
       dates_requested: vehicle_label ? `${vehicle_label} | ${datesNote}` : datesNote,
       stage: "new",
-    });
+    }).select("id");
+
+    let leadId: string | null = null;
 
     if (error) {
       // If the leads table has strict constraints, try a simpler insert
-      const { error: err2 } = await supabase.from("leads").insert({
+      const { data: simpleLead, error: err2 } = await supabase.from("leads").insert({
         operator_id,
         name,
         phone: phone || null,
         email: email || null,
         stage: "new",
-      });
+      }).select("id");
 
       if (err2) {
         return NextResponse.json({ error: err2.message }, { status: 500 });
+      }
+
+      if (simpleLead && simpleLead.length > 0) {
+        leadId = simpleLead[0].id;
+      }
+    } else {
+      if (leadData && leadData.length > 0) {
+        leadId = leadData[0].id;
+      }
+    }
+
+    // Send confirmation SMS if we have a lead ID and phone number
+    if (leadId && phone) {
+      try {
+        const baseUrl = request.headers.get("origin") || "https://pcrbooking.com";
+        await fetch(`${baseUrl}/api/book/confirm-sms`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leadId }),
+        });
+      } catch (err) {
+        // SMS failure doesn't break the booking - log but continue
+        console.error("SMS confirmation failed:", err);
       }
     }
 
