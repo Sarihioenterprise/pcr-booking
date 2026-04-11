@@ -47,6 +47,16 @@ export async function POST(request: NextRequest) {
         await handleSubscriptionDeleted(supabase, subscription);
         break;
       }
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handlePaymentFailed(supabase, invoice);
+        break;
+      }
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handlePaymentSucceeded(supabase, invoice);
+        break;
+      }
       default:
         console.log(`Unhandled Stripe event type: ${event.type}`);
     }
@@ -107,6 +117,49 @@ async function handleSubscriptionUpsert(
 
   if (opError) {
     console.error("Failed to update operator plan:", opError);
+  }
+}
+
+async function handlePaymentFailed(
+  supabase: ReturnType<typeof createAdminClient>,
+  invoice: Stripe.Invoice
+) {
+  const customerId = invoice.customer as string;
+  if (!customerId) return;
+
+  // Lock the account — set stripe_subscription_id to null so get-operator redirects to plan page
+  const { error } = await supabase
+    .from("operators")
+    .update({
+      stripe_subscription_id: null,
+      plan: "free",
+    })
+    .eq("stripe_customer_id", customerId);
+
+  if (error) {
+    console.error("Failed to lock account after payment failure:", error);
+  } else {
+    console.log(`Account locked for customer ${customerId} due to payment failure`);
+  }
+}
+
+async function handlePaymentSucceeded(
+  supabase: ReturnType<typeof createAdminClient>,
+  invoice: Stripe.Invoice
+) {
+  const customerId = invoice.customer as string;
+  const subscriptionId = invoice.subscription as string;
+  if (!customerId || !subscriptionId) return;
+
+  // Restore access — re-link subscription so get-operator lets them in
+  const { error } = await supabase
+    .from("operators")
+    .update({ stripe_subscription_id: subscriptionId })
+    .eq("stripe_customer_id", customerId)
+    .is("stripe_subscription_id", null); // only restore if it was locked
+
+  if (error) {
+    console.error("Failed to restore account after payment success:", error);
   }
 }
 
