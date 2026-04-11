@@ -22,6 +22,7 @@ import {
   MapPin,
   Target,
   Upload,
+  AlertCircle,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +34,7 @@ const navItems = [
   { href: "/dashboard/fleet", label: "Fleet", icon: Car },
   { href: "/dashboard/renters", label: "Renters", icon: UserCircle },
   { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
+  { href: "/dashboard/collections", label: "Collections", icon: AlertCircle },
   { href: "/dashboard/agreements", label: "Agreements", icon: FileText },
   { href: "/dashboard/inspections", label: "Inspections", icon: ClipboardCheck },
   { href: "/dashboard/maintenance", label: "Maintenance", icon: Wrench },
