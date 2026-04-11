@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { AnalyticsClient } from "./analytics-client";
 import { PCRLeadsUpsell } from "@/components/dashboard/pcr-leads-upsell";
+import { AnalyticsGate } from "@/components/dashboard/analytics-gate";
 
 export default async function AnalyticsPage() {
   const operator = await getOperator();
@@ -161,7 +162,7 @@ export default async function AnalyticsPage() {
               Revenue by Vehicle
             </Button>
           </Link>
-          <AnalyticsClient operatorId={operator.id} />
+          <AnalyticsClient operatorId={operator.id} operatorPlan={operator.plan} />
         </div>
       </div>
 
@@ -171,8 +172,9 @@ export default async function AnalyticsPage() {
         bookingsLast30Days={last30DaysBookings.length}
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <AnalyticsGate operatorPlan={operator.plan}>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <Card className="border-0 bg-white shadow-sm ring-0">
           <CardHeader className="flex flex-row items-center justify-between pb-1">
             <CardTitle className="text-sm font-medium text-gray-500">Total Revenue</CardTitle>
@@ -366,6 +368,7 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+      </AnalyticsGate>
     </div>
   );
 }

@@ -558,28 +558,35 @@ export default function NewVehiclePage() {
       <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <AlertCircle className="h-6 w-6 text-yellow-600 mb-2" />
-            <DialogTitle>Vehicle Limit Reached</DialogTitle>
-            <DialogDescription>
-              You've reached your {operator?.plan || "free"} plan limit of{" "}
-              {PLAN_LIMITS[operator?.plan as keyof typeof PLAN_LIMITS] || 3} vehicles.
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2EBD6B]/10">
+                <AlertCircle className="h-5 w-5 text-[#2EBD6B]" />
+              </div>
+              <DialogTitle className="text-lg">Vehicle Limit Reached</DialogTitle>
+            </div>
+            <DialogDescription className="text-base text-gray-600 mt-3">
+              {operator?.plan === "free" && (
+                "You've added 3 vehicles — upgrade to Growth to manage up to 15, plus unlock automated payment reminders and SMS notifications."
+              )}
+              {operator?.plan === "growth" && (
+                "You're at 15 vehicles — upgrade to Pro to manage up to 40, plus unlock revenue analytics and collections automation."
+              )}
+              {operator?.plan === "pro" && (
+                "You're at 40 vehicles — upgrade to Scale for unlimited vehicles, white-label branding, and API access."
+              )}
+              {!operator?.plan && (
+                "You've reached your plan limit. Upgrade to add more vehicles and unlock additional features."
+              )}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <p className="text-sm text-gray-600 mb-4">
-              Upgrade to {NEXT_PLAN[operator?.plan as keyof typeof NEXT_PLAN] || "growth"} to add more vehicles
-              and unlock additional features.
-            </p>
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="mt-6 gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowUpgradeModal(false)}
             >
-              Cancel
+              Maybe Later
             </Button>
             <Button
               className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"

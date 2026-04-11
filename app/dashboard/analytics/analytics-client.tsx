@@ -11,7 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function AnalyticsClient({ operatorId }: { operatorId: string }) {
+export function AnalyticsClient({
+  operatorId,
+  operatorPlan,
+}: {
+  operatorId: string;
+  operatorPlan?: string;
+}) {
   const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState("this_year");
 
