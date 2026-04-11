@@ -38,7 +38,7 @@ export default async function FleetPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Fleet</h1>
           <p className="text-muted-foreground">
@@ -46,7 +46,7 @@ export default async function FleetPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/dashboard/fleet/revenue">
+          <Link href="/dashboard/fleet/revenue" className="hidden sm:block">
             <Button variant="outline" size="sm">
               <BarChart3 className="mr-2 h-4 w-4" />
               Revenue Report

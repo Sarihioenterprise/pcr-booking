@@ -633,7 +633,8 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="profile">
-        <TabsList className="flex flex-wrap gap-1 mb-4 h-auto">
+        <div className="overflow-x-auto pb-1 -mx-1 px-1">
+        <TabsList className="flex flex-nowrap gap-1 mb-4 h-auto w-max min-w-full">
           <TabsTrigger value="profile"><Building2 className="h-3.5 w-3.5 mr-1.5" />Business</TabsTrigger>
           <TabsTrigger value="branding"><Palette className="h-3.5 w-3.5 mr-1.5" />Branding</TabsTrigger>
           <TabsTrigger value="booking_page"><Globe className="h-3.5 w-3.5 mr-1.5" />Booking Page</TabsTrigger>
@@ -645,6 +646,7 @@ export default function SettingsPage() {
           <TabsTrigger value="widget"><Code className="h-3.5 w-3.5 mr-1.5" />Widget</TabsTrigger>
           <TabsTrigger value="subscription"><Crown className="h-3.5 w-3.5 mr-1.5" />Plan</TabsTrigger>
         </TabsList>
+        </div>
 
         {/* ── Business Profile ── */}
         <TabsContent value="profile">
@@ -687,7 +689,7 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <Label htmlFor="timezone">Timezone</Label>
                     <Select value={timezone} onValueChange={(v) => { if (v) setTimezone(v); }}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="America/New_York">Eastern</SelectItem>
                         <SelectItem value="America/Chicago">Central</SelectItem>
