@@ -13,10 +13,10 @@ interface Message {
 
 const AI_RESPONSES: Record<string, string> = {
   pricing: `PCR Booking offers 4 simple pricing tiers:
-• **Free** — Perfect for starting out. Limited bookings.
-• **Growth** — $99/month for growing operators. Unlimited bookings.
-• **Pro** — $299/month with advanced features and priority support.
-• **Scale** — Custom pricing for large fleets (50+ vehicles).
+• **Free** — Up to 3 cars. No credit card required.
+• **Growth** — $79/month. Unlimited bookings, full dashboard.
+• **Pro** — $149/month. Advanced features + priority support.
+• **Scale** — $249/month. For large fleets (50+ vehicles).
 
 All plans include a 14-day free trial. No credit card required to start.`,
 
