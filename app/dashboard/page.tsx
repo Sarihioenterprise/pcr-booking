@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
+import OnboardingChecklist from "@/components/dashboard/onboarding-checklist";
 import {
   Card,
   CardContent,
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
     leadsRes,
     upcomingReturnsRes,
     recentBookingsRes,
+    vehiclesRes,
   ] = await Promise.all([
     // Total bookings this month
     supabase
@@ -99,6 +101,12 @@ export default async function DashboardPage() {
       .eq("operator_id", operator.id)
       .order("created_at", { ascending: false })
       .limit(5),
+
+    // Vehicle count
+    supabase
+      .from("vehicles")
+      .select("id", { count: "exact" })
+      .eq("operator_id", operator.id),
   ]);
 
   const monthBookings = monthBookingsRes.data || [];
@@ -110,6 +118,8 @@ export default async function DashboardPage() {
   const leadsToday = leadsRes.data?.length || 0;
   const upcomingReturns = upcomingReturnsRes.data || [];
   const recentBookings = recentBookingsRes.data || [];
+  const vehicleCount = vehiclesRes.count || 0;
+  const hasVehicles = vehicleCount > 0;
 
   const stats = [
     {
@@ -141,6 +151,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Onboarding Checklist */}
+      <OnboardingChecklist hasVehicles={hasVehicles} />
+
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {stats.map((stat) => (

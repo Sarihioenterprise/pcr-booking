@@ -15,6 +15,25 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
+    // Check if renter is blacklisted
+    try {
+      const { data: blacklistedRenter } = await supabase
+        .from("blacklisted_renters")
+        .select("id")
+        .eq("operator_id", operator_id)
+        .or(`email.eq.${email},phone.eq.${phone}`)
+        .maybeSingle();
+
+      if (blacklistedRenter) {
+        return NextResponse.json(
+          { error: "Unable to process booking request." },
+          { status: 400 }
+        );
+      }
+    } catch {
+      // Table may not exist - silently skip this check
+    }
+
     const datesNote = start_date && end_date
       ? `${start_date} to ${end_date}`
       : start_date || "";
