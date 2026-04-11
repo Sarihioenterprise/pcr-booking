@@ -31,20 +31,26 @@ export function NewTicketButton() {
 
       if (!operator) return;
 
-      await supabase.from("support_tickets").insert({
+      const { error } = await supabase.from("support_tickets").insert({
         operator_id: operator.id,
         subject: subject.trim(),
         message: message.trim(),
         priority,
         status: "open",
-        source: "operator",
       });
+
+      if (error) {
+        console.error("Ticket insert error:", error);
+        alert("Failed to submit ticket: " + error.message);
+        return;
+      }
 
       setSubject("");
       setMessage("");
       setPriority("normal");
       setOpen(false);
-      router.refresh();
+      // Hard reload to re-fetch server component data
+      window.location.reload();
     } finally {
       setSaving(false);
     }
