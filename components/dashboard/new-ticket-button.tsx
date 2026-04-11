@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 export function NewTicketButton() {
   const [open, setOpen] = useState(false);
@@ -12,7 +11,6 @@ export function NewTicketButton() {
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState("normal");
   const [saving, setSaving] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,31 +23,48 @@ export function NewTicketButton() {
 
       const { data: operator } = await supabase
         .from("operators")
-        .select("id")
+        .select("id, business_name, contact_name")
         .eq("user_id", user.id)
         .single();
 
       if (!operator) return;
 
-      const { error } = await supabase.from("support_tickets").insert({
-        operator_id: operator.id,
-        subject: subject.trim(),
-        message: message.trim(),
-        priority,
-        status: "open",
-      });
+      // Insert ticket (renter_name = operator's name since this is operator-submitted)
+      const { data: ticket, error } = await supabase
+        .from("support_tickets")
+        .insert({
+          operator_id: operator.id,
+          subject: subject.trim(),
+          priority,
+          status: "open",
+          renter_name: (operator as { business_name?: string; contact_name?: string }).contact_name
+            || (operator as { business_name?: string }).business_name
+            || user.email?.split("@")[0]
+            || "Operator",
+        })
+        .select()
+        .single();
 
-      if (error) {
+      if (error || !ticket) {
         console.error("Ticket insert error:", error);
-        alert("Failed to submit ticket: " + error.message);
+        alert("Failed to submit ticket: " + (error?.message || "Unknown error"));
         return;
       }
+
+      // Insert the message into ticket_messages
+      await supabase.from("ticket_messages").insert({
+        ticket_id: ticket.id,
+        sender_type: "operator",
+        sender_name: (operator as { contact_name?: string; business_name?: string }).contact_name
+          || (operator as { business_name?: string }).business_name
+          || "Operator",
+        content: message.trim(),
+      });
 
       setSubject("");
       setMessage("");
       setPriority("normal");
       setOpen(false);
-      // Hard reload to re-fetch server component data
       window.location.reload();
     } finally {
       setSaving(false);
