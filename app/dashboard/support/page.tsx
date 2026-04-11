@@ -86,11 +86,18 @@ export default async function SupportPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Support Tickets</h1>
-        <p className="text-muted-foreground">
-          Manage renter support requests
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Support Tickets</h1>
+          <p className="text-muted-foreground">
+            Manage renter support requests
+          </p>
+        </div>
+        <Link href="/dashboard/support/new">
+          <Button style={{ backgroundColor: "#2EBD6B" }} className="text-white hover:bg-[#1a9952] shrink-0">
+            + New Ticket
+          </Button>
+        </Link>
       </div>
 
       {/* Summary Cards */}

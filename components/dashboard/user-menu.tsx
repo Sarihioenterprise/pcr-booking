@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, Settings, CreditCard, Users, ChevronDown, ArrowUpCircle } from "lucide-react";
+import { LogOut, Settings, CreditCard, Users, ChevronDown, ArrowUpCircle, HeadphonesIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function UserMenu() {
@@ -102,6 +102,13 @@ export function UserMenu() {
             >
               <Users className="h-4 w-4 text-gray-400" />
               Team Members
+            </button>
+            <button
+              onClick={() => navigate("/dashboard/support")}
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <HeadphonesIcon className="h-4 w-4 text-gray-400" />
+              Support
             </button>
           </div>
 
