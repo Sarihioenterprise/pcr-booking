@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
+import { NewTicketButton } from "@/components/dashboard/new-ticket-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,11 +94,7 @@ export default async function SupportPage({
             Manage renter support requests
           </p>
         </div>
-        <Link href="/dashboard/support/new">
-          <Button style={{ backgroundColor: "#2EBD6B" }} className="text-white hover:bg-[#1a9952] shrink-0">
-            + New Ticket
-          </Button>
-        </Link>
+        <NewTicketButton />
       </div>
 
       {/* Summary Cards */}
