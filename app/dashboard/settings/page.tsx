@@ -633,17 +633,17 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="profile">
-        <TabsList className="flex flex-wrap gap-1">
+        <TabsList className="flex flex-wrap gap-1 mb-4 h-auto">
           <TabsTrigger value="profile"><Building2 className="h-3.5 w-3.5 mr-1.5" />Business</TabsTrigger>
           <TabsTrigger value="branding"><Palette className="h-3.5 w-3.5 mr-1.5" />Branding</TabsTrigger>
+          <TabsTrigger value="booking_page"><Globe className="h-3.5 w-3.5 mr-1.5" />Booking Page</TabsTrigger>
           <TabsTrigger value="payment"><CreditCard className="h-3.5 w-3.5 mr-1.5" />Payment</TabsTrigger>
+          <TabsTrigger value="notifications"><Bell className="h-3.5 w-3.5 mr-1.5" />Notifications</TabsTrigger>
           <TabsTrigger value="team"><Users className="h-3.5 w-3.5 mr-1.5" />Team</TabsTrigger>
           <TabsTrigger value="email"><Mail className="h-3.5 w-3.5 mr-1.5" />Email</TabsTrigger>
           <TabsTrigger value="webhooks"><Webhook className="h-3.5 w-3.5 mr-1.5" />Webhooks</TabsTrigger>
           <TabsTrigger value="widget"><Code className="h-3.5 w-3.5 mr-1.5" />Widget</TabsTrigger>
           <TabsTrigger value="subscription"><Crown className="h-3.5 w-3.5 mr-1.5" />Plan</TabsTrigger>
-          <TabsTrigger value="notifications"><Bell className="h-3.5 w-3.5 mr-1.5" />Notifications</TabsTrigger>
-          <TabsTrigger value="booking_page"><Globe className="h-3.5 w-3.5 mr-1.5" />Booking Page</TabsTrigger>
         </TabsList>
 
         {/* ── Business Profile ── */}
