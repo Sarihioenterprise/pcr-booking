@@ -87,6 +87,12 @@ export default function HomePage() {
 
           <div className="hidden items-center gap-8 md:flex">
             <Link
+              href="/tour"
+              className="text-sm text-gray-400 transition-colors hover:text-white"
+            >
+              Product Tour
+            </Link>
+            <Link
               href="/features"
               className="text-sm text-gray-400 transition-colors hover:text-white"
             >
@@ -477,6 +483,14 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-gray-300">Product</h4>
               <ul className="mt-3 flex flex-col gap-2">
+                <li>
+                  <Link
+                    href="/tour"
+                    className="text-sm text-gray-500 hover:text-white"
+                  >
+                    Product Tour
+                  </Link>
+                </li>
                 <li>
                   <Link
                     href="#features"
