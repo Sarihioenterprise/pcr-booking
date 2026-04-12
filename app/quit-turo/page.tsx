@@ -226,14 +226,11 @@ export default function QuitTuroPage() {
 
           <div className="grid sm:grid-cols-3 gap-6">
             {/* Free */}
-            <div
-              className="rounded-2xl p-8 border border-white/10 flex flex-col"
-              style={{ backgroundColor: "#080812" }}
-            >
-              <h3 className="font-bold text-xl mb-1">Free</h3>
+            <div className="rounded-2xl p-8 border border-white/10 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
+              <h3 className="font-bold text-xl mb-1 text-white">Free</h3>
               <p className="text-white/50 text-sm mb-6">Get started, no risk</p>
               <div className="mb-8">
-                <span className="text-4xl font-extrabold">$0</span>
+                <span className="text-4xl font-extrabold text-white">$0</span>
                 <span className="text-white/40 text-sm">/mo</span>
               </div>
               <ul className="space-y-3 text-sm text-white/70 mb-8 flex-1">
@@ -245,40 +242,25 @@ export default function QuitTuroPage() {
                 ))}
               </ul>
               <Link href="/auth/signup">
-                <Button
-                  variant="outline"
-                  className="w-full font-semibold border-white/20 hover:border-white/40"
-                >
+                <button className="w-full py-2.5 rounded-lg font-semibold text-white border border-white/30 hover:border-white/60 transition-colors">
                   Get Started
-                </Button>
+                </button>
               </Link>
             </div>
 
             {/* Growth */}
-            <div
-              className="rounded-2xl p-8 border-2 flex flex-col relative"
-              style={{ backgroundColor: "#080812", borderColor: "#2EBD6B" }}
-            >
-              <div
-                className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold uppercase tracking-widest px-4 py-1 rounded-full"
-                style={{ backgroundColor: "#2EBD6B", color: "#080812" }}
-              >
+            <div className="rounded-2xl p-8 border-2 flex flex-col relative" style={{ backgroundColor: "#0c0c1c", borderColor: "#2EBD6B" }}>
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold uppercase tracking-widest px-4 py-1 rounded-full" style={{ backgroundColor: "#2EBD6B", color: "#080812" }}>
                 Most Popular
               </div>
-              <h3 className="font-bold text-xl mb-1">Growth</h3>
+              <h3 className="font-bold text-xl mb-1 text-white">Growth</h3>
               <p className="text-white/50 text-sm mb-6">For serious operators</p>
               <div className="mb-8">
-                <span className="text-4xl font-extrabold">$79</span>
+                <span className="text-4xl font-extrabold text-white">$79</span>
                 <span className="text-white/40 text-sm">/mo</span>
               </div>
               <ul className="space-y-3 text-sm text-white/70 mb-8 flex-1">
-                {[
-                  "Unlimited cars",
-                  "Full dashboard",
-                  "Automated payments",
-                  "Late fee automation",
-                  "Priority bookings",
-                ].map((f) => (
+                {["Unlimited cars", "Full dashboard", "Automated payments", "Late fee automation", "Collections & dunning"].map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <Check className="w-4 h-4 flex-shrink-0" style={{ color: "#2EBD6B" }} />
                     {f}
@@ -286,34 +268,22 @@ export default function QuitTuroPage() {
                 ))}
               </ul>
               <Link href="/auth/signup">
-                <Button
-                  className="w-full font-bold"
-                  style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
-                >
+                <button className="w-full py-2.5 rounded-lg font-bold text-white transition-colors hover:opacity-90" style={{ backgroundColor: "#2EBD6B" }}>
                   Get Started
-                </Button>
+                </button>
               </Link>
             </div>
 
             {/* Pro */}
-            <div
-              className="rounded-2xl p-8 border border-white/10 flex flex-col"
-              style={{ backgroundColor: "#080812" }}
-            >
-              <h3 className="font-bold text-xl mb-1">Pro</h3>
+            <div className="rounded-2xl p-8 border border-white/10 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
+              <h3 className="font-bold text-xl mb-1 text-white">Pro</h3>
               <p className="text-white/50 text-sm mb-6">Scale your operation</p>
               <div className="mb-8">
-                <span className="text-4xl font-extrabold">$149</span>
+                <span className="text-4xl font-extrabold text-white">$149</span>
                 <span className="text-white/40 text-sm">/mo</span>
               </div>
               <ul className="space-y-3 text-sm text-white/70 mb-8 flex-1">
-                {[
-                  "Everything in Growth",
-                  "Advanced analytics",
-                  "Priority support",
-                  "Custom domain",
-                  "API access",
-                ].map((f) => (
+                {["Everything in Growth", "Advanced analytics", "Priority support", "Multi-location support", "API access"].map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <Check className="w-4 h-4 flex-shrink-0" style={{ color: "#2EBD6B" }} />
                     {f}
@@ -321,12 +291,32 @@ export default function QuitTuroPage() {
                 ))}
               </ul>
               <Link href="/auth/signup">
-                <Button
-                  variant="outline"
-                  className="w-full font-semibold border-white/20 hover:border-white/40"
-                >
+                <button className="w-full py-2.5 rounded-lg font-semibold text-white border border-white/30 hover:border-white/60 transition-colors">
                   Get Started
-                </Button>
+                </button>
+              </Link>
+            </div>
+
+            {/* Scale */}
+            <div className="rounded-2xl p-8 border border-white/10 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
+              <h3 className="font-bold text-xl mb-1 text-white">Scale</h3>
+              <p className="text-white/50 text-sm mb-6">For large fleets</p>
+              <div className="mb-8">
+                <span className="text-4xl font-extrabold text-white">$249</span>
+                <span className="text-white/40 text-sm">/mo</span>
+              </div>
+              <ul className="space-y-3 text-sm text-white/70 mb-8 flex-1">
+                {["Everything in Pro", "Custom booking page branding", "White label renter portal", "Dedicated onboarding call", "50+ vehicles"].map((f) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <Check className="w-4 h-4 flex-shrink-0" style={{ color: "#2EBD6B" }} />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/auth/signup">
+                <button className="w-full py-2.5 rounded-lg font-semibold text-white border border-white/30 hover:border-white/60 transition-colors">
+                  Get Started
+                </button>
               </Link>
             </div>
           </div>
