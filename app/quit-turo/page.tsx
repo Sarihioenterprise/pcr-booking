@@ -224,7 +224,7 @@ export default function QuitTuroPage() {
             No percentages. No surprises. Flat monthly fee.
           </p>
 
-          <div className="grid sm:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Free */}
             <div className="rounded-2xl p-8 border border-white/10 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
               <h3 className="font-bold text-xl mb-1 text-white">Free</h3>
@@ -275,7 +275,7 @@ export default function QuitTuroPage() {
             </div>
 
             {/* Pro */}
-            <div className="rounded-2xl p-8 border border-white/10 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
+            <div className="rounded-2xl p-8 border border-purple-500/30 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
               <h3 className="font-bold text-xl mb-1 text-white">Pro</h3>
               <p className="text-white/50 text-sm mb-6">Scale your operation</p>
               <div className="mb-8">
@@ -298,7 +298,7 @@ export default function QuitTuroPage() {
             </div>
 
             {/* Scale */}
-            <div className="rounded-2xl p-8 border border-white/10 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
+            <div className="rounded-2xl p-8 border border-yellow-500/30 flex flex-col" style={{ backgroundColor: "#0c0c1c" }}>
               <h3 className="font-bold text-xl mb-1 text-white">Scale</h3>
               <p className="text-white/50 text-sm mb-6">For large fleets</p>
               <div className="mb-8">
