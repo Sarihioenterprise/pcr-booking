@@ -65,45 +65,22 @@ export default function RootLayout({
           />
         </noscript>
 
-        {/* Google Analytics 4 */}
-        {process.env.NEXT_PUBLIC_GA4_ID && (
-          <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA4_ID}`}
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${process.env.NEXT_PUBLIC_GA4_ID}');
-                `,
-              }}
-            />
-          </>
-        )}
-
-        {/* Google Ads */}
-        {process.env.NEXT_PUBLIC_GADS_CONVERSION_ID && (
-          <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GADS_CONVERSION_ID}`}
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${process.env.NEXT_PUBLIC_GADS_CONVERSION_ID}');
-                `,
-              }}
-            />
-          </>
-        )}
+        {/* Google Analytics 4 + Google Ads — single gtag load */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-3EFS1QR98P"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-3EFS1QR98P');
+              gtag('config', 'AW-18083110150');
+            `,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col font-sans overflow-x-hidden">
         {children}
