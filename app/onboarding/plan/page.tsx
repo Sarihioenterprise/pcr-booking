@@ -7,12 +7,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Check } from "lucide-react";
 
 type Plan = "growth" | "pro" | "scale";
+type Billing = "monthly" | "annual";
 
-const plans = [
+const MONTHLY_PRICES: Record<Plan, number> = { growth: 79, pro: 149, scale: 249 };
+const ANNUAL_PRICES: Record<Plan, number> = { growth: 790, pro: 1490, scale: 2490 };
+
+const plans: { id: Plan; name: string; description: string; features: string[]; popular: boolean }[] = [
   {
-    id: "growth" as Plan,
+    id: "growth",
     name: "Growth",
-    price: "$79",
     description: "Perfect for small fleets getting started.",
     features: [
       "Up to 10 cars",
@@ -24,9 +27,8 @@ const plans = [
     popular: false,
   },
   {
-    id: "pro" as Plan,
+    id: "pro",
     name: "Pro",
-    price: "$149",
     description: "For growing businesses that need more.",
     features: [
       "Up to 25 cars",
@@ -39,9 +41,8 @@ const plans = [
     popular: true,
   },
   {
-    id: "scale" as Plan,
+    id: "scale",
     name: "Scale",
-    price: "$249",
     description: "Enterprise-grade for large operations.",
     features: [
       "Unlimited cars",
@@ -58,6 +59,7 @@ const plans = [
 export default function PlanPage() {
   const [loading, setLoading] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [billing, setBilling] = useState<Billing>("monthly");
 
   async function handleSelectPlan(plan: Plan) {
     setError(null);
@@ -66,7 +68,7 @@ export default function PlanPage() {
       const res = await fetch("/api/billing/checkout-public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, billing }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start checkout");
@@ -77,19 +79,62 @@ export default function PlanPage() {
     }
   }
 
+  function getPrice(plan: Plan): string {
+    if (billing === "annual") return `$${ANNUAL_PRICES[plan].toLocaleString()}`;
+    return `$${MONTHLY_PRICES[plan]}`;
+  }
+
+  function getPeriod(): string {
+    return billing === "annual" ? "/yr" : "/mo";
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center px-4 py-16">
       {/* Header */}
-      <div className="mb-10 text-center">
+      <div className="mb-8 text-center">
         <div className="mb-4 flex items-center justify-center gap-2">
           <div className="h-8 w-8 rounded-full bg-[#2EBD6B]" />
           <span className="text-xl font-bold tracking-tight text-[#080812]">PCR Booking</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-[#080812]">Choose your plan</h1>
         <p className="mt-2 text-base text-gray-500 max-w-md mx-auto">
-          Start your 14-day free trial today. Card required. Cancel anytime.{" "}
-          <span className="font-medium text-[#2EBD6B]">You won't be charged for 14 days.</span>
+          Start your 14-day free trial today. Cancel anytime.{" "}
+          <span className="font-medium text-[#2EBD6B]">You won&apos;t be charged for 14 days.</span>
         </p>
+      </div>
+
+      {/* Billing Toggle */}
+      <div className="flex flex-col items-center mb-8">
+        <div className="flex rounded-full bg-[#E5E7EB] p-1">
+          <button
+            onClick={() => setBilling("monthly")}
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+              billing === "monthly"
+                ? "bg-white text-[#080812] shadow-sm"
+                : "text-[#6B7280] hover:text-[#374151]"
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBilling("annual")}
+            className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+              billing === "annual"
+                ? "bg-white text-[#080812] shadow-sm"
+                : "text-[#6B7280] hover:text-[#374151]"
+            }`}
+          >
+            Annual
+            <span className="rounded-full bg-[#2EBD6B] px-2 py-0.5 text-[10px] font-bold text-white">
+              SAVE 17%
+            </span>
+          </button>
+        </div>
+        {billing === "monthly" ? (
+          <p className="mt-2 text-xs text-gray-500">+ $199 setup fee (waived on annual)</p>
+        ) : (
+          <p className="mt-2 text-xs text-[#2EBD6B] font-medium">Setup fee waived · 2 months free</p>
+        )}
       </div>
 
       {/* Plan Cards */}
@@ -105,19 +150,24 @@ export default function PlanPage() {
           >
             {plan.popular && (
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <Badge
-                  className="bg-[#2EBD6B] text-white hover:bg-[#2EBD6B] px-3 py-0.5 text-xs font-semibold shadow"
-                >
+                <Badge className="bg-[#2EBD6B] text-white hover:bg-[#2EBD6B] px-3 py-0.5 text-xs font-semibold shadow">
                   Most Popular
                 </Badge>
               </div>
             )}
 
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-bold text-[#080812]">{plan.name}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-[#080812]">{plan.name}</CardTitle>
+                {billing === "annual" && (
+                  <span className="rounded-full bg-[#2EBD6B]/10 px-2 py-0.5 text-[10px] font-bold text-[#2EBD6B]">
+                    2 months free
+                  </span>
+                )}
+              </div>
               <div className="mt-1 flex items-end gap-1">
-                <span className="text-4xl font-extrabold text-[#080812]">{plan.price}</span>
-                <span className="mb-1 text-sm text-gray-500">/mo</span>
+                <span className="text-4xl font-extrabold text-[#080812]">{getPrice(plan.id)}</span>
+                <span className="mb-1 text-sm text-gray-500">{getPeriod()}</span>
               </div>
               <CardDescription className="mt-1 text-sm text-gray-500">{plan.description}</CardDescription>
             </CardHeader>
@@ -155,7 +205,6 @@ export default function PlanPage() {
         <p className="mt-6 text-sm text-red-500">{error}</p>
       )}
 
-      {/* Footer note */}
       <p className="mt-8 text-xs text-gray-400 text-center max-w-sm">
         By selecting a plan you agree to our Terms of Service. Your card will be charged after the 14-day trial unless you cancel.
       </p>

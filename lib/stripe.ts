@@ -13,6 +13,15 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
+export const PRICE_IDS = {
+  growth: process.env.STRIPE_PRICE_GROWTH || "",
+  pro: process.env.STRIPE_PRICE_PRO || "",
+  scale: process.env.STRIPE_PRICE_SCALE || "",
+  growth_annual: process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID || "price_annual_growth_placeholder",
+  pro_annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || "price_annual_pro_placeholder",
+  scale_annual: process.env.STRIPE_SCALE_ANNUAL_PRICE_ID || "price_annual_scale_placeholder",
+};
+
 export const PLANS = {
   growth: {
     name: "Growth",
