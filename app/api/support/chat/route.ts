@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getOperator } from "@/lib/get-operator";
 
-const SYSTEM_PROMPT = `You are the PCR Booking support assistant. You help operators (independent private rental car business owners) use the PCR Booking platform.
+const ESCALATION_PHRASES = [
+  "i'm not sure",
+  "im not sure",
+  "i am not sure",
+  "contact support",
+  "reach out to support",
+  "submit a support ticket",
+  "open a support ticket",
+  "can't help with that",
+  "cannot help with that",
+  "don't have access to",
+  "do not have access to",
+  "don't have the ability",
+  "beyond my capabilities",
+  "please contact",
+  "you'll need to contact",
+  "you will need to contact",
+];
+
+const SYSTEM_PROMPT_BASE = `You are the PCR Booking support assistant. You help operators (independent private rental car business owners) use the PCR Booking platform.
 
 ## About PCR Booking
 PCR Booking is a SaaS fleet management and booking platform for independent private rental car operators. It helps them manage their fleet, take bookings, collect payments, send agreements, and track renters.
@@ -130,18 +152,65 @@ PCR Booking is a SaaS fleet management and booking platform for independent priv
 ## Tone & Style
 - Be helpful, direct, and concise
 - Don't be overly formal — this is a SaaS tool for entrepreneurs
-- If you don't know something specific to their account, tell them to submit a support ticket
+- If you genuinely don't know something specific to their account, tell them to submit a support ticket
 - Never make up features that don't exist
 - If they seem frustrated, acknowledge it briefly then solve the problem
-- Keep answers focused — don't dump everything you know, just answer what they asked`;
+- Keep answers focused — don't dump everything you know, just answer what they asked
+- If you cannot answer something confidently, say "I'm not sure — I'd recommend submitting a support ticket so our team can look into this directly."`;
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    // Auth check
+    const operator = await getOperator();
 
-    if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ error: "messages array required" }, { status: 400 });
+    const { message, conversationHistory } = await req.json();
+
+    if (!message || typeof message !== "string") {
+      return NextResponse.json({ error: "message is required" }, { status: 400 });
     }
+
+    // Fetch operator context from Supabase
+    const adminSupabase = createAdminClient();
+
+    const [vehiclesRes, bookingsRes, paymentsRes] = await Promise.all([
+      adminSupabase
+        .from("vehicles")
+        .select("id", { count: "exact", head: true })
+        .eq("operator_id", operator.id),
+      adminSupabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("operator_id", operator.id)
+        .in("status", ["confirmed", "active"]),
+      adminSupabase
+        .from("payment_schedule")
+        .select("id", { count: "exact", head: true })
+        .eq("operator_id", operator.id)
+        .eq("status", "overdue"),
+    ]);
+
+    const fleetCount = vehiclesRes.count ?? 0;
+    const activeBookingsCount = bookingsRes.count ?? 0;
+    const overduePaymentsCount = paymentsRes.count ?? 0;
+
+    const contextBlock = `
+## This Operator's Account Context
+- Business: ${operator.business_name}
+- Plan: ${operator.plan} plan
+- Fleet size: ${fleetCount} vehicle${fleetCount !== 1 ? "s" : ""}
+- Active bookings: ${activeBookingsCount}
+- Overdue payments: ${overduePaymentsCount > 0 ? `${overduePaymentsCount} overdue` : "none"}
+
+Use this context to give personalized answers. For example, if they ask about a feature only available on Growth+ and they're on Free, let them know they'd need to upgrade.`;
+
+    const systemPrompt = SYSTEM_PROMPT_BASE + "\n" + contextBlock;
+
+    // Build conversation messages (keep last 10)
+    const history = Array.isArray(conversationHistory) ? conversationHistory.slice(-10) : [];
+    const messages = [
+      ...history,
+      { role: "user", content: message },
+    ];
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -152,10 +221,10 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...messages.slice(-10), // last 10 messages for context
+          { role: "system", content: systemPrompt },
+          ...messages,
         ],
-        max_tokens: 400,
+        max_tokens: 500,
         temperature: 0.4,
       }),
     });
@@ -167,9 +236,15 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response. Please submit a support ticket.";
+    const reply: string =
+      data.choices?.[0]?.message?.content ||
+      "Sorry, I couldn't generate a response. Please submit a support ticket.";
 
-    return NextResponse.json({ reply });
+    // Check if we should escalate
+    const replyLower = reply.toLowerCase();
+    const shouldEscalate = ESCALATION_PHRASES.some((phrase) => replyLower.includes(phrase));
+
+    return NextResponse.json({ reply, shouldEscalate });
   } catch (err) {
     console.error("Support chat error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
