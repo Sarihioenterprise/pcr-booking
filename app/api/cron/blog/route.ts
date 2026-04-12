@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKeywordOpportunities } from "@/lib/ahrefs";
 import { blogPosts } from "@/lib/blog-posts";
-import { writeFileSync, readFileSync } from "fs";
-import { join } from "path";
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_REPO = "Sarihioenterprise/pcr-booking";
+const GITHUB_BRANCH = "main";
+const BLOG_POSTS_PATH = "lib/blog-posts.ts";
 
 const seedKeywords = [
   "private rental car software",
@@ -121,6 +124,68 @@ function generateBlogPostContent(keyword: string, title: string): string {
   return content;
 }
 
+async function commitBlogPostsToGitHub(
+  newPostStr: string,
+  title: string
+): Promise<void> {
+  if (!GITHUB_TOKEN) {
+    throw new Error("GITHUB_TOKEN environment variable is not set");
+  }
+  const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${BLOG_POSTS_PATH}`;
+  const headers = {
+    Authorization: `Bearer ${GITHUB_TOKEN}`,
+    "User-Agent": "pcr-booking-cron",
+    Accept: "application/vnd.github+json",
+    "Content-Type": "application/json",
+  };
+
+  // GET current file content + SHA
+  const getRes = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}`, { headers });
+  if (!getRes.ok) {
+    throw new Error(`GitHub GET failed: ${getRes.status} ${await getRes.text()}`);
+  }
+  const getJson = await getRes.json();
+  const fileSha: string = getJson.sha;
+
+  // Decode base64 content
+  const currentContent = Buffer.from(getJson.content, "base64").toString("utf-8");
+
+  // Find insertion point (after opening bracket of the array)
+  const arrayStartMatch = currentContent.match(
+    /export const blogPosts: BlogPost\[\] = \[\n/
+  );
+  if (!arrayStartMatch) {
+    throw new Error("Could not find blog posts array in file");
+  }
+  const insertPosition =
+    currentContent.indexOf(arrayStartMatch[0]) + arrayStartMatch[0].length;
+
+  // Insert new post at the top of the array
+  const updatedContent =
+    currentContent.slice(0, insertPosition) +
+    newPostStr +
+    currentContent.slice(insertPosition);
+
+  // Re-encode to base64
+  const encodedContent = Buffer.from(updatedContent, "utf-8").toString("base64");
+
+  // PUT updated file
+  const putRes = await fetch(apiUrl, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({
+      message: `blog: add post - ${title}`,
+      content: encodedContent,
+      sha: fileSha,
+      branch: GITHUB_BRANCH,
+    }),
+  });
+
+  if (!putRes.ok) {
+    throw new Error(`GitHub PUT failed: ${putRes.status} ${await putRes.text()}`);
+  }
+}
+
 export async function GET(request: NextRequest) {
   // Verify authorization
   const authHeader = request.headers.get("authorization");
@@ -199,24 +264,6 @@ export async function GET(request: NextRequest) {
       ],
     };
 
-    // Read current blog posts file
-    const blogPostsPath = join(
-      process.cwd(),
-      "lib",
-      "blog-posts.ts"
-    );
-
-    let fileContent = readFileSync(blogPostsPath, "utf-8");
-
-    // Find the position to insert the new post (after the opening bracket of the array)
-    const arrayStartMatch = fileContent.match(/export const blogPosts: BlogPost\[\] = \[\n/);
-    if (!arrayStartMatch) {
-      throw new Error("Could not find blog posts array");
-    }
-
-    const insertPosition =
-      fileContent.indexOf(arrayStartMatch[0]) + arrayStartMatch[0].length;
-
     // Format the new post as TypeScript object
     const newPostStr = `  {
     slug: "${newPost.slug}",
@@ -229,14 +276,8 @@ export async function GET(request: NextRequest) {
     content: \`${newPost.content}\`,
   },\n`;
 
-    // Insert the new post
-    fileContent =
-      fileContent.slice(0, insertPosition) +
-      newPostStr +
-      fileContent.slice(insertPosition);
-
-    // Write back to file
-    writeFileSync(blogPostsPath, fileContent, "utf-8");
+    // Commit updated blog-posts.ts to GitHub (triggers Vercel redeploy)
+    await commitBlogPostsToGitHub(newPostStr, newPost.title);
 
     return NextResponse.json({
       success: true,
