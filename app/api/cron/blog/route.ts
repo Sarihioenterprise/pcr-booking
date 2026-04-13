@@ -196,14 +196,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Get keyword opportunities
-    const opportunities = await getKeywordOpportunities(seedKeywords);
+    // Get keyword opportunities (with fallback if Ahrefs fails or returns nothing)
+    let opportunities = [];
+    try {
+      opportunities = await getKeywordOpportunities(seedKeywords);
+    } catch (ahrefsError) {
+      console.warn("Ahrefs API error, falling back to seed keywords:", ahrefsError);
+    }
 
     if (opportunities.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: "No keyword opportunities found",
-      });
+      console.warn("No Ahrefs results — falling back to seed keywords directly");
+      opportunities = seedKeywords.map((kw) => ({
+        keyword: kw,
+        volume: 0,
+        difficulty: 0,
+        clicks: 0,
+      }));
     }
 
     // Find existing blog post slugs
