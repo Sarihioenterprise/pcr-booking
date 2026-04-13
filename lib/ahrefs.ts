@@ -2,7 +2,8 @@ interface AhrefsKeyword {
   keyword: string;
   volume: number;
   difficulty: number;
-  clicks_per_search: number;
+  cps: number;
+  clicks_per_search?: number;
 }
 
 interface KeywordOpportunity {
@@ -26,18 +27,19 @@ export async function getKeywordOpportunities(
 
   for (const keyword of seedKeywords) {
     try {
+      const params = new URLSearchParams({
+        keywords: keyword,
+        country: "us",
+        select: "keyword,volume,difficulty,cps",
+      });
+
       const response = await fetch(
-        "https://api.ahrefs.com/v3/keywords-explorer/overview",
+        `https://api.ahrefs.com/v3/keywords-explorer/overview?${params.toString()}`,
         {
           method: "GET",
           headers: {
             Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            keywords: [keyword],
-            select: ["keyword", "volume", "difficulty", "clicks_per_search"],
-          }),
         }
       );
 
@@ -48,15 +50,15 @@ export async function getKeywordOpportunities(
 
       const data = await response.json();
 
-      if (data && Array.isArray(data.data)) {
-        data.data.forEach((item: AhrefsKeyword) => {
-          // Filter: volume > 100, difficulty < 40
-          if (item.volume > 100 && item.difficulty < 40) {
+      if (data && Array.isArray(data.keywords)) {
+        data.keywords.forEach((item: AhrefsKeyword) => {
+          // Filter: volume > 100, difficulty < 60
+          if (item.volume > 100 && item.difficulty < 60) {
             opportunities.push({
               keyword: item.keyword,
               volume: item.volume,
               difficulty: item.difficulty,
-              clicks: item.clicks_per_search,
+              clicks: item.cps,
             });
           }
         });
