@@ -52,8 +52,8 @@ export async function getKeywordOpportunities(
 
       if (data && Array.isArray(data.keywords)) {
         data.keywords.forEach((item: AhrefsKeyword) => {
-          // Filter: volume > 100, difficulty < 60
-          if (item.volume > 100 && item.difficulty < 60) {
+          // Filter: volume > 50, difficulty < 80
+          if (item.volume > 50 && (item.difficulty === null || item.difficulty < 80)) {
             opportunities.push({
               keyword: item.keyword,
               volume: item.volume,
