@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Check, X, AlertTriangle } from "lucide-react";
 
 export const metadata = {
-  title: "RentCentric Alternative — PCR Booking vs RentCentric",
+  title: "Rent Centric Alternative — PCR Booking vs Rent Centric Software",
   description:
-    "Looking for a RentCentric alternative? PCR Booking starts free and goes up to $249/mo — with more features built specifically for independent car rental operators. No contracts.",
+    "Looking for a Rent Centric alternative? PCR Booking starts free and costs up to 70% less than Rent Centric — built specifically for independent car rental operators. No contracts, no setup fees.",
 };
 
 const tableRows = [
@@ -105,15 +105,17 @@ export default function RentCentricAlternativePage() {
           className="inline-block text-xs font-semibold uppercase tracking-widest rounded-full px-4 py-1 mb-6"
           style={{ backgroundColor: "rgba(46,189,107,0.15)", color: "#2EBD6B" }}
         >
-          RentCentric Alternative
+          Rent Centric Alternative
         </div>
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight mb-6">
-          Looking for a{" "}
-          <span style={{ color: "#2EBD6B" }}>RentCentric Alternative?</span>
+          The Best{" "}
+          <span style={{ color: "#2EBD6B" }}>Rent Centric Alternative</span>{" "}
+          for Independent Operators
         </h1>
         <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
-          RentCentric charges $300+/month. PCR Booking starts free and goes up to $249/mo —
-          with more features built specifically for independent car rental operators.
+          Rent Centric charges $300+/month and was built for enterprise fleets.
+          PCR Booking starts free, costs up to 70% less, and is built specifically
+          for independent car rental operators — no contracts, no setup fees.
         </p>
         <Link href="/auth/signup">
           <Button
@@ -132,7 +134,7 @@ export default function RentCentricAlternativePage() {
       <section className="py-20 px-4" style={{ backgroundColor: "#0c0c1c" }}>
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-center mb-12">
-            PCR Booking vs RentCentric
+            PCR Booking vs Rent Centric — Feature Comparison
           </h2>
 
           {/* Desktop table */}
@@ -232,13 +234,13 @@ export default function RentCentricAlternativePage() {
       <section className="py-20 px-4" style={{ backgroundColor: "#080812" }}>
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-center mb-12">
-            Why Operators Switch
+            Why Operators Switch from Rent Centric
           </h2>
           <div className="space-y-5">
             {[
-              "RentCentric was built for traditional car rental companies with large fleets. PCR Booking was built for independent operators — the setup is simpler, the price is lower, and the features are what you actually need.",
-              "At $300+/month, RentCentric costs more than most operators make in their first month. PCR Booking starts free.",
-              "No contracts. No setup fees on annual plans. Cancel anytime.",
+              "Rent Centric was built for traditional car rental companies with large enterprise fleets. PCR Booking was built for independent operators — the setup is simpler, the price is lower, and the features are what you actually need.",
+              "At $300+/month, Rent Centric costs more than most operators make in their first month. PCR Booking starts free — no credit card required.",
+              "No long-term contracts. No setup fees. No surprise charges. Cancel anytime.",
             ].map((point, i) => (
               <div
                 key={i}
@@ -252,6 +254,44 @@ export default function RentCentricAlternativePage() {
                   {i + 1}
                 </div>
                 <p className="text-white/80 leading-relaxed pt-0.5">{point}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ — keyword-rich for Google quality score */}
+      <section className="py-20 px-4" style={{ backgroundColor: "#0c0c1c" }}>
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-center mb-12">
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-6">
+            {[
+              {
+                q: "Is PCR Booking a good Rent Centric alternative?",
+                a: "Yes. PCR Booking offers the same core features as Rent Centric — fleet management, booking, payments, digital agreements — at up to 70% less. Unlike Rent Centric, PCR Booking has a free tier for operators with up to 3 cars and no annual contracts.",
+              },
+              {
+                q: "How does PCR Booking pricing compare to Rent Centric?",
+                a: "Rent Centric starts at $300+/month and typically requires an annual contract. PCR Booking is free for up to 3 cars and paid plans start at $79/month with no long-term commitment.",
+              },
+              {
+                q: "Can I switch from Rent Centric to PCR Booking easily?",
+                a: "Yes. PCR Booking is designed to get you up and running in under 10 minutes. You can import your fleet, set up your booking flow, and start taking reservations the same day.",
+              },
+              {
+                q: "Who is PCR Booking built for compared to Rent Centric?",
+                a: "Rent Centric is designed for large enterprise car rental companies. PCR Booking is purpose-built for independent private car rental operators — people renting to Uber/Lyft drivers, running small fleets, or going independent from platforms like Turo.",
+              },
+            ].map((faq, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-white/10 p-6"
+                style={{ backgroundColor: "#080812" }}
+              >
+                <h3 className="font-bold text-white text-lg mb-3">{faq.q}</h3>
+                <p className="text-white/70 leading-relaxed">{faq.a}</p>
               </div>
             ))}
           </div>
