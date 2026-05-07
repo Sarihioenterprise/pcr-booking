@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpsert(supabase, subscription);
+        await handleSubscriptionUpsert(supabase, subscription, stripe);
         break;
       }
       case "customer.subscription.deleted": {
@@ -85,7 +85,8 @@ function getPlanFromSubscription(subscription: Stripe.Subscription): string {
 
 async function handleSubscriptionUpsert(
   supabase: ReturnType<typeof createAdminClient>,
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription,
+  stripe: Stripe
 ) {
   const customerId = subscription.customer as string;
   const plan = getPlanFromSubscription(subscription);
@@ -117,6 +118,33 @@ async function handleSubscriptionUpsert(
 
   if (opError) {
     console.error("Failed to update operator plan:", opError);
+  }
+
+  // Check if the update actually matched any rows
+  const { data: updatedOps } = await supabase
+    .from("operators")
+    .select("id")
+    .eq("stripe_customer_id", customerId);
+
+  if (!updatedOps || updatedOps.length === 0) {
+    // No operator matched by customer ID — try email fallback
+    try {
+      const stripeCustomer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+      if (stripeCustomer.email) {
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        const matchedUser = authUsers?.users?.find(u => u.email === stripeCustomer.email);
+        if (matchedUser) {
+          await supabase.from("operators").update({
+            plan,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscription.id,
+          }).eq("user_id", matchedUser.id);
+          console.log(`[webhook] Linked subscription via email fallback for ${stripeCustomer.email}`);
+        }
+      }
+    } catch (e) {
+      console.error("[webhook] Email fallback failed:", e);
+    }
   }
 }
 

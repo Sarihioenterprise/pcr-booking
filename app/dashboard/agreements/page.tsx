@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,7 @@ function formatDate(iso: string) {
 
 export default async function AgreementsPage() {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: templates } = await supabase
     .from("agreement_templates")

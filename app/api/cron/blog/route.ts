@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get keyword opportunities (with fallback if Ahrefs fails or returns nothing)
-    let opportunities = [];
+    let opportunities: Array<{ keyword: string; volume: number; difficulty: number }> = [];
     try {
       opportunities = await getKeywordOpportunities(seedKeywords);
     } catch (ahrefsError) {

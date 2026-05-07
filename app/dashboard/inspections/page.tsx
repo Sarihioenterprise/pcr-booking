@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -111,7 +111,7 @@ function InspectionTable({
 
 export default async function InspectionsPage() {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: inspections } = await supabase
     .from("inspections")

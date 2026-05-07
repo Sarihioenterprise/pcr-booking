@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +38,7 @@ export default async function TicketDetailPage({
 }) {
   const { id } = await params;
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: ticket, error } = await supabase
     .from("support_tickets")

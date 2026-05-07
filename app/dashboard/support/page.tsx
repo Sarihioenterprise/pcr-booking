@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
 import { NewTicketButton } from "@/components/dashboard/new-ticket-button";
@@ -54,7 +54,7 @@ export default async function SupportPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { status: filterStatus } = await searchParams;
 
   let query = supabase

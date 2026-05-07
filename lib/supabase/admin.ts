@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Service-role client — bypasses RLS. Only use server-side after auth is already verified.
 export function createAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

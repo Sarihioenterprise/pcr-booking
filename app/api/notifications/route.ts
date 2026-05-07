@@ -78,18 +78,23 @@ export async function PUT(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { operator_id, type, title, message, link } = body;
+    // ── Auth: only authenticated operators can create notifications ──────────
+    // Get the authenticated operator and use their ID (ignore any operator_id in body)
+    const operator = await getOperator();
 
-    if (!operator_id || !type || !title || !message) {
+    const body = await request.json();
+    const { type, title, message, link } = body;
+
+    if (!type || !title || !message) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields: type, title, message" },
         { status: 400 }
       );
     }
 
+    // Always use the authenticated operator's ID — never trust the request body
     const result = await createNotification(
-      operator_id,
+      operator.id,
       type,
       title,
       message,

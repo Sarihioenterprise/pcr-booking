@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyPortalToken } from "@/lib/portal-auth";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ bookingId: string }> }
 ) {
   try {
     const { bookingId } = await params;
     const supabase = createAdminClient();
+
+    // Verify portal access token
+    const authError = await verifyPortalToken(request, bookingId, supabase);
+    if (authError) return authError;
 
     // Get the booking to find operator_id
     const { data: booking } = await supabase
@@ -49,8 +54,12 @@ export async function POST(
   try {
     const { bookingId } = await params;
     const supabase = createAdminClient();
-    const body = await request.json();
 
+    // Verify portal access token
+    const authError = await verifyPortalToken(request, bookingId, supabase);
+    if (authError) return authError;
+
+    const body = await request.json();
     const { subject, message } = body;
 
     // Get the booking to find operator_id and renter info

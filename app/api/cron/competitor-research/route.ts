@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
 
 const searchQueries = [
   "RentCentric problems complaints 2025",
@@ -151,15 +149,8 @@ export async function GET(request: NextRequest) {
     // Generate report
     const report = generateReport(allResults);
 
-    // Save report to file
-    const reportPath = "/Users/igrisknight/.openclaw/workspace/competitor-intel/latest.md";
-    try {
-      mkdirSync(dirname(reportPath), { recursive: true });
-      writeFileSync(reportPath, report, "utf-8");
-    } catch (error) {
-      console.error("Failed to write report file:", error);
-      // Continue anyway - report was generated, just not saved
-    }
+    // Log report content (replaces filesystem write which fails on Vercel's read-only FS)
+    console.log("[competitor-research] Report generated:\n", report);
 
     // Count opportunities
     const opportunitiesCount = Object.values(allResults).flat().length;
@@ -167,6 +158,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       opportunitiesFound: opportunitiesCount,
+      report, // Return report in response so it can be captured by the caller
     });
   } catch (error) {
     console.error("Competitor research error:", error);

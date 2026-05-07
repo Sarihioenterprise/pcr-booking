@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyPortalToken } from "@/lib/portal-auth";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ bookingId: string; ticketId: string }> }
 ) {
   try {
-    const { ticketId } = await params;
+    const { bookingId, ticketId } = await params;
     const supabase = createAdminClient();
+
+    // Verify portal access token
+    const authError = await verifyPortalToken(request, bookingId, supabase);
+    if (authError) return authError;
 
     const { data, error } = await supabase
       .from("ticket_messages")
@@ -35,8 +40,12 @@ export async function POST(
   try {
     const { bookingId, ticketId } = await params;
     const supabase = createAdminClient();
-    const body = await request.json();
 
+    // Verify portal access token
+    const authError = await verifyPortalToken(request, bookingId, supabase);
+    if (authError) return authError;
+
+    const body = await request.json();
     const { content, sender_name } = body;
 
     // Get booking info for sender name fallback

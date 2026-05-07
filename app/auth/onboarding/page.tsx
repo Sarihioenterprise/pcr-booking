@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense, use } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,11 @@ import {
   CardContent,
 } from "@/components/ui/card";
 
-export default function OnboardingPage() {
+function OnboardingPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlSessionId = searchParams.get("session_id") ?? "";
+
   const [businessName, setBusinessName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
@@ -23,6 +26,32 @@ export default function OnboardingPage() {
   const [state, setState] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Verify session on mount — retry up to 3x to handle cookie propagation delay
+  useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = 800; // ms between retries
+
+    async function checkSession() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        setSessionChecked(true);
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(checkSession, delay);
+      } else {
+        // Session truly not found after retries — redirect to login
+        router.replace("/auth/login?message=Session+expired.+Please+sign+in+again.");
+      }
+    }
+
+    checkSession();
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,18 +60,20 @@ export default function OnboardingPage() {
 
     const supabase = createClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError("You must be logged in to complete onboarding.");
-      setLoading(false);
-      return;
+    // Re-check user in case session expired mid-form
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace("/auth/login?message=Session+expired.+Please+sign+in+again.");
+        setLoading(false);
+        return;
+      }
+      resolvedUserId = user.id;
     }
 
     const { error: insertError } = await supabase.from("operators").insert({
-      user_id: user.id,
+      user_id: resolvedUserId,
       business_name: businessName,
       owner_name: ownerName,
       phone,
@@ -56,8 +87,8 @@ export default function OnboardingPage() {
       return;
     }
 
-    // Check if there's a Stripe session to link
-    const stripeSessionId = sessionStorage.getItem("stripe_session_id");
+    // Check if there's a Stripe session to link — URL param takes priority over sessionStorage
+    const stripeSessionId = urlSessionId || sessionStorage.getItem("stripe_session_id");
 
     if (stripeSessionId) {
       try {
@@ -74,16 +105,29 @@ export default function OnboardingPage() {
         } else {
           const data = await res.json();
           console.error("[onboarding] link-subscription failed:", data.error);
-          // Fall through to plan page so user can retry billing
+          // Still push to dashboard — Stripe webhook will link the sub async
+          router.push("/dashboard");
+          return;
         }
       } catch (err) {
         console.error("[onboarding] link-subscription error:", err);
-        // Fall through to plan page
+        // Still push to dashboard — Stripe webhook will link the sub async
+        router.push("/dashboard");
+        return;
       }
     }
 
     // FREE plan users go to dashboard onboarding wizard
     router.push("/dashboard/onboarding");
+  }
+
+  // Show spinner while verifying session
+  if (!sessionChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FC]">
+        <p className="text-sm text-muted-foreground animate-pulse">Setting up your account…</p>
+      </div>
+    );
   }
 
   return (
@@ -195,5 +239,17 @@ export default function OnboardingPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FC]">
+        <p className="text-sm text-muted-foreground animate-pulse">Loading…</p>
+      </div>
+    }>
+      <OnboardingPageInner />
+    </Suspense>
   );
 }

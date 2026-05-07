@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { booking_id, amount } = body;
+    const { booking_id, amount, access_token } = body;
 
     if (!booking_id || !amount) {
       return NextResponse.json(
@@ -34,6 +35,39 @@ export async function POST(request: NextRequest) {
         { error: "Booking not found" },
         { status: 404 }
       );
+    }
+
+    // Auth check: allow if either:
+    // 1. A valid access_token is provided matching the booking's token (renter-facing flow)
+    // 2. An authenticated operator session owns this booking
+    const hasAccessToken = access_token && booking.access_token && access_token === booking.access_token;
+
+    if (!hasAccessToken) {
+      // Fall back to session-based auth (operator dashboard)
+      const serverClient = await createClient();
+      const { data: { user } } = await serverClient.auth.getUser();
+
+      if (!user) {
+        return NextResponse.json(
+          { error: "Unauthorized: provide a valid access_token or an authenticated session" },
+          { status: 401 }
+        );
+      }
+
+      // Verify the authenticated user owns the operator associated with this booking
+      const { data: operator } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("id", booking.operator_id)
+        .single();
+
+      if (!operator) {
+        return NextResponse.json(
+          { error: "Unauthorized: booking does not belong to your account" },
+          { status: 403 }
+        );
+      }
     }
 
     const stripe = getStripe();

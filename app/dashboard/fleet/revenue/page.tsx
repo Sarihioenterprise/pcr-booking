@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ function utilizationBg(pct: number) {
 
 export default async function RevenueByVehiclePage() {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [{ data: vehicles }, { data: bookings }] = await Promise.all([
     supabase

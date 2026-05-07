@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Car, Gauge, Fuel, BarChart3 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import type { Vehicle } from "@/lib/types";
 
@@ -15,7 +15,7 @@ const statusStyles: Record<string, string> = {
 
 export default async function FleetPage() {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: vehicles } = await supabase
     .from("vehicles")

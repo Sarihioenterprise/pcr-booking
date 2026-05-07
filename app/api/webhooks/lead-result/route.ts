@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
+  // ── Webhook Secret Verification ──────────────────────────────────────────
+  const webhookSecret = process.env.WEBHOOK_SECRET;
+  const authHeader = request.headers.get("authorization");
+
+  if (webhookSecret) {
+    // Secret is configured — enforce it
+    if (authHeader !== `Bearer ${webhookSecret}`) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+  } else {
+    // Secret not configured — warn and allow through for backward compatibility
+    console.warn(
+      "[webhooks/lead-result] WEBHOOK_SECRET is not set. " +
+        "Set WEBHOOK_SECRET in your environment to secure this endpoint."
+    );
+  }
+
   try {
     const body = await request.json();
     const {

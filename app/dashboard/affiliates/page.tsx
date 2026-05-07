@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import {
   Card,
@@ -28,7 +28,7 @@ const statusColors: Record<string, string> = {
 
 export default async function AffiliatesPage() {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const referralCode = operator.referral_code || "—";
   const shareLink = `https://pcrbooking.com/ref/${referralCode}`;

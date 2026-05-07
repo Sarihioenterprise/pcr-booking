@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
 import OnboardingChecklist from "@/components/dashboard/onboarding-checklist";
@@ -32,7 +32,7 @@ const statusColors: Record<string, string> = {
 
 export default async function DashboardPage() {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];

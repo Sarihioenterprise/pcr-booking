@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { LocationActions } from "./location-actions";
 
 export default async function LocationsPage() {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: locations } = await supabase
     .from("locations")

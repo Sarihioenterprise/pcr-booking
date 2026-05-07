@@ -97,12 +97,13 @@ export default function SignupPage(props: {
       return;
     }
 
-    // Store stripe session_id so onboarding can link the subscription
+    // Store stripe session_id in both sessionStorage and URL so onboarding can link the subscription
     if (sessionId) {
       sessionStorage.setItem("stripe_session_id", sessionId);
+      router.push(`/auth/onboarding?session_id=${sessionId}`);
+    } else {
+      router.push("/auth/onboarding");
     }
-
-    router.push("/auth/onboarding");
   }
 
   async function handleGoogleSignup() {

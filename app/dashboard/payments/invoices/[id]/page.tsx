@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -33,7 +33,7 @@ export default async function InvoiceDetailPage({
 }) {
   const { id } = await params;
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: invoice, error } = await supabase
     .from("invoices")

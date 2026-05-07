@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -107,6 +108,8 @@ const PLAN_DETAILS: Record<string, { name: string; price: string; features: stri
 
 export default function SettingsPage() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "profile";
 
   // Operator state
   const [operator, setOperator] = useState<Operator | null>(null);
@@ -632,7 +635,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <Tabs defaultValue="profile">
+      <Tabs defaultValue={defaultTab}>
         <div className="overflow-x-auto pb-1 -mx-1 px-1">
         <TabsList className="flex flex-nowrap gap-1 mb-4 h-auto w-max min-w-full">
           <TabsTrigger value="profile"><Building2 className="h-3.5 w-3.5 mr-1.5" />Business</TabsTrigger>
@@ -1349,6 +1352,30 @@ export default function SettingsPage() {
               <CardDescription>Manage your subscription and billing.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Manage Billing Button */}
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4 bg-slate-50">
+                <div>
+                  <p className="font-medium text-sm text-slate-900">Billing Portal</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Update payment method, cancel, or download invoices</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const res = await fetch("/api/billing/portal", { method: "POST" });
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    } else {
+                      alert(data.error || "Could not open billing portal");
+                    }
+                  }}
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  Manage Billing
+                </Button>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-3">
                 {Object.entries(PLAN_DETAILS).map(([key, plan]) => {
                   const isCurrent = key === currentPlan;

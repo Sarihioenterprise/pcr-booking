@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState, useCallback } from "react";
+import { use, useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SMSButton } from "@/components/dashboard/sms-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +61,7 @@ import {
   CheckCircle2,
   Circle,
   PenLine,
+  Loader2,
 } from "lucide-react";
 
 // ── Status Flow Config ──────────────────────────────────────────────
@@ -106,193 +108,6 @@ const statusBadgeColors: Record<BookingStatus, string> = {
   cancelled: "bg-red-100 text-red-700 border-red-200",
 };
 
-// ── Sample Data ─────────────────────────────────────────────────────
-
-const SAMPLE_VEHICLE: Vehicle = {
-  id: "veh-001",
-  operator_id: "op-001",
-  make: "Toyota",
-  model: "Camry",
-  year: 2024,
-  color: "Pearl White",
-  plate: "PCR-2024",
-  vin: "1HGCM82633A123456",
-  daily_rate: 65,
-  weekly_rate: 400,
-  monthly_rate: 1500,
-  mileage: 12450,
-  fuel_level: "full",
-  category: "sedan",
-  purchase_price: 28000,
-  monthly_cost: 450,
-  minimum_rental_days: 3,
-  status: "active",
-  photo_url: null,
-  location_id: "loc-001",
-  created_at: "2024-01-15T10:00:00Z",
-  updated_at: "2026-03-28T14:00:00Z",
-};
-
-const SAMPLE_BOOKING: Booking = {
-  id: "bk-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  operator_id: "op-001",
-  vehicle_id: "veh-001",
-  renter_id: "rnt-001",
-  renter_name: "Marcus Johnson",
-  renter_phone: "+1 (404) 555-0192",
-  renter_email: "marcus.johnson@email.com",
-  start_date: "2026-04-01",
-  end_date: "2026-04-14",
-  duration_days: 14,
-  daily_rate: 65,
-  total_price: 860,
-  tax_amount: 68.8,
-  discount_amount: 50,
-  deposit_amount: 300,
-  deposit_status: "held",
-  deposit_payment_intent_id: null,
-  stripe_payment_intent_id: null,
-  status: "confirmed",
-  notes: "Returning renter — 3rd booking. Prefers early morning pickup. Uber driver, needs vehicle for rideshare.",
-  pickup_instructions: "Meet at the office parking lot, Lot B, Space 14. Bring valid driver's license and proof of insurance.",
-  drivers_license_url: "https://example.com/dl/marcus-johnson.pdf",
-  location_id: "loc-001",
-  dropoff_location_id: null,
-  promo_code_id: null,
-  mileage_out: null,
-  mileage_in: null,
-  fuel_out: null,
-  fuel_in: null,
-  created_at: "2026-03-25T09:30:00Z",
-  updated_at: "2026-03-28T16:45:00Z",
-};
-
-const SAMPLE_AGREEMENT: RentalAgreement = {
-  id: "agr-001",
-  operator_id: "op-001",
-  booking_id: SAMPLE_BOOKING.id,
-  template_id: "tpl-001",
-  content:
-    "RENTAL AGREEMENT\n\nThis Rental Agreement is entered into between PCR Fleet Management (\"Owner\") and Marcus Johnson (\"Renter\") on March 28, 2026.\n\nVEHICLE: 2024 Toyota Camry — Plate: PCR-2024\nRENTAL PERIOD: April 1, 2026 to April 14, 2026 (14 days)\nDAILY RATE: $65.00\nTOTAL: $860.00 (after $50 discount)\nSECURITY DEPOSIT: $300.00\n\nTERMS:\n1. Renter agrees to maintain the vehicle in good condition.\n2. Renter is responsible for fuel, tolls, and traffic violations.\n3. Vehicle may be used for rideshare (Uber/Lyft) purposes.\n4. Maximum mileage: Unlimited.\n5. Late return fee: $85/day after the agreed return date.\n6. Renter must return vehicle with the same fuel level.\n\nSigned electronically via PCR Portal.",
-  status: "signed",
-  renter_signature: "Marcus Johnson",
-  signed_at: "2026-03-28T14:30:00Z",
-  created_at: "2026-03-28T10:00:00Z",
-  updated_at: "2026-03-28T14:30:00Z",
-};
-
-const SAMPLE_PAYMENTS: PaymentScheduleItem[] = [
-  {
-    id: "pay-001",
-    booking_id: SAMPLE_BOOKING.id,
-    operator_id: "op-001",
-    amount: 300,
-    due_date: "2026-03-28",
-    status: "paid",
-    stripe_payment_intent_id: null,
-    paid_at: "2026-03-28T14:00:00Z",
-    created_at: "2026-03-25T09:30:00Z",
-  },
-  {
-    id: "pay-002",
-    booking_id: SAMPLE_BOOKING.id,
-    operator_id: "op-001",
-    amount: 430,
-    due_date: "2026-04-01",
-    status: "paid",
-    stripe_payment_intent_id: null,
-    paid_at: "2026-04-01T08:15:00Z",
-    created_at: "2026-03-25T09:30:00Z",
-  },
-  {
-    id: "pay-003",
-    booking_id: SAMPLE_BOOKING.id,
-    operator_id: "op-001",
-    amount: 430,
-    due_date: "2026-04-08",
-    status: "pending",
-    stripe_payment_intent_id: null,
-    paid_at: null,
-    created_at: "2026-03-25T09:30:00Z",
-  },
-];
-
-interface ActivityEvent {
-  id: string;
-  type: "status" | "payment" | "agreement" | "note" | "system";
-  title: string;
-  description: string;
-  timestamp: string;
-  icon: "status" | "payment" | "agreement" | "note" | "system";
-}
-
-const SAMPLE_ACTIVITY: ActivityEvent[] = [
-  {
-    id: "act-001",
-    type: "status",
-    title: "Booking Created",
-    description: "New inquiry submitted by Marcus Johnson via portal.",
-    timestamp: "2026-03-25T09:30:00Z",
-    icon: "status",
-  },
-  {
-    id: "act-002",
-    type: "status",
-    title: "Status → Pending",
-    description: "Operator reviewed inquiry and moved to pending.",
-    timestamp: "2026-03-25T10:15:00Z",
-    icon: "status",
-  },
-  {
-    id: "act-003",
-    type: "note",
-    title: "Note Added",
-    description: "Returning renter — 3rd booking. Verified license on file.",
-    timestamp: "2026-03-25T10:20:00Z",
-    icon: "note",
-  },
-  {
-    id: "act-004",
-    type: "agreement",
-    title: "Agreement Generated",
-    description: "Rental agreement created from default template.",
-    timestamp: "2026-03-28T10:00:00Z",
-    icon: "agreement",
-  },
-  {
-    id: "act-005",
-    type: "agreement",
-    title: "Agreement Signed",
-    description: "Marcus Johnson signed the rental agreement via portal.",
-    timestamp: "2026-03-28T14:30:00Z",
-    icon: "agreement",
-  },
-  {
-    id: "act-006",
-    type: "payment",
-    title: "Deposit Received",
-    description: "$300.00 security deposit collected — Zelle.",
-    timestamp: "2026-03-28T14:00:00Z",
-    icon: "payment",
-  },
-  {
-    id: "act-007",
-    type: "status",
-    title: "Status → Confirmed",
-    description: "Booking confirmed after deposit and signed agreement.",
-    timestamp: "2026-03-28T16:45:00Z",
-    icon: "status",
-  },
-  {
-    id: "act-008",
-    type: "payment",
-    title: "Week 1 Payment Received",
-    description: "$430.00 received — Cash App.",
-    timestamp: "2026-04-01T08:15:00Z",
-    icon: "payment",
-  },
-];
-
 // ── Helper Functions ────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -318,6 +133,17 @@ function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// ── Activity Event type ─────────────────────────────────────────────
+
+interface ActivityEvent {
+  id: string;
+  type: "status" | "payment" | "agreement" | "note" | "system";
+  title: string;
+  description: string;
+  timestamp: string;
+  icon: "status" | "payment" | "agreement" | "note" | "system";
+}
+
 // ── Component ───────────────────────────────────────────────────────
 
 export default function BookingDetailPage({
@@ -326,14 +152,19 @@ export default function BookingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
+
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // State
-  const [booking, setBooking] = useState<Booking>(SAMPLE_BOOKING);
-  const [vehicle] = useState<Vehicle>(SAMPLE_VEHICLE);
-  const [agreement, setAgreement] = useState<RentalAgreement | null>(SAMPLE_AGREEMENT);
-  const [payments, setPayments] = useState<PaymentScheduleItem[]>(SAMPLE_PAYMENTS);
-  const [activity, setActivity] = useState<ActivityEvent[]>(SAMPLE_ACTIVITY);
-  const [notes, setNotes] = useState(SAMPLE_BOOKING.notes || "");
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [agreement, setAgreement] = useState<RentalAgreement | null>(null);
+  const [payments, setPayments] = useState<PaymentScheduleItem[]>([]);
+  const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [notes, setNotes] = useState("");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   // Dialogs
@@ -359,17 +190,100 @@ export default function BookingDetailPage({
     setTimeout(() => setToast({ message: "", visible: false }), 3000);
   }, []);
 
+  // ── Fetch real booking data ─────────────────────────────────────
+  useEffect(() => {
+    async function fetchBooking() {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+
+        const response = await fetch(`/api/bookings/${id}`);
+
+        if (response.status === 404) {
+          router.push("/dashboard/bookings");
+          return;
+        }
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setLoadError(data.error || "Failed to load booking");
+          return;
+        }
+
+        const data = await response.json();
+
+        setBooking(data);
+        setNotes(data.notes || "");
+
+        if (data.vehicles) {
+          setVehicle(data.vehicles);
+        }
+
+        if (data.rental_agreements && data.rental_agreements.length > 0) {
+          // Take the most recent agreement
+          const sorted = [...data.rental_agreements].sort(
+            (a: RentalAgreement, b: RentalAgreement) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setAgreement(sorted[0]);
+        }
+
+        if (data.payment_schedule_items) {
+          setPayments(data.payment_schedule_items);
+        }
+
+        // Build initial activity from booking data
+        const events: ActivityEvent[] = [
+          {
+            id: "act-created",
+            type: "status",
+            title: "Booking Created",
+            description: `Booking created for ${data.renter_name}.`,
+            timestamp: data.created_at,
+            icon: "status",
+          },
+        ];
+
+        if (data.rental_agreements && data.rental_agreements.length > 0) {
+          for (const agr of data.rental_agreements) {
+            events.push({
+              id: `act-agr-${agr.id}`,
+              type: "agreement",
+              title: agr.status === "signed" ? "Agreement Signed" : "Agreement Generated",
+              description:
+                agr.status === "signed"
+                  ? `${data.renter_name} signed the rental agreement.`
+                  : "Rental agreement created.",
+              timestamp: agr.signed_at || agr.created_at,
+              icon: "agreement",
+            });
+          }
+        }
+
+        setActivity(events);
+      } catch (err) {
+        console.error("Failed to fetch booking:", err);
+        setLoadError("Failed to load booking. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchBooking();
+  }, [id, router]);
+
   // ── Status Transitions ──────────────────────────────────────────
 
-  const currentStepIndex = STATUS_STEPS.indexOf(booking.status);
-  const isCancelled = booking.status === "cancelled";
+  const currentStepIndex = booking ? STATUS_STEPS.indexOf(booking.status) : 0;
+  const isCancelled = booking?.status === "cancelled";
 
   function canTransitionTo(target: BookingStatus): boolean {
+    if (!booking) return false;
     return VALID_TRANSITIONS[booking.status]?.includes(target) ?? false;
   }
 
   function handleStepClick(step: BookingStatus) {
-    if (step === booking.status || isCancelled) return;
+    if (!booking || step === booking.status || isCancelled) return;
     if (!canTransitionTo(step)) return;
     if (step === "cancelled") {
       setCancelDialog(true);
@@ -379,11 +293,11 @@ export default function BookingDetailPage({
   }
 
   function confirmStatusChange() {
-    if (!statusDialog.targetStatus) return;
+    if (!statusDialog.targetStatus || !booking) return;
     const target = statusDialog.targetStatus;
     const now = new Date().toISOString();
 
-    setBooking((prev) => ({ ...prev, status: target, updated_at: now }));
+    setBooking((prev) => prev ? { ...prev, status: target, updated_at: now } : prev);
     setActivity((prev) => [
       ...prev,
       {
@@ -400,14 +314,12 @@ export default function BookingDetailPage({
   }
 
   function confirmCancel() {
-    if (!cancelReason.trim()) return;
+    if (!cancelReason.trim() || !booking) return;
     const now = new Date().toISOString();
 
-    setBooking((prev) => ({
-      ...prev,
-      status: "cancelled" as BookingStatus,
-      updated_at: now,
-    }));
+    setBooking((prev) =>
+      prev ? { ...prev, status: "cancelled" as BookingStatus, updated_at: now } : prev
+    );
     setActivity((prev) => [
       ...prev,
       {
@@ -427,6 +339,7 @@ export default function BookingDetailPage({
   // ── Payments ────────────────────────────────────────────────────
 
   function recordPayment() {
+    if (!booking) return;
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) return;
     const now = new Date().toISOString();
@@ -464,6 +377,7 @@ export default function BookingDetailPage({
   // ── Agreement ───────────────────────────────────────────────────
 
   function generateAgreement() {
+    if (!booking || !vehicle) return;
     const now = new Date().toISOString();
     const newAgreement: RentalAgreement = {
       id: `agr-${Date.now()}`,
@@ -493,8 +407,9 @@ export default function BookingDetailPage({
   }
 
   function saveNotes() {
+    if (!booking) return;
     const now = new Date().toISOString();
-    setBooking((prev) => ({ ...prev, notes, updated_at: now }));
+    setBooking((prev) => prev ? { ...prev, notes, updated_at: now } : prev);
     setActivity((prev) => [
       ...prev,
       {
@@ -515,14 +430,42 @@ export default function BookingDetailPage({
   const totalPaid = payments
     .filter((p) => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0);
-  const totalDue = booking.total_price + booking.tax_amount - booking.discount_amount;
+  const totalDue = booking
+    ? booking.total_price + booking.tax_amount - booking.discount_amount
+    : 0;
   const remaining = totalDue - totalPaid;
 
-  // Next valid forward transition
   const nextStep =
-    !isCancelled && currentStepIndex < STATUS_STEPS.length - 1
+    !isCancelled && booking && currentStepIndex < STATUS_STEPS.length - 1
       ? STATUS_STEPS[currentStepIndex + 1]
       : null;
+
+  // ── Loading / Error State ────────────────────────────────────────
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FC] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-slate-500">
+          <Loader2 className="h-8 w-8 animate-spin text-[#2EBD6B]" />
+          <p className="text-sm font-medium">Loading booking...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !booking) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FC] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-400 mx-auto" />
+          <p className="text-slate-600">{loadError || "Booking not found"}</p>
+          <Link href="/dashboard/bookings">
+            <Button variant="outline">Back to Bookings</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // ── Render ──────────────────────────────────────────────────────
 
@@ -589,7 +532,6 @@ export default function BookingDetailPage({
                 {STATUS_STEPS.map((step, index) => {
                   const isPast = index < currentStepIndex;
                   const isCurrent = index === currentStepIndex;
-                  const isFuture = index > currentStepIndex;
                   const isClickable = canTransitionTo(step);
 
                   return (
@@ -700,9 +642,6 @@ export default function BookingDetailPage({
                           <p className="font-semibold text-slate-900">
                             {booking.renter_name}
                           </p>
-                          <p className="text-xs text-slate-500">
-                            Returning Customer
-                          </p>
                         </div>
                       </div>
                       <Separator />
@@ -759,46 +698,52 @@ export default function BookingDetailPage({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Car className="h-5 w-5 text-slate-500" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {vehicle.year} {vehicle.make} {vehicle.model}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {vehicle.color} &middot; {vehicle.category}
-                          </p>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div className="grid grid-cols-2 gap-y-2.5">
-                        <div>
-                          <p className="text-xs text-slate-400">Plate</p>
-                          <p className="font-medium text-slate-700">
-                            {vehicle.plate || "—"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400">VIN</p>
-                          <p className="font-medium text-slate-700 text-xs">
-                            {vehicle.vin?.slice(-6) || "—"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400">Daily Rate</p>
-                          <p className="font-semibold text-[#2EBD6B]">
-                            {formatCurrency(vehicle.daily_rate)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400">Mileage</p>
-                          <p className="font-medium text-slate-700">
-                            {vehicle.mileage.toLocaleString()} mi
-                          </p>
-                        </div>
-                      </div>
+                      {vehicle ? (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                              <Car className="h-5 w-5 text-slate-500" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900">
+                                {vehicle.year} {vehicle.make} {vehicle.model}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {vehicle.color} &middot; {vehicle.category}
+                              </p>
+                            </div>
+                          </div>
+                          <Separator />
+                          <div className="grid grid-cols-2 gap-y-2.5">
+                            <div>
+                              <p className="text-xs text-slate-400">Plate</p>
+                              <p className="font-medium text-slate-700">
+                                {vehicle.plate || "—"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">VIN</p>
+                              <p className="font-medium text-slate-700 text-xs">
+                                {vehicle.vin?.slice(-6) || "—"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Daily Rate</p>
+                              <p className="font-semibold text-[#2EBD6B]">
+                                {formatCurrency(vehicle.daily_rate)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Mileage</p>
+                              <p className="font-medium text-slate-700">
+                                {vehicle.mileage.toLocaleString()} mi
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-slate-400 italic text-sm">No vehicle assigned</p>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -1146,56 +1091,62 @@ export default function BookingDetailPage({
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {payments.map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center justify-between py-3 px-4 rounded-lg bg-slate-50 border border-slate-100"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                p.status === "paid"
-                                  ? "bg-[#2EBD6B]/10"
-                                  : p.status === "overdue"
-                                    ? "bg-red-50"
-                                    : "bg-slate-100"
-                              }`}
-                            >
-                              {p.status === "paid" ? (
-                                <Check className="h-4 w-4 text-[#2EBD6B]" />
-                              ) : p.status === "overdue" ? (
-                                <AlertCircle className="h-4 w-4 text-red-500" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-slate-400" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-900 text-sm">
-                                {formatCurrency(p.amount)}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                Due {formatDate(p.due_date)}
-                                {p.paid_at &&
-                                  ` · Paid ${formatDate(p.paid_at)}`}
-                              </p>
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={
-                              p.status === "paid"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : p.status === "overdue"
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-slate-50 text-slate-600 border-slate-200"
-                            }
+                    {payments.length === 0 ? (
+                      <p className="text-slate-400 italic text-sm text-center py-6">
+                        No payments recorded yet
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {payments.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between py-3 px-4 rounded-lg bg-slate-50 border border-slate-100"
                           >
-                            {p.status}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                  p.status === "paid"
+                                    ? "bg-[#2EBD6B]/10"
+                                    : p.status === "overdue"
+                                      ? "bg-red-50"
+                                      : "bg-slate-100"
+                                }`}
+                              >
+                                {p.status === "paid" ? (
+                                  <Check className="h-4 w-4 text-[#2EBD6B]" />
+                                ) : p.status === "overdue" ? (
+                                  <AlertCircle className="h-4 w-4 text-red-500" />
+                                ) : (
+                                  <Clock className="h-4 w-4 text-slate-400" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900 text-sm">
+                                  {formatCurrency(p.amount)}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                  Due {formatDate(p.due_date)}
+                                  {p.paid_at &&
+                                    ` · Paid ${formatDate(p.paid_at)}`}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                p.status === "paid"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : p.status === "overdue"
+                                    ? "bg-red-50 text-red-700 border-red-200"
+                                    : "bg-slate-50 text-slate-600 border-slate-200"
+                              }
+                            >
+                              {p.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Progress bar */}
                     <div className="mt-5">
@@ -1369,12 +1320,14 @@ export default function BookingDetailPage({
                 <CardTitle className="text-base">Snapshot</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Vehicle</span>
-                  <span className="font-medium text-slate-700">
-                    {vehicle.year} {vehicle.make} {vehicle.model}
-                  </span>
-                </div>
+                {vehicle && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Vehicle</span>
+                    <span className="font-medium text-slate-700">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-slate-400">Duration</span>
                   <span className="font-medium text-slate-700">

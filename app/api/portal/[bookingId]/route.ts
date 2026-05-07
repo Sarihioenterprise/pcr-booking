@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyPortalToken } from "@/lib/portal-auth";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ bookingId: string }> }
 ) {
   try {
     const { bookingId } = await params;
     const supabase = createAdminClient();
+
+    // Verify portal access token
+    const authError = await verifyPortalToken(request, bookingId, supabase);
+    if (authError) return authError;
 
     const { data: booking, error } = await supabase
       .from("bookings")

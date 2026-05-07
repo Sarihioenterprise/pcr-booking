@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default async function RentersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const operator = await getOperator();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { q } = await searchParams;
 
   let query = supabase

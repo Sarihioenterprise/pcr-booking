@@ -208,6 +208,13 @@ export default function PlanPage() {
       <p className="mt-8 text-xs text-gray-400 text-center max-w-sm">
         By selecting a plan you agree to our Terms of Service. Your card will be charged after the 14-day trial unless you cancel.
       </p>
+
+      <p className="mt-4 text-sm text-gray-400 text-center">
+        Already have an account?{" "}
+        <a href="/auth/login" className="text-[#2EBD6B] font-medium hover:underline">
+          Log in
+        </a>
+      </p>
     </div>
   );
 }

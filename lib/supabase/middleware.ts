@@ -41,7 +41,16 @@ export async function updateSession(request: NextRequest) {
   // Redirect authenticated users away from auth pages
   if (user && (path === "/auth/login" || path === "/auth/signup")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    // Preserve session_id so Stripe-paid users don't lose their subscription link
+    const sessionId = request.nextUrl.searchParams.get("session_id");
+    if (sessionId) {
+      // Has a Stripe session — send to onboarding to complete account setup
+      url.pathname = "/auth/onboarding";
+      url.search = `?session_id=${sessionId}`;
+    } else {
+      url.pathname = "/dashboard";
+      url.search = "";
+    }
     return NextResponse.redirect(url);
   }
 
