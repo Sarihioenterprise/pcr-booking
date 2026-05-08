@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Operator } from "@/lib/types";
@@ -12,7 +13,9 @@ export async function getOperator(): Promise<Operator> {
 
   if (!user) redirect("/auth/login");
 
-  const { data: operator } = await supabase
+  // Use admin client to bypass RLS on operator lookup
+  const adminSupabase = createAdminClient();
+  const { data: operator } = await adminSupabase
     .from("operators")
     .select("*")
     .eq("user_id", user.id)

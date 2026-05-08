@@ -169,33 +169,32 @@ export default function NewVehiclePage() {
         return;
       }
 
-      const { error: insertError } = await supabase.from("vehicles").insert({
-        operator_id: operator.id,
-        make: form.make,
-        model: form.model,
-        year: parseInt(form.year, 10),
-        color: form.color || null,
-        plate: form.plate || null,
-        vin: form.vin || null,
-        category: form.category,
-        daily_rate: parseFloat(form.daily_rate),
-        weekly_rate: form.weekly_rate ? parseFloat(form.weekly_rate) : null,
-        monthly_rate: form.monthly_rate ? parseFloat(form.monthly_rate) : null,
-        purchase_price: form.purchase_price
-          ? parseFloat(form.purchase_price)
-          : null,
-        monthly_cost: form.monthly_cost
-          ? parseFloat(form.monthly_cost)
-          : null,
-        minimum_rental_days: parseInt(form.minimum_rental_days, 10) || 1,
-        mileage: parseInt(form.mileage, 10) || 0,
-        fuel_level: form.fuel_level,
-        location_id: form.location_id || null,
-        photo_url: form.photo_url || null,
-        status: form.status,
+      const res = await fetch("/api/fleet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          make: form.make,
+          model: form.model,
+          year: parseInt(form.year, 10),
+          color: form.color || null,
+          plate: form.plate || null,
+          vin: form.vin || null,
+          category: form.category,
+          daily_rate: parseFloat(form.daily_rate),
+          weekly_rate: form.weekly_rate ? parseFloat(form.weekly_rate) : null,
+          monthly_rate: form.monthly_rate ? parseFloat(form.monthly_rate) : null,
+          purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
+          monthly_cost: form.monthly_cost ? parseFloat(form.monthly_cost) : null,
+          minimum_rental_days: parseInt(form.minimum_rental_days, 10) || 1,
+          mileage: parseInt(form.mileage, 10) || 0,
+          fuel_level: form.fuel_level,
+          location_id: form.location_id || null,
+          photo_url: form.photo_url || null,
+          status: form.status,
+        }),
       });
-
-      if (insertError) throw insertError;
+      const insertResult = await res.json();
+      if (!res.ok) throw new Error(insertResult.error || "Failed to create vehicle");
       router.push("/dashboard/fleet");
     } catch (err: any) {
       setError(err.message || "Failed to create vehicle");
