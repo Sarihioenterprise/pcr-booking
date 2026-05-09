@@ -3,9 +3,16 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -14,59 +21,85 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Send, FileText, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Plus,
+  FileText,
+  Send,
+  ExternalLink,
+  Copy,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Download,
+  Eye,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Operator } from "@/lib/types";
 
-interface ContractTemplate {
+interface Contract {
   id: string;
-  name: string;
-  content_text: string;
-  file_url?: string;
+  operator_id: string;
+  renter_id: string | null;
+  template_url: string | null;
+  signed_pdf_url: string | null;
+  status: "pending" | "sent" | "signed";
+  token: string;
+  sent_at: string | null;
+  signed_at: string | null;
+  renter_name: string | null;
+  renter_email: string | null;
+  renter_phone: string | null;
+  renter_dl: string | null;
   created_at: string;
 }
 
-interface ContractSigning {
+interface Renter {
   id: string;
-  contract_template_id: string;
-  renter_name: string;
-  renter_email: string;
-  status: "pending" | "signed" | "expired";
-  token: string;
-  signed_at?: string;
-  created_at: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
 }
+
+const statusConfig = {
+  pending: {
+    label: "Pending",
+    color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+    icon: Clock,
+  },
+  sent: {
+    label: "Sent",
+    color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    icon: Send,
+  },
+  signed: {
+    label: "Signed",
+    color: "bg-green-500/10 text-green-600 border-green-500/20",
+    icon: CheckCircle,
+  },
+};
 
 export default function ContractsPage() {
   const supabase = createClient();
   const [operator, setOperator] = useState<Operator | null>(null);
-  const [templates, setTemplates] = useState<ContractTemplate[]>([]);
-  const [signings, setSignings] = useState<ContractSigning[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [renters, setRenters] = useState<Renter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [sendMethod, setSendMethod] = useState<"sms" | "copy">("copy");
+  const [sending, setSending] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const [uploadForm, setUploadForm] = useState({
-    name: "",
-    contentType: "paste" as "paste" | "upload",
-    contentText: "",
-  });
-
-  const [sendForm, setSendForm] = useState({
-    renterName: "",
-    renterEmail: "",
-    renterPhone: "",
-  });
-
-  // Load operator and contracts
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get operator
       const { data: operatorData } = await supabase
         .from("operators")
         .select("*")
@@ -75,21 +108,20 @@ export default function ContractsPage() {
       if (operatorData) setOperator(operatorData as Operator);
 
       if (operatorData?.id) {
-        // Get templates
-        const { data: templatesData } = await supabase
-          .from("contract_templates")
+        // Load contracts
+        const { data: contractsData } = await supabase
+          .from("contracts")
           .select("*")
           .eq("operator_id", operatorData.id)
           .order("created_at", { ascending: false });
-        if (templatesData) setTemplates(templatesData as ContractTemplate[]);
+        if (contractsData) setContracts(contractsData as Contract[]);
 
-        // Get signings
-        const { data: signingsData } = await supabase
-          .from("contract_signings")
-          .select("*")
-          .eq("operator_id", operatorData.id)
-          .order("created_at", { ascending: false });
-        if (signingsData) setSignings(signingsData as ContractSigning[]);
+        // Load renters for reference
+        const { data: rentersData } = await supabase
+          .from("renters")
+          .select("id, name, email, phone")
+          .eq("operator_id", operatorData.id);
+        if (rentersData) setRenters(rentersData as Renter[]);
       }
 
       setLoading(false);
@@ -97,131 +129,93 @@ export default function ContractsPage() {
     load();
   }, [supabase]);
 
-  async function handleUploadContract(e: React.FormEvent) {
-    e.preventDefault();
-    if (!operator || !uploadForm.name || !uploadForm.contentText) {
-      setError("Name and content are required");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const { error: insertError } = await supabase
-        .from("contract_templates")
-        .insert({
-          operator_id: operator.id,
-          name: uploadForm.name,
-          content_text: uploadForm.contentText,
-        });
-
-      if (insertError) throw insertError;
-
-      // Reload templates
-      const { data: templatesData } = await supabase
-        .from("contract_templates")
-        .select("*")
-        .eq("operator_id", operator.id)
-        .order("created_at", { ascending: false });
-      if (templatesData) setTemplates(templatesData as ContractTemplate[]);
-
-      setUploadForm({ name: "", contentType: "paste", contentText: "" });
-      setShowUploadModal(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to upload contract");
-    } finally {
-      setLoading(false);
-    }
+  function getSigningUrl(token: string) {
+    return `${window.location.origin}/sign/${token}`;
   }
 
-  async function handleSendContract(e: React.FormEvent) {
-    e.preventDefault();
-    if (!operator || !selectedTemplate || !sendForm.renterEmail) {
-      setError("All required fields must be filled");
+  async function handleCopyLink() {
+    if (!selectedContract) return;
+    const url = getSigningUrl(selectedContract.token);
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleSendSMS() {
+    if (!selectedContract || !selectedContract.renter_phone) {
+      setError("No phone number available for this contract");
       return;
     }
 
-    setLoading(true);
+    setSending(true);
     setError("");
 
     try {
-      // Create contract signing record
-      const { error: insertError } = await supabase
-        .from("contract_signings")
-        .insert({
-          operator_id: operator.id,
-          contract_template_id: selectedTemplate.id,
-          renter_name: sendForm.renterName,
-          renter_email: sendForm.renterEmail,
-          renter_phone: sendForm.renterPhone || null,
-          status: "pending",
-        });
-
-      if (insertError) throw insertError;
-
-      // Send email notification to renter
-      const signingUrl = `${window.location.origin}/sign/${selectedTemplate.id}`;
-      await fetch("/api/email/send", {
+      const url = getSigningUrl(selectedContract.token);
+      const res = await fetch("/api/sms/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: sendForm.renterEmail,
-          subject: `Contract from ${operator.business_name}`,
-          body: `<p>Hello ${sendForm.renterName},</p><p>Please review and sign the contract:</p><p><a href="${signingUrl}">Sign Contract</a></p>`,
-          templateType: "contract_sent",
+          to: selectedContract.renter_phone,
+          message: `Please sign your rental contract: ${url}`,
         }),
       });
 
-      // Reload signings
-      const { data: signingsData } = await supabase
-        .from("contract_signings")
-        .select("*")
-        .eq("operator_id", operator.id)
-        .order("created_at", { ascending: false });
-      if (signingsData) setSignings(signingsData as ContractSigning[]);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send SMS");
+      }
 
-      setSendForm({ renterName: "", renterEmail: "", renterPhone: "" });
+      // Update contract status to sent
+      await supabase
+        .from("contracts")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", selectedContract.id);
+
+      // Refresh contracts
+      setContracts((prev) =>
+        prev.map((c) =>
+          c.id === selectedContract.id
+            ? { ...c, status: "sent" as const, sent_at: new Date().toISOString() }
+            : c
+        )
+      );
+
       setShowSendModal(false);
-      setSelectedTemplate(null);
+      setSelectedContract(null);
     } catch (err: any) {
-      setError(err.message || "Failed to send contract");
+      setError(err.message || "Failed to send SMS");
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   }
 
-  async function deleteTemplate(id: string) {
-    if (!confirm("Delete this contract template?")) return;
-
-    try {
-      const { error: deleteError } = await supabase
-        .from("contract_templates")
-        .delete()
-        .eq("id", id);
-
-      if (deleteError) throw deleteError;
-
-      setTemplates(templates.filter((t) => t.id !== id));
-    } catch (err: any) {
-      setError(err.message || "Failed to delete template");
+  function getRenterName(renterId: string | null, renterName: string | null) {
+    if (renterName) return renterName;
+    if (renterId) {
+      const renter = renters.find((r) => r.id === renterId);
+      return renter?.name || "Unknown";
     }
+    return "---";
   }
 
   if (loading) return <div className="text-center py-8">Loading...</div>;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Contracts & E-Signatures</h1>
-        <Button
-          onClick={() => setShowUploadModal(true)}
-          className="bg-[#2EBD6B] text-white hover:bg-[#1a9952] flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Upload Contract
-        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Contracts</h1>
+          <p className="text-muted-foreground">
+            {contracts.length} total contract{contracts.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <Link href="/dashboard/contracts/new">
+          <Button style={{ backgroundColor: "#2EBD6B" }}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Contract
+          </Button>
+        </Link>
       </div>
 
       {error && (
@@ -231,230 +225,160 @@ export default function ContractsPage() {
         </div>
       )}
 
-      {/* Contract Templates Section */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Contract Templates</h2>
-        {templates.length === 0 ? (
-          <Card className="border-dashed border-2 border-gray-200 bg-gray-50">
-            <CardContent className="pt-6 text-center text-gray-600">
-              <FileText className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-              <p>No contract templates yet</p>
-              <Button
-                variant="outline"
-                onClick={() => setShowUploadModal(true)}
-                className="mt-4"
-              >
-                Upload Your First Contract
+      {contracts.length === 0 ? (
+        <Card className="border-0 bg-white shadow-sm ring-0">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="font-semibold mb-1">No contracts yet</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Create your first contract to get started
+            </p>
+            <Link href="/dashboard/contracts/new">
+              <Button style={{ backgroundColor: "#2EBD6B" }}>
+                Create Contract
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4">
-            {templates.map((template) => (
-              <Card key={template.id} className="border-0 bg-white shadow-sm">
-                <CardContent className="pt-6 flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-base">{template.name}</h3>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Created {new Date(template.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setShowSendModal(true);
-                      }}
-                      className="bg-[#2EBD6B] text-white hover:bg-[#1a9952] flex items-center gap-2"
-                      size="sm"
-                    >
-                      <Send className="h-4 w-4" />
-                      Send
-                    </Button>
-                    <Button
-                      onClick={() => deleteTemplate(template.id)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Signings Status Section */}
-      {signings.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Signing Status</h2>
-          <div className="space-y-2 overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="border-b border-gray-200">
-                <tr className="text-gray-600">
-                  <th className="text-left py-2 px-3 font-medium">Renter</th>
-                  <th className="text-left py-2 px-3 font-medium">Email</th>
-                  <th className="text-left py-2 px-3 font-medium">Status</th>
-                  <th className="text-left py-2 px-3 font-medium">Signed At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {signings.map((signing) => (
-                  <tr key={signing.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-3">{signing.renter_name}</td>
-                    <td className="py-3 px-3">{signing.renter_email}</td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          signing.status === "signed"
-                            ? "bg-green-100 text-green-700"
-                            : signing.status === "expired"
-                            ? "bg-gray-100 text-gray-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {signing.status.charAt(0).toUpperCase() + signing.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      {signing.signed_at
-                        ? new Date(signing.signed_at).toLocaleDateString()
-                        : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-0 bg-white shadow-sm ring-0">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Renter</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contracts.map((contract) => {
+                  const status = statusConfig[contract.status];
+                  const StatusIcon = status.icon;
+                  return (
+                    <TableRow key={contract.id}>
+                      <TableCell className="font-medium">
+                        {getRenterName(contract.renter_id, contract.renter_name)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {contract.renter_email || "---"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {contract.renter_phone || "---"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={status.color}>
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {status.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(contract.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {contract.status !== "signed" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedContract(contract);
+                                setShowSendModal(true);
+                              }}
+                            >
+                              <Send className="h-4 w-4 mr-1" />
+                              Send
+                            </Button>
+                          )}
+                          {contract.signed_pdf_url && (
+                            <a
+                              href={contract.signed_pdf_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Button variant="outline" size="sm">
+                                <Download className="h-4 w-4 mr-1" />
+                                Download
+                              </Button>
+                            </a>
+                          )}
+                          <Link href={`/dashboard/contracts/${contract.id}`}>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
-
-      {/* Upload Contract Modal */}
-      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Upload Contract Template</DialogTitle>
-            <DialogDescription>
-              Create a contract template that can be sent to renters for signature
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleUploadContract} className="space-y-4">
-            <div>
-              <Label htmlFor="template_name">Contract Name *</Label>
-              <Input
-                id="template_name"
-                placeholder="e.g., Standard Rental Agreement"
-                value={uploadForm.name}
-                onChange={(e) =>
-                  setUploadForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>Contract Content *</Label>
-              <textarea
-                placeholder="Paste your contract text or HTML here..."
-                value={uploadForm.contentText}
-                onChange={(e) =>
-                  setUploadForm((prev) => ({ ...prev, contentText: e.target.value }))
-                }
-                className="w-full h-48 p-3 border border-gray-200 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#2EBD6B] resize-none"
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowUploadModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-              >
-                {loading ? "Uploading..." : "Upload Contract"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Send Contract Modal */}
       <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Send Contract for Signature</DialogTitle>
+            <DialogTitle>Send Contract Link</DialogTitle>
             <DialogDescription>
-              Enter renter details to send the contract
+              Share the signing link with{" "}
+              {selectedContract?.renter_name || "the renter"}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSendContract} className="space-y-4">
-            <div>
-              <Label htmlFor="renter_name">Renter Name *</Label>
-              <Input
-                id="renter_name"
-                placeholder="John Doe"
-                value={sendForm.renterName}
-                onChange={(e) =>
-                  setSendForm((prev) => ({ ...prev, renterName: e.target.value }))
-                }
-                className="mt-1"
-              />
+          <div className="space-y-4">
+            {error && (
+              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Signing Link</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={selectedContract ? getSigningUrl(selectedContract.token) : ""}
+                  className="font-mono text-sm"
+                />
+                <Button variant="outline" onClick={handleCopyLink}>
+                  {copied ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="renter_email">Email *</Label>
-              <Input
-                id="renter_email"
-                type="email"
-                placeholder="john@example.com"
-                value={sendForm.renterEmail}
-                onChange={(e) =>
-                  setSendForm((prev) => ({ ...prev, renterEmail: e.target.value }))
-                }
-                className="mt-1"
-              />
-            </div>
+            {selectedContract?.renter_phone && (
+              <div className="pt-2 border-t">
+                <Button
+                  onClick={handleSendSMS}
+                  disabled={sending}
+                  className="w-full bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {sending ? "Sending..." : "Send via SMS"}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Will send to {selectedContract.renter_phone}
+                </p>
+              </div>
+            )}
+          </div>
 
-            <div>
-              <Label htmlFor="renter_phone">Phone</Label>
-              <Input
-                id="renter_phone"
-                placeholder="555-0100"
-                value={sendForm.renterPhone}
-                onChange={(e) =>
-                  setSendForm((prev) => ({ ...prev, renterPhone: e.target.value }))
-                }
-                className="mt-1"
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowSendModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-              >
-                {loading ? "Sending..." : "Send Contract"}
-              </Button>
-            </DialogFooter>
-          </form>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSendModal(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
