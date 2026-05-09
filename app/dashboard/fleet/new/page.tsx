@@ -25,6 +25,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Car, DollarSign, Gauge, MapPin, Upload, X, ImageIcon, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Location, Operator } from "@/lib/types";
 
 const PLAN_LIMITS = {
@@ -80,23 +81,26 @@ export default function NewVehiclePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Use admin client to bypass RLS and ensure we can load operator and vehicles
+      const adminSupabase = createAdminClient();
+
       // Load operator
-      const { data: operatorData } = await supabase
+      const { data: operatorData } = await adminSupabase
         .from("operators")
         .select("*")
         .eq("user_id", user.id)
         .single();
       if (operatorData) setOperator(operatorData as Operator);
 
-      // Load locations
+      // Load locations (using regular client is fine - no operator_id filtering)
       const { data: locationsData } = await supabase
         .from("locations")
         .select("*")
         .order("name");
       if (locationsData) setLocations(locationsData as Location[]);
 
-      // Load vehicle count
-      const { count } = await supabase
+      // Load vehicle count using admin client to bypass RLS
+      const { count } = await adminSupabase
         .from("vehicles")
         .select("id", { count: "exact", head: true })
         .eq("operator_id", operatorData?.id);

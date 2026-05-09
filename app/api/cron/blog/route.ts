@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKeywordOpportunities } from "@/lib/ahrefs";
-import { blogPosts } from "@/lib/blog-posts";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = "Sarihioenterprise/pcr-booking";
@@ -18,7 +17,47 @@ const seedKeywords = [
   "rent centric alternative",
   "car rental software small business",
   "booking software rental cars",
+  "how to manage rental car fleet",
+  "car rental payment software",
+  "rental car agreement template",
+  "car rental inspection checklist",
+  "rental car late fee policy",
+  "private car rental vs turo",
+  "uber lyft rental car program",
+  "rideshare car rental weekly",
+  "car rental business profit margin",
+  "how to price rental cars",
+  "car rental deposit policy",
+  "rental car insurance requirements",
+  "fleet maintenance tracking software",
+  "car rental customer management",
+  "how to get more rental car bookings",
+  "car rental booking website",
+  "rental car business plan",
+  "car rental terms and conditions",
+  "how to scale a car rental business",
+  "car rental software free trial",
 ];
+
+// Fetch existing slugs from GitHub (source of truth, not the compiled bundle)
+async function getExistingSlugsFromGitHub(): Promise<string[]> {
+  if (!GITHUB_TOKEN) return [];
+  const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${BLOG_POSTS_PATH}`;
+  const res = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}`, {
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      "User-Agent": "pcr-booking-cron",
+      Accept: "application/vnd.github+json",
+    },
+  });
+  if (!res.ok) return [];
+  const json = await res.json();
+  const content = Buffer.from(json.content, "base64").toString("utf-8");
+  const matches = content.match(/slug:\s*"([^"]+)"/g) || [];
+  return matches
+    .map((m) => m.replace(/slug:\s*"/, "").replace(/"$/, ""))
+    .filter((s) => s !== "string"); // exclude interface definition
+}
 
 function generateSlug(title: string): string {
   return title
@@ -214,8 +253,8 @@ export async function GET(request: NextRequest) {
       }));
     }
 
-    // Find existing blog post slugs
-    const existingSlugs = blogPosts.map((post) => post.slug);
+    // Fetch existing slugs from GitHub (live source of truth)
+    const existingSlugs = await getExistingSlugsFromGitHub();
 
     // Find first keyword that doesn't have a blog post
     let selectedKeyword = null;
@@ -223,10 +262,10 @@ export async function GET(request: NextRequest) {
 
     for (const opp of opportunities) {
       const proposedSlug = generateSlug(
-        opp.keyword
+        `Best ${opp.keyword
           .split(" ")
           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ")
+          .join(" ")} in 2025`
       );
 
       if (!existingSlugs.includes(proposedSlug)) {
@@ -284,8 +323,34 @@ export async function GET(request: NextRequest) {
     content: \`${newPost.content}\`,
   },\n`;
 
-    // Commit updated blog-posts.ts to GitHub (triggers Vercel redeploy)
+    // Commit updated blog-posts.ts to GitHub
     await commitBlogPostsToGitHub(newPostStr, newPost.title);
+
+    // Trigger Vercel production deploy (GitHub not connected, so we do it via API)
+    const vercelToken = process.env.VERCEL_TOKEN;
+    const vercelTeamId = process.env.VERCEL_TEAM_ID;
+    const vercelProjectId = process.env.VERCEL_PROJECT_ID;
+    if (vercelToken && vercelProjectId) {
+      try {
+        await fetch(
+          `https://api.vercel.com/v13/deployments${vercelTeamId ? `?teamId=${vercelTeamId}` : ""}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${vercelToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: "pcr-booking",
+              target: "production",
+              gitSource: null,
+            }),
+          }
+        );
+      } catch (deployErr) {
+        console.warn("Vercel deploy trigger failed (non-fatal):", deployErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
