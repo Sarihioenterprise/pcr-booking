@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,6 +35,7 @@ import {
 import {
   Car,
   ImagePlus,
+  ImageIcon,
   FileText,
   Wrench,
   CalendarDays,
@@ -44,6 +45,8 @@ import {
   CheckCircle2,
   XCircle,
   Plus,
+  X,
+  Upload,
 } from "lucide-react";
 import type {
   Vehicle,
@@ -111,9 +114,12 @@ export function VehicleDetailTabs({
 
   // Photo dialog
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState("");
   const [photoLabel, setPhotoLabel] = useState("");
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Document dialog
   const [docDialogOpen, setDocDialogOpen] = useState(false);
@@ -132,27 +138,73 @@ export function VehicleDetailTabs({
     setVehicleStatus(value as Vehicle["status"]);
   }
 
+  function handlePhotoSelect(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setPhotoPreview(objectUrl);
+    setPhotoFile(file);
+  }
+
+  function handlePhotoInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handlePhotoSelect(file);
+  }
+
+  function handlePhotoDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handlePhotoSelect(file);
+  }
+
+  function clearPhotoSelection() {
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  }
+
   async function addPhoto() {
-    if (!photoUrl) return;
+    if (!photoFile) return;
     setPhotoLoading(true);
-    const res = await fetch(`/api/fleet/${vehicle.id}/photos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url: photoUrl,
-        label: photoLabel || null,
-        is_primary: photos.length === 0,
-        sort_order: photos.length,
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setPhotos([...photos, data]);
-      setPhotoUrl("");
-      setPhotoLabel("");
-      setPhotoDialogOpen(false);
+
+    try {
+      // Upload to Supabase Storage
+      const ext = photoFile.name.split(".").pop();
+      const fileName = `${vehicle.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { data, error: uploadError } = await supabase.storage
+        .from("vehicle-photos")
+        .upload(fileName, photoFile, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("vehicle-photos")
+        .getPublicUrl(data.path);
+
+      // Save to database
+      const res = await fetch(`/api/fleet/${vehicle.id}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: publicUrl,
+          label: photoLabel || null,
+          is_primary: photos.length === 0,
+          sort_order: photos.length,
+        }),
+      });
+
+      if (res.ok) {
+        const photoData = await res.json();
+        setPhotos([...photos, photoData]);
+        setPhotoLabel("");
+        clearPhotoSelection();
+        setPhotoDialogOpen(false);
+      }
+    } catch (err) {
+      console.error("Failed to upload photo:", err);
+    } finally {
+      setPhotoLoading(false);
     }
-    setPhotoLoading(false);
   }
 
   async function removePhoto(photoId: string) {
@@ -773,20 +825,62 @@ export function VehicleDetailTabs({
       </Tabs>
 
       {/* Add Photo Dialog */}
-      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+      <Dialog open={photoDialogOpen} onOpenChange={(open) => {
+        setPhotoDialogOpen(open);
+        if (!open) clearPhotoSelection();
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Vehicle Photo</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="photo-url">Photo URL</Label>
-              <Input
-                id="photo-url"
-                placeholder="https://example.com/photo.jpg"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
+              <Label>Photo</Label>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                className="hidden"
+                onChange={handlePhotoInputChange}
               />
+              {photoPreview ? (
+                <div className="relative w-full h-48 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                  <img
+                    src={photoPreview}
+                    alt="Photo preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearPhotoSelection}
+                    className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => photoInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={handlePhotoDrop}
+                  className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 text-center transition-colors ${
+                    dragActive
+                      ? "border-[#2EBD6B] bg-[#2EBD6B]/10"
+                      : "border-gray-200 bg-gray-50 hover:border-[#2EBD6B] hover:bg-[#2EBD6B]/5"
+                  }`}
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
+                    <ImageIcon className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      {dragActive ? "Drop photo here" : "Click or drag photo to upload"}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WEBP, HEIC up to 10MB</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="photo-label">Label (optional)</Label>
@@ -808,9 +902,9 @@ export function VehicleDetailTabs({
             <Button
               className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
               onClick={addPhoto}
-              disabled={photoLoading || !photoUrl}
+              disabled={photoLoading || !photoFile}
             >
-              {photoLoading ? "Adding..." : "Add Photo"}
+              {photoLoading ? "Uploading..." : "Add Photo"}
             </Button>
           </DialogFooter>
         </DialogContent>
