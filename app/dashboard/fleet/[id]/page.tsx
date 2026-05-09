@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import { notFound } from "next/navigation";
@@ -26,7 +28,7 @@ export default async function VehicleDetailPage({
 
   const { data: vehicle } = await supabase
     .from("vehicles")
-    .select("*, locations(id, name, address, city, state)")
+    .select("*")
     .eq("id", id)
     .eq("operator_id", operator.id)
     .single();
@@ -99,7 +101,7 @@ export default async function VehicleDetailPage({
       </div>
 
       <VehicleDetailTabs
-        vehicle={vehicle as Vehicle & { locations: { id: string; name: string; address: string; city: string; state: string } | null }}
+        vehicle={vehicle as Vehicle & { locations: null }}
         photos={(photos ?? []) as VehiclePhoto[]}
         documents={(documents ?? []) as VehicleDocument[]}
         bookings={(bookings ?? []) as Booking[]}
