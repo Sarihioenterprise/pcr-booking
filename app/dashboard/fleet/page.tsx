@@ -21,13 +21,11 @@ export default async function FleetPage() {
 
   const { data: vehicles } = await supabase
     .from("vehicles")
-    .select("*, locations(name)")
+    .select("*")
     .eq("operator_id", operator.id)
     .order("created_at", { ascending: false });
 
-  const typedVehicles = (vehicles ?? []) as (Vehicle & {
-    locations: { name: string } | null;
-  })[];
+  const typedVehicles = (vehicles ?? []) as Vehicle[];
 
   const activeCount = typedVehicles.filter((v) => v.status === "active").length;
   const maintenanceCount = typedVehicles.filter(
