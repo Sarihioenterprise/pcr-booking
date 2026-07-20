@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import twilio from "twilio";
+import { fireWebhook } from "@/lib/webhooks";
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,6 +107,16 @@ export async function POST(request: NextRequest) {
       from: fromNumber,
       to: renterPhone,
     });
+
+    // Fire webhook for booking confirmation
+    if (bookingId) {
+      fireWebhook(operator_id, "booking.confirmed", {
+        booking_id: bookingId,
+        renter_name: renterName,
+        renter_phone: renterPhone,
+        vehicle_info: vehicleInfo,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

@@ -69,14 +69,14 @@ import type {
 } from "@/lib/types";
 
 const WEBHOOK_EVENTS = [
-  "new_booking",
-  "payment_received",
-  "booking_completed",
-  "booking_cancelled",
-  "agreement_signed",
-  "maintenance_due",
-  "deposit_released",
-  "lead_qualified",
+  "renter.created",
+  "booking.confirmed",
+  "booking.completed",
+  "contract.sent",
+  "contract.signed",
+  "payment.received",
+  "payment.failed",
+  "payment.overdue",
 ];
 
 const EMAIL_TEMPLATE_TYPES = [
@@ -162,6 +162,8 @@ export default function SettingsPage() {
   const [newWebhookEvents, setNewWebhookEvents] = useState<string[]>([]);
   const [newWebhookSecret, setNewWebhookSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+  const [expandedWebhookSecret, setExpandedWebhookSecret] = useState<string | null>(null);
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
 
   // Widget
   const [copiedEmbed, setCopiedEmbed] = useState(false);
@@ -179,6 +181,16 @@ export default function SettingsPage() {
   // Saving state
   const [saving, setSaving] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Stripe Connect state
+  const [stripeConnecting, setStripeConnecting] = useState(false);
+  const [stripeError, setStripeError] = useState("");
+  const [stripeStatus, setStripeStatus] = useState<{
+    connected: boolean;
+    charges_enabled: boolean;
+    details_submitted: boolean;
+  } | null>(null);
+  const [checkingStripeStatus, setCheckingStripeStatus] = useState(false);
 
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg);
@@ -216,6 +228,49 @@ export default function SettingsPage() {
       setUpgradingPlan(null);
     }
   }, []);
+
+  // Check Stripe status
+  const checkStripeStatus = useCallback(async () => {
+    setCheckingStripeStatus(true);
+    try {
+      const res = await fetch("/api/stripe/connect/status");
+      if (res.ok) {
+        const data = await res.json();
+        setStripeStatus(data);
+      }
+    } catch (error) {
+      console.error("Failed to check Stripe status:", error);
+    } finally {
+      setCheckingStripeStatus(false);
+    }
+  }, []);
+
+  // Handle Stripe Connect query params
+  useEffect(() => {
+    const stripeConnected = searchParams.get("stripe");
+    const error = searchParams.get("error");
+
+    if (stripeConnected === "connected") {
+      showSuccess("Stripe onboarding complete! Checking status...");
+      // Reload operator data
+      async function reload() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: op } = await supabase
+            .from("operators")
+            .select("*")
+            .eq("user_id", user.id)
+            .single();
+          if (op) setOperator(op as Operator);
+        }
+      }
+      reload();
+      // Check status after a short delay
+      setTimeout(() => checkStripeStatus(), 1000);
+    } else if (error) {
+      setStripeError(`Connection failed: ${error}`);
+    }
+  }, [searchParams, showSuccess, supabase, checkStripeStatus]);
 
   // Load operator data
   useEffect(() => {
@@ -411,6 +466,64 @@ export default function SettingsPage() {
     if (!error) showSuccess("Payment settings saved");
   }
 
+  // Connect Stripe
+  async function handleConnectStripe() {
+    setStripeConnecting(true);
+    setStripeError("");
+    try {
+      window.location.href = "/api/stripe/connect";
+    } catch (error) {
+      console.error("Stripe connect error:", error);
+      setStripeError("Failed to connect to Stripe");
+      setStripeConnecting(false);
+    }
+  }
+
+  // Re-trigger Stripe onboarding
+  async function handleReconnectStripe() {
+    setStripeConnecting(true);
+    setStripeError("");
+    try {
+      window.location.href = "/api/stripe/connect";
+    } catch (error) {
+      console.error("Stripe connect error:", error);
+      setStripeError("Failed to reconnect to Stripe");
+      setStripeConnecting(false);
+    }
+  }
+
+  // Disconnect Stripe
+  async function handleDisconnectStripe() {
+    if (!confirm("Are you sure you want to disconnect your Stripe account?")) return;
+    setSaving("stripe");
+    try {
+      const res = await fetch("/api/stripe/connect/disconnect", {
+        method: "POST",
+      });
+      if (res.ok) {
+        showSuccess("Stripe account disconnected");
+        // Reload operator
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: op } = await supabase
+            .from("operators")
+            .select("*")
+            .eq("user_id", user.id)
+            .single();
+          if (op) setOperator(op as Operator);
+        }
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to disconnect");
+      }
+    } catch (error) {
+      console.error("Stripe disconnect error:", error);
+      alert("Failed to disconnect");
+    } finally {
+      setSaving("");
+    }
+  }
+
   // Add team member
   async function addTeamMember() {
     if (!newMemberName || !newMemberEmail) return;
@@ -582,6 +695,45 @@ export default function SettingsPage() {
     if (json.success) {
       setWebhooks((prev) => prev.filter((w) => w.id !== id));
       showSuccess("Webhook removed");
+    }
+  }
+
+  // Test webhook
+  async function testWebhook(webhook: WebhookEndpoint) {
+    setTestingWebhook(webhook.id);
+    try {
+      const testPayload = {
+        event: "test.ping",
+        timestamp: Date.now(),
+        data: { message: "This is a test webhook from PCR Booking" },
+      };
+
+      const bodyJson = JSON.stringify(testPayload);
+      let headers: Record<string, string> = { "Content-Type": "application/json" };
+
+      if (webhook.secret) {
+        const signature = require("crypto")
+          .createHmac("sha256", webhook.secret)
+          .update(bodyJson)
+          .digest("hex");
+        headers["X-PCR-Signature"] = signature;
+      }
+
+      const res = await fetch(webhook.url, {
+        method: "POST",
+        headers,
+        body: bodyJson,
+      });
+
+      if (res.ok) {
+        showSuccess("Test webhook sent successfully");
+      } else {
+        showSuccess(`Webhook returned status ${res.status}`);
+      }
+    } catch (error) {
+      showSuccess("Error sending test webhook");
+    } finally {
+      setTestingWebhook(null);
     }
   }
 
@@ -961,16 +1113,101 @@ export default function SettingsPage() {
                 </div>
               </div>
               <Separator />
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Label>Stripe Account</Label>
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {operator?.stripe_account_id || "Not connected"}
-                  </Badge>
-                  {operator?.stripe_account_id && (
-                    <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">Connected</Badge>
-                  )}
-                </div>
+                {stripeError && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800">
+                    {stripeError}
+                  </div>
+                )}
+                {operator?.stripe_account_id && stripeStatus?.charges_enabled ? (
+                  // Connected state
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+                      <Check className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-emerald-900">
+                          Stripe Connected — Payouts Active
+                        </p>
+                        <p className="text-sm text-emerald-800 mt-0.5">
+                          Funds are being sent to your bank account
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          window.open("https://dashboard.stripe.com/", "_blank");
+                        }}
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Stripe Dashboard
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDisconnectStripe}
+                        disabled={saving === "stripe"}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        {saving === "stripe" ? "Disconnecting..." : "Disconnect"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // Not connected or setup in progress
+                  <div className="space-y-4">
+                    {operator?.stripe_account_id ? (
+                      <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                        <p className="text-sm font-medium text-amber-900 mb-3">
+                          ⚠️ Setup in progress
+                        </p>
+                        <p className="text-sm text-amber-800 mb-4">
+                          Complete your Stripe account setup to start accepting payments. This usually takes 1-2 business days.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleReconnectStripe}
+                            disabled={stripeConnecting}
+                            className="bg-[#635BFF] hover:bg-[#5850DB] text-white gap-2"
+                            size="sm"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                            {stripeConnecting ? "Connecting..." : "Complete Setup"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              window.open("https://dashboard.stripe.com/", "_blank");
+                            }}
+                            className="gap-2"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Dashboard
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          Connect your Stripe account to accept payments from renters. Funds go directly to your bank account.
+                        </p>
+                        <Button
+                          onClick={handleConnectStripe}
+                          disabled={stripeConnecting}
+                          className="bg-[#635BFF] hover:bg-[#5850DB] text-white gap-2 w-full"
+                        >
+                          <CreditCard className="h-4 w-4" />
+                          {stripeConnecting ? "Connecting..." : "Connect with Stripe"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex justify-end">
                 <Button onClick={savePaymentSettings} disabled={saving === "payment"} className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white">
@@ -1222,30 +1459,30 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               {/* Existing webhooks */}
               {webhooks.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {webhooks.map((wh) => (
-                    <div key={wh.id} className="p-3 border rounded-lg">
-                      <div className="flex items-start justify-between">
+                    <div key={wh.id} className="p-4 border rounded-lg bg-slate-50">
+                      <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <code className="text-sm font-mono truncate">{wh.url}</code>
+                          <div className="flex items-center gap-2 mb-2">
+                            <code className="text-sm font-mono truncate bg-white px-2 py-1 rounded border">{wh.url}</code>
                             <Badge
                               variant="outline"
-                              className={wh.is_active ? "bg-green-100 text-green-700 border-green-200" : "bg-slate-100 text-slate-500 border-slate-200"}
+                              className={wh.is_active ? "bg-green-100 text-green-700 border-green-200" : "bg-slate-200 text-slate-600 border-slate-300"}
                             >
                               {wh.is_active ? "Active" : "Inactive"}
                             </Badge>
                           </div>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {wh.events.map((e) => (
-                              <Badge key={e} variant="outline" className="text-xs">{e}</Badge>
+                              <Badge key={e} variant="outline" className="text-xs bg-white">{e}</Badge>
                             ))}
                           </div>
-                          {wh.last_triggered_at && (
-                            <p className="text-xs text-muted-foreground mt-1">Last triggered: {new Date(wh.last_triggered_at).toLocaleDateString()}</p>
-                          )}
                         </div>
-                        <div className="flex items-center gap-1 ml-2">
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button variant="ghost" size="sm" onClick={() => testWebhook(wh)} disabled={testingWebhook === wh.id} title="Send test webhook">
+                            <Webhook className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="sm" onClick={() => toggleWebhookActive(wh)}>
                             {wh.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </Button>
@@ -1254,6 +1491,38 @@ export default function SettingsPage() {
                           </Button>
                         </div>
                       </div>
+                      {wh.secret && (
+                        <div className="pt-3 border-t text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Secret:</span>
+                            <button
+                              onClick={() => setExpandedWebhookSecret(expandedWebhookSecret === wh.id ? null : wh.id)}
+                              className="text-[#2EBD6B] hover:underline flex items-center gap-1"
+                            >
+                              {expandedWebhookSecret === wh.id ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                              {expandedWebhookSecret === wh.id ? "Hide" : "Show"}
+                            </button>
+                          </div>
+                          {expandedWebhookSecret === wh.id && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <code className="bg-white px-2 py-1 rounded border flex-1 font-mono text-xs truncate">{wh.secret}</code>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(wh.secret || "");
+                                  showSuccess("Secret copied");
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {wh.last_triggered_at && (
+                        <p className="text-xs text-muted-foreground mt-2">Last triggered: {new Date(wh.last_triggered_at).toLocaleDateString()}</p>
+                      )}
                     </div>
                   ))}
                 </div>

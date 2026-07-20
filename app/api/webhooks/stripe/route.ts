@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
+import { fireGHLEvent, addTag, createOrUpdateContact } from "@/lib/ghl";
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
@@ -107,44 +108,64 @@ async function handleSubscriptionUpsert(
   }
 
   // Update operator plan
-  const { error: opError } = await supabase
+  const { error: opError, data: updatedOps } = await supabase
     .from("operators")
     .update({
       plan,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
     })
-    .eq("stripe_customer_id", customerId);
+    .eq("stripe_customer_id", customerId)
+    .select();
 
   if (opError) {
     console.error("Failed to update operator plan:", opError);
   }
 
-  // Check if the update actually matched any rows
-  const { data: updatedOps } = await supabase
-    .from("operators")
-    .select("id")
-    .eq("stripe_customer_id", customerId);
+  let operator = updatedOps?.[0];
 
-  if (!updatedOps || updatedOps.length === 0) {
-    // No operator matched by customer ID — try email fallback
+  // If no operator matched by customer ID, try email fallback
+  if (!operator) {
     try {
       const stripeCustomer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
       if (stripeCustomer.email) {
         const { data: authUsers } = await supabase.auth.admin.listUsers();
         const matchedUser = authUsers?.users?.find(u => u.email === stripeCustomer.email);
         if (matchedUser) {
-          await supabase.from("operators").update({
-            plan,
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscription.id,
-          }).eq("user_id", matchedUser.id);
+          const { data: updated } = await supabase
+            .from("operators")
+            .update({
+              plan,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscription.id,
+            })
+            .eq("user_id", matchedUser.id)
+            .select()
+            .single();
+          operator = updated;
           console.log(`[webhook] Linked subscription via email fallback for ${stripeCustomer.email}`);
         }
       }
     } catch (e) {
       console.error("[webhook] Email fallback failed:", e);
     }
+  }
+
+  // Fire GHL event if subscription is active or trialing (fire and forget)
+  if (
+    operator &&
+    (subscription.status === "active" || subscription.status === "trialing")
+  ) {
+    const amount = subscription.items.data[0]?.price?.unit_amount
+      ? (subscription.items.data[0].price.unit_amount / 100).toFixed(2)
+      : "0.00";
+    const note = `Subscribed to ${plan} plan at $${amount}/month on ${new Date().toLocaleDateString()}`;
+    fireGHLEvent(
+      operator,
+      "pcr-booking-paid",
+      note,
+      [`plan-${plan}`]
+    ).catch((err) => console.error("[GHL] subscription event failed:", err));
   }
 }
 
@@ -156,18 +177,30 @@ async function handlePaymentFailed(
   if (!customerId) return;
 
   // Lock the account — set stripe_subscription_id to null so get-operator redirects to plan page
-  const { error } = await supabase
+  const { error, data: updatedOps } = await supabase
     .from("operators")
     .update({
       stripe_subscription_id: null,
       plan: "free",
     })
-    .eq("stripe_customer_id", customerId);
+    .eq("stripe_customer_id", customerId)
+    .select();
 
   if (error) {
     console.error("Failed to lock account after payment failure:", error);
   } else {
     console.log(`Account locked for customer ${customerId} due to payment failure`);
+    // Fire GHL event for payment failure (fire and forget)
+    const operator = updatedOps?.[0];
+    if (operator) {
+      const amount = invoice.amount_due
+        ? (invoice.amount_due / 100).toFixed(2)
+        : "unknown";
+      const note = `Payment failed for ${amount}. Subscription paused.`;
+      fireGHLEvent(operator, "payment-failed", note).catch((err) =>
+        console.error("[GHL] payment failed event failed:", err)
+      );
+    }
   }
 }
 
@@ -207,12 +240,22 @@ async function handleSubscriptionDeleted(
   }
 
   // Downgrade operator to growth plan
-  const { error: opError } = await supabase
+  const { error: opError, data: updatedOps } = await supabase
     .from("operators")
     .update({ plan: "growth" })
-    .eq("stripe_customer_id", customerId);
+    .eq("stripe_customer_id", customerId)
+    .select();
 
   if (opError) {
     console.error("Failed to downgrade operator plan:", opError);
+  } else {
+    // Fire GHL event for subscription cancellation (fire and forget)
+    const operator = updatedOps?.[0];
+    if (operator) {
+      const note = `Cancelled PCR Booking subscription on ${new Date().toLocaleDateString()}`;
+      fireGHLEvent(operator, "pcr-booking-churned", note).catch((err) =>
+        console.error("[GHL] subscription cancelled event failed:", err)
+      );
+    }
   }
 }

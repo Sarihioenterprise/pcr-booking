@@ -72,19 +72,37 @@ function OnboardingPageInner() {
       resolvedUserId = user.id;
     }
 
-    const { error: insertError } = await supabase.from("operators").insert({
-      user_id: resolvedUserId,
-      business_name: businessName,
-      owner_name: ownerName,
-      phone,
-      city,
-      state,
-    });
+    const { data: operator, error: insertError } = await supabase
+      .from("operators")
+      .insert({
+        user_id: resolvedUserId,
+        business_name: businessName,
+        owner_name: ownerName,
+        phone,
+        city,
+        state,
+      })
+      .select()
+      .single();
 
     if (insertError) {
       setError(insertError.message);
       setLoading(false);
       return;
+    }
+
+    // Fire GHL signup event asynchronously (fire and forget)
+    if (operator?.id) {
+      fetch("/api/ghl/sync-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operatorId: operator.id,
+          businessName,
+          ownerName,
+          phone,
+        }),
+      }).catch((err) => console.error("[onboarding] GHL sync failed:", err));
     }
 
     // Check if there's a Stripe session to link — URL param takes priority over sessionStorage

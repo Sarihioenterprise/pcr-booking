@@ -57,6 +57,15 @@ interface RenterDocument {
   created_at: string;
 }
 
+interface SMSLogEntry {
+  id: string;
+  message_type: "contract" | "booking_confirmation" | "payment_reminder" | "late_fee" | "custom";
+  message_body: string;
+  to_phone: string;
+  status: "sent" | "failed";
+  created_at: string;
+}
+
 const bookingStatusColors: Record<string, string> = {
   pending: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   confirmed: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -73,6 +82,22 @@ const commTypeIcons: Record<string, React.ReactNode> = {
   in_person: <User className="h-4 w-4" />,
 };
 
+const smsTypeColors: Record<string, string> = {
+  contract: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  booking_confirmation: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  payment_reminder: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  late_fee: "bg-red-500/10 text-red-600 border-red-500/20",
+  custom: "bg-slate-500/10 text-slate-600 border-slate-500/20",
+};
+
+const smsTypeLabels: Record<string, string> = {
+  contract: "Contract",
+  booking_confirmation: "Booking Confirmation",
+  payment_reminder: "Payment Reminder",
+  late_fee: "Late Fee",
+  custom: "Custom",
+};
+
 export default function RenterDetailPage() {
   const { id } = useParams();
   const supabase = createClient();
@@ -82,6 +107,7 @@ export default function RenterDetailPage() {
     []
   );
   const [documents, setDocuments] = useState<RenterDocument[]>([]);
+  const [smsLog, setSmsLog] = useState<SMSLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Blacklist state
@@ -142,6 +168,15 @@ export default function RenterDetailPage() {
 
         if (docs) setDocuments(docs as RenterDocument[]);
       }
+
+      // Fetch SMS log for this renter
+      const { data: sms } = await supabase
+        .from("renter_comms_log")
+        .select("*")
+        .eq("renter_id", id)
+        .order("created_at", { ascending: false });
+
+      if (sms) setSmsLog(sms as SMSLogEntry[]);
 
       setLoading(false);
     }
@@ -298,6 +333,7 @@ export default function RenterDetailPage() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="history">Rental History</TabsTrigger>
           <TabsTrigger value="communications">Communication Log</TabsTrigger>
+          <TabsTrigger value="sms-log">SMS Log</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
@@ -603,6 +639,64 @@ export default function RenterDetailPage() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* SMS LOG TAB */}
+        <TabsContent value="sms-log">
+          {smsLog.length === 0 ? (
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="font-semibold mb-1">No SMS messages sent</h3>
+                <p className="text-sm text-muted-foreground">
+                  SMS messages to this renter will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {smsLog.map((log) => (
+                <Card
+                  key={log.id}
+                  className="border-0 bg-white shadow-sm ring-0"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${smsTypeColors[log.message_type] || ""}`}
+                          >
+                            {smsTypeLabels[log.message_type] || log.message_type}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              log.status === "sent"
+                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                : "bg-red-500/10 text-red-600 border-red-500/20"
+                            }`}
+                          >
+                            {log.status === "sent" ? "✓ Sent" : "✗ Failed"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-foreground whitespace-pre-wrap mb-2">
+                          {log.message_body}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>To: {log.to_phone}</span>
+                          <span>•</span>
+                          <span>{new Date(log.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* DOCUMENTS TAB */}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
+import { fireGHLEvent } from "@/lib/ghl";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,6 +50,12 @@ export async function POST(req: NextRequest) {
       console.error("Failed to add ticket message:", msgError);
       // Ticket was created — don't fail, just log
     }
+
+    // Fire GHL event for support ticket (fire and forget)
+    const note = `Support ticket created: ${subject}\n\n${message.substring(0, 200)}`;
+    fireGHLEvent(operator, "support-ticket", note).catch((err) =>
+      console.error("[GHL] support-ticket event failed:", err)
+    );
 
     return NextResponse.json({ success: true, ticketId: ticket.id }, { status: 201 });
   } catch (err) {

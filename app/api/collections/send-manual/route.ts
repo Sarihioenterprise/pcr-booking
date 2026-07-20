@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getOperator } from "@/lib/get-operator";
 import twilio from "twilio";
+import { fireWebhook } from "@/lib/webhooks";
 
 export async function POST(request: NextRequest) {
   const operator = await getOperator();
@@ -60,6 +61,15 @@ export async function POST(request: NextRequest) {
       stage: payment.dunning_stage ?? "manual",
       channel: "sms",
       message_sent: smsMessage,
+    });
+
+    // Fire webhook for overdue payment
+    fireWebhook(operator.id, "payment.overdue", {
+      payment_schedule_id: payment.id,
+      booking_id: payment.booking_id,
+      amount: payment.amount,
+      late_fee_amount: payment.late_fee_amount,
+      renter_name: renterName,
     });
 
     return NextResponse.json({ success: true });

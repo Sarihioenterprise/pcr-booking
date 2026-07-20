@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import twilio from "twilio";
 
 export async function POST(request: NextRequest) {
   // ── Webhook Secret Verification ──────────────────────────────────────────
@@ -66,10 +67,46 @@ export async function POST(request: NextRequest) {
     }
 
     if (stage === "hot_lead") {
-      // TODO: Send notification to operator (email, SMS, or push)
-      console.log(
-        `[NOTIFICATION] Hot lead detected — lead_id: ${lead_id}, operator_id: ${operator_id}`
-      );
+      // Send SMS notification to operator's notification_phone
+      try {
+        const { data: operator } = await supabase
+          .from("operators")
+          .select("notification_phone, business_name, owner_name")
+          .eq("id", operator_id)
+          .single();
+
+        const accountSid = process.env.TWILIO_ACCOUNT_SID;
+        const authToken = process.env.TWILIO_AUTH_TOKEN;
+        const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+        if (operator?.notification_phone && accountSid && authToken && fromNumber) {
+          const client = twilio(accountSid, authToken);
+          // Try to get renter name from the lead record
+          const { data: lead } = await supabase
+            .from("leads")
+            .select("name, phone")
+            .eq("id", lead_id)
+            .single();
+          const leadInfo = lead?.name ? ` from ${lead.name}` : "";
+          await client.messages.create({
+            body: `\ud83d\udd25 Hot Lead Alert! A qualified renter${leadInfo} is ready to book. Log in to PCR Booking to follow up: https://pcrbooking.com/dashboard/leads`,
+            from: fromNumber,
+            to: operator.notification_phone,
+          });
+          console.log(
+            `[NOTIFICATION] Hot lead SMS sent to operator ${operator_id}`
+          );
+        } else {
+          console.warn(
+            `[NOTIFICATION] Hot lead detected but cannot send SMS — ` +
+              `operator_id: ${operator_id}, has_phone: ${!!operator?.notification_phone}, ` +
+              `twilio_configured: ${!!(accountSid && authToken && fromNumber)}`
+          );
+        }
+      } catch (smsErr) {
+        // Non-fatal: log but don't fail the webhook response
+        console.error("[NOTIFICATION] Failed to send hot lead SMS:", smsErr);
+      }
     }
 
     return NextResponse.json({ success: true });
