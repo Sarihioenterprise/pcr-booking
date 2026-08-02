@@ -11,6 +11,42 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "best-rideshare-car-rental-weekly-in-2025",
+    title: "Best Rideshare Car Rental Weekly in 2025",
+    excerpt: "Learn how to choose the best rideshare car rental weekly for your independent rental business. Complete guide with feature comparison and pricing analysis.",
+    category: "Software",
+    publishedAt: "2026-08-02",
+    readTime: "1 min",
+    keywords: ["rideshare car rental weekly", "car rental software", "rental management system"],
+    content: `
+    <p>If you're running an independent car rental business, finding the right tools is critical.
+    The challenge: most software is built for enterprise companies or marketplace platforms that take a cut of your revenue.</p>
+
+    <h2>The Problem With Current Solutions</h2>
+    <ul>
+      <li><strong>Enterprise systems</strong> — Costly, complex, built for Hertz not you</li>
+      <li><strong>Marketplace platforms</strong> — Take 20–35% of your revenue per booking</li>
+    </ul>
+
+    <h2>What Independent Operators Actually Need</h2>
+    <ul>
+      <li>Direct booking control — own the customer relationship</li>
+      <li>Simple fleet management — add, price, and track vehicles easily</li>
+      <li>Built-in payment processing — no commissions extracted</li>
+      <li>AI lead qualification — screen renters automatically</li>
+      <li>Mobile-first dashboard — manage from anywhere</li>
+    </ul>
+
+    <h2>How PCR Booking Solves rideshare car rental weekly</h2>
+    <p>PCR Booking is purpose-built for operators like you — managing 1–50 vehicles, renting direct to rideshare drivers and private renters.
+    Flat monthly pricing, no per-booking fees, payments go straight to your Stripe account.</p>
+
+    <h2>Get Started Today</h2>
+    <p>Most operators are live with their booking widget the same day.
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+  `,
+  },
+  {
     slug: "best-uber-lyft-rental-car-program-in-2025",
     title: "Best Uber Lyft Rental Car Program in 2025",
     excerpt: "Learn how to choose the best uber lyft rental car program for your independent rental business. Complete guide with feature comparison and pricing analysis.",
