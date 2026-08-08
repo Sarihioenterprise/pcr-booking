@@ -52,6 +52,7 @@ interface BookingForm {
   name: string;
   phone: string;
   email: string;
+  email_error: string;
   start_date: string;
   end_date: string;
 }
@@ -60,6 +61,7 @@ const emptyForm: BookingForm = {
   name: "",
   phone: "",
   email: "",
+  email_error: "",
   start_date: "",
   end_date: "",
 };
@@ -77,9 +79,31 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
   const displayName = (isScale && operator.brand_company_name) || operator.business_name;
   const displayLogo = (isScale && operator.brand_logo_url) || operator.logo_url;
 
+  function handleEmailBlur() {
+    const email = form.email;
+    if (!email) {
+      setForm((prev) => ({ ...prev, email_error: "" }));
+      return;
+    }
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    setForm((prev) => ({
+      ...prev,
+      email_error: valid ? "" : "Please enter a valid email address",
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedVehicle) return;
+
+    // Validate email before submit
+    if (form.email) {
+      const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
+      if (!valid) {
+        setForm((prev) => ({ ...prev, email_error: "Please enter a valid email address" }));
+        return;
+      }
+    }
 
     setSubmitting(true);
     setError("");
@@ -206,7 +230,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
 
       {/* Booking Request Dialog */}
       <Dialog open={!!selectedVehicle && !submitted} onOpenChange={(o) => { if (!o) setSelectedVehicle(null); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request to Book</DialogTitle>
             <DialogDescription>
@@ -214,7 +238,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="req-name">
                 <User className="h-3.5 w-3.5 inline mr-1" />
@@ -251,12 +275,17 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
               </Label>
               <Input
                 id="req-email"
-                required
-                type="email"
+                type="text"
+                inputMode="email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => setForm({ ...form, email: e.target.value, email_error: "" })}
+                onBlur={handleEmailBlur}
                 placeholder="john@example.com"
+                className={form.email_error ? "border-red-400" : ""}
               />
+              {form.email_error && (
+                <p className="text-xs text-red-500">{form.email_error}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -284,6 +313,26 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
                 />
               </div>
             </div>
+
+            {/* Pricing preview — shown as soon as vehicle is selected; total when dates added */}
+            {selectedVehicle && (
+              <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Daily rate</span>
+                  <span className="font-semibold text-gray-900">${Number(selectedVehicle.daily_rate).toFixed(0)}/day</span>
+                </div>
+                {form.start_date && form.end_date && (() => {
+                  const days = Math.max(1, Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+                  const total = selectedVehicle.daily_rate * days;
+                  return days > 0 ? (
+                    <div className="flex items-center justify-between mt-1 pt-1 border-t border-gray-200">
+                      <span className="text-gray-500">{days} day{days !== 1 ? "s" : ""} total</span>
+                      <span className="font-bold text-[#2EBD6B]">${total.toFixed(2)}</span>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>

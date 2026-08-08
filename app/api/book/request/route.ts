@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
+// Public endpoint — uses service role to bypass RLS on the leads table
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Check if renter is blacklisted
     try {
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         email: email || null,
         stage: "new",
+        source: "booking_widget",
       }).select("id");
 
       if (err2) {
@@ -73,15 +75,60 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch operator name for notifications
+    let operatorName = "the rental company";
+    try {
+      const { data: op } = await supabase
+        .from("operators")
+        .select("business_name, business_email")
+        .eq("id", operator_id)
+        .single();
+      if (op) {
+        operatorName = op.business_name;
+
+        // Notify operator by email (fire-and-forget)
+        if (op.business_email) {
+          const baseUrl = request.headers.get("origin") || "https://pcrbooking.com";
+          fetch(`${baseUrl}/api/email/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: op.business_email,
+              subject: `New Booking Request: ${name}`,
+              body: `<p>A new booking request has been submitted via your booking page.</p><p><strong>Name:</strong> ${name}</p><p><strong>Phone:</strong> ${phone}</p>${email ? `<p><strong>Email:</strong> ${email}</p>` : ""}${vehicle_label ? `<p><strong>Vehicle:</strong> ${vehicle_label}</p>` : ""}${datesNote ? `<p><strong>Dates:</strong> ${datesNote}</p>` : ""}<p><a href="https://pcrbooking.com/dashboard/leads">View leads &rarr;</a></p>`,
+              templateType: "operator_lead_notification",
+            }),
+          }).catch(() => {});
+        }
+      }
+    } catch {
+      // Non-fatal
+    }
+
+    // Send customer confirmation email (fire-and-forget)
+    if (email) {
+      const baseUrl = request.headers.get("origin") || "https://pcrbooking.com";
+      fetch(`${baseUrl}/api/email/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: email,
+          subject: "Booking Request Received",
+          body: `<p>Hi ${name},</p><p>Your booking request with <strong>${operatorName}</strong> has been received!</p>${vehicle_label ? `<p><strong>Vehicle:</strong> ${vehicle_label}</p>` : ""}<p><strong>Requested dates:</strong> ${datesNote || "To be confirmed"}</p><p>${operatorName} will contact you shortly to confirm your reservation.</p><p>Thank you!</p>`,
+          templateType: "customer_booking_confirmation",
+        }),
+      }).catch(() => {});
+    }
+
     // Send confirmation SMS if we have a lead ID and phone number
     if (leadId && phone) {
       try {
         const baseUrl = request.headers.get("origin") || "https://pcrbooking.com";
-        await fetch(`${baseUrl}/api/book/confirm-sms`, {
+        fetch(`${baseUrl}/api/book/confirm-sms`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ leadId }),
-        });
+        }).catch((err) => console.error("SMS confirmation failed:", err));
       } catch (err) {
         // SMS failure doesn't break the booking - log but continue
         console.error("SMS confirmation failed:", err);

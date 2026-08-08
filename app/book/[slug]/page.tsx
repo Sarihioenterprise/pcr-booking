@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { BookingPageClient } from "./booking-page-client";
 
@@ -6,9 +6,10 @@ interface Params {
   params: Promise<{ slug: string }>;
 }
 
+// Public page — must use admin client to bypass RLS since visitors are unauthenticated
 export default async function PublicBookingPage({ params }: Params) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Find operator by booking_slug or referral_code
   // Also fetch white label branding fields (Scale plan only — applied client-side)
