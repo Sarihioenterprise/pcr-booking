@@ -21,8 +21,12 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: true });
 
   if (error) {
-    // Table may not exist yet (migration pending) — return empty gracefully
-    if (error.code === "42P01") {
+    // Table may not exist yet (migration pending) — return empty gracefully.
+    // Handles both Postgres error 42P01 and PostgREST "schema cache" errors.
+    const isTableMissing =
+      error.code === "42P01" ||
+      (error.message && error.message.includes("addons"));
+    if (isTableMissing) {
       return NextResponse.json({ addons: [] });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -17,7 +17,11 @@ export async function GET() {
 
     if (error) {
       // Table may not exist yet (migration pending)
-      if (error.code === "42P01") {
+      // Handles Postgres 42P01 + PostgREST schema cache errors
+      const isTableMissing =
+        error.code === "42P01" ||
+        (error.message && error.message.includes("addons"));
+      if (isTableMissing) {
         return NextResponse.json({ addons: [] });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
