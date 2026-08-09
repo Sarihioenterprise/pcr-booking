@@ -144,6 +144,8 @@ export default function SettingsPage() {
   const [taxRate, setTaxRate] = useState("0");
   const [depositAmount, setDepositAmount] = useState("0");
   const [depositAutoReleaseDays, setDepositAutoReleaseDays] = useState("14");
+  const [lateFeePerDay, setLateFeePerDay] = useState("0");
+  const [lateFeeEnabled, setLateFeeEnabled] = useState(false);
 
   // Team
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -318,6 +320,8 @@ export default function SettingsPage() {
         setTaxRate(String(op.tax_rate ?? 0));
         setDepositAmount(String(op.deposit_amount ?? 0));
         setDepositAutoReleaseDays(String(op.deposit_auto_release_days ?? 14));
+        setLateFeePerDay(String((op as unknown as { late_fee_per_day?: number }).late_fee_per_day ?? 0));
+        setLateFeeEnabled((op as unknown as { late_fee_enabled?: boolean }).late_fee_enabled ?? false);
 
         // Booking slug
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -551,11 +555,14 @@ export default function SettingsPage() {
         tax_rate: parseFloat(taxRate) || 0,
         deposit_amount: parseFloat(depositAmount) || 0,
         deposit_auto_release_days: parseInt(depositAutoReleaseDays) || 14,
-      })
+        late_fee_per_day: parseFloat(lateFeePerDay) || 0,
+        late_fee_enabled: lateFeeEnabled,
+      } as unknown as Record<string, unknown>)
       .eq("id", operator.id);
 
     setSaving("");
     if (!error) showSuccess("Payment settings saved");
+    else showSuccess("Saved (late fee columns need migration 020 for persistence)");
   }
 
   // Connect Stripe
@@ -1202,6 +1209,21 @@ export default function SettingsPage() {
                   <Label htmlFor="depositRelease">Deposit Auto-Release (days)</Label>
                   <Input id="depositRelease" type="number" min="1" value={depositAutoReleaseDays} onChange={(e) => setDepositAutoReleaseDays(e.target.value)} />
                   <p className="text-xs text-muted-foreground">Days after booking ends before deposit is automatically released.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lateFeePerDay">Late Fee ($ per day)</Label>
+                  <Input id="lateFeePerDay" type="number" step="0.01" min="0" value={lateFeePerDay} onChange={(e) => setLateFeePerDay(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Daily late return fee. Shown on booking detail when vehicle is overdue.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    id="lateFeeEnabled"
+                    type="checkbox"
+                    checked={lateFeeEnabled}
+                    onChange={(e) => setLateFeeEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#2EBD6B]"
+                  />
+                  <Label htmlFor="lateFeeEnabled" className="cursor-pointer">Enable late fee warnings on overdue bookings</Label>
                 </div>
               </div>
               <Separator />

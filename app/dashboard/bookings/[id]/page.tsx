@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SMSButton } from "@/components/dashboard/sms-button";
 import { AddonsBreakdown } from "@/components/dashboard/addons-breakdown";
+import { DepositCard } from "@/components/dashboard/deposit-card";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type {
   Booking,
   BookingStatus,
+  Operator,
   Vehicle,
   PaymentScheduleItem,
   RentalAgreement,
@@ -236,6 +239,7 @@ export default function BookingDetailPage({
 
   // State
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [operator, setOperator] = useState<Operator | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [agreement, setAgreement] = useState<RentalAgreement | null>(null);
   const [payments, setPayments] = useState<PaymentScheduleItem[]>([]);
@@ -347,6 +351,25 @@ export default function BookingDetailPage({
 
     fetchBooking();
   }, [id, router]);
+
+  // Load operator for DepositCard
+  useEffect(() => {
+    const supabase = createClient();
+    async function loadOperator() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from("operators")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+        if (data) setOperator(data as Operator);
+      } catch { /* non-fatal */ }
+    }
+    loadOperator();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Status Transitions ──────────────────────────────────────────
 
@@ -1484,6 +1507,22 @@ export default function BookingDetailPage({
                 )}
               </CardContent>
             </Card>
+
+            {/* Deposit Card */}
+            {booking && operator && (
+              <DepositCard
+                booking={booking as Parameters<typeof DepositCard>[0]["booking"]}
+                operator={operator as Parameters<typeof DepositCard>[0]["operator"]}
+                onUpdate={async () => {
+                  // Refresh booking from API after deposit action
+                  const res = await fetch(`/api/bookings/${id}`);
+                  if (res.ok) {
+                    const refreshed = await res.json();
+                    setBooking(refreshed);
+                  }
+                }}
+              />
+            )}
 
             {/* Booking Snapshot */}
             <Card className="border-0 bg-white shadow-sm">

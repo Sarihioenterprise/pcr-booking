@@ -259,6 +259,112 @@ export async function GET(request: NextRequest) {
     errors.push(`Return loop error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // ── 3. Overdue Return Alerts (end_date < today and status active/confirmed) ────
+  let overdueAlerted = 0;
+  let overdueSkipped = 0;
+
+  try {
+    const { data: overdueBookings, error: overdueError } = await supabase
+      .from("bookings")
+      .select(`
+        id, operator_id, renter_name, end_date, deposit_amount, deposit_status,
+        vehicles(make, model, year),
+        operators(business_name, business_email, late_fee_per_day, late_fee_enabled)
+      `)
+      .lt("end_date", todayStr)
+      .in("status", ["active", "confirmed"]);
+
+    if (overdueError) {
+      errors.push(`Overdue query error: ${overdueError.message}`);
+    } else {
+      for (const booking of overdueBookings || []) {
+        try {
+          const bookingLink = `/dashboard/bookings/${booking.id}`;
+
+          // Idempotency: one overdue alert per calendar day per booking
+          const todayLinkKey = `${bookingLink}:overdue:${todayStr}`;
+          const { data: existingAlert } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("operator_id", booking.operator_id)
+            .eq("type", "reminder_return")
+            .eq("link", todayLinkKey)
+            .maybeSingle();
+
+          if (existingAlert) {
+            overdueSkipped++;
+            continue;
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const vehicleArr = booking.vehicles as any;
+          const vehicle = Array.isArray(vehicleArr) ? vehicleArr[0] : vehicleArr;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const opArr = booking.operators as any;
+          const op = Array.isArray(opArr) ? opArr[0] : opArr;
+          const vehicleLabel = vehicle
+            ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+            : "rental vehicle";
+          const operatorName = op?.business_name || "PCR Booking";
+
+          // Compute days overdue + late fee
+          const daysOverdue = Math.floor(
+            (new Date(todayStr).getTime() - new Date(booking.end_date).getTime()) /
+              (1000 * 60 * 60 * 24)
+          );
+          const lateFeePerDay = Number(op?.late_fee_per_day ?? 0);
+          const lateFeeEnabled = op?.late_fee_enabled ?? false;
+          const accruedLateFee = lateFeeEnabled && lateFeePerDay > 0
+            ? daysOverdue * lateFeePerDay
+            : 0;
+
+          // Email operator
+          if (op?.business_email) {
+            await sendEmail(baseUrl, {
+              to: op.business_email,
+              subject: `⚠️ Overdue Return: ${booking.renter_name} — ${vehicleLabel} (${daysOverdue} day${daysOverdue !== 1 ? "s" : ""})`,
+              body: `<p>Vehicle overdue alert for <strong>${operatorName}</strong>:</p>
+<p><strong>Renter:</strong> ${booking.renter_name}</p>
+<p><strong>Vehicle:</strong> ${vehicleLabel}</p>
+<p><strong>Due Date:</strong> ${formatDate(booking.end_date)}</p>
+<p><strong>Days Overdue:</strong> ${daysOverdue} day${daysOverdue !== 1 ? "s" : ""}</p>
+${
+  accruedLateFee > 0
+    ? `<p><strong>Potential Late Fee:</strong> $${accruedLateFee.toFixed(2)} ($${lateFeePerDay.toFixed(2)}/day × ${daysOverdue} days)</p>`
+    : ""
+}
+${
+  booking.deposit_status === "held"
+    ? `<p><strong>Deposit Hold:</strong> Active — $${Number(booking.deposit_amount).toFixed(2)} can be captured from the booking detail.</p>`
+    : ""
+}
+<p><a href="${baseUrl}/dashboard/bookings/${booking.id}">View Booking →</a></p>`,
+              templateType: "operator_overdue_alert",
+            });
+          }
+
+          // Record idempotency notification
+          try {
+            await supabase.from("notifications").insert({
+              operator_id: booking.operator_id,
+              type: "reminder_return",
+              title: `Overdue Return Alert — ${booking.renter_name}`,
+              message: `${vehicleLabel} is ${daysOverdue} day${daysOverdue !== 1 ? "s" : ""} overdue.${accruedLateFee > 0 ? ` Potential late fee: $${accruedLateFee.toFixed(2)}.` : ""}`,
+              link: todayLinkKey,
+              is_read: false,
+            });
+          } catch { /* non-fatal */ }
+
+          overdueAlerted++;
+        } catch (bookingErr) {
+          errors.push(`Overdue booking ${booking.id}: ${bookingErr instanceof Error ? bookingErr.message : String(bookingErr)}`);
+        }
+      }
+    }
+  } catch (err) {
+    errors.push(`Overdue loop error: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   return NextResponse.json({
     ok: true,
     date: todayStr,
@@ -268,6 +374,8 @@ export async function GET(request: NextRequest) {
     pickupRemindersSkipped: pickupSkipped,
     returnRemindersSent: returnSent,
     returnRemindersSkipped: returnSkipped,
+    overdueAlertsAlerted: overdueAlerted,
+    overdueAlertsSkipped: overdueSkipped,
     errors: errors.length > 0 ? errors : undefined,
   });
 }

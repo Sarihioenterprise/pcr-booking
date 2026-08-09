@@ -21,6 +21,8 @@ export interface Operator {
   tax_rate: number;
   deposit_amount: number;
   deposit_auto_release_days: number;
+  late_fee_per_day: number | null;
+  late_fee_enabled: boolean;
   require_booking_approval: boolean;
   default_pickup_instructions: string | null;
   booking_slug: string | null;
@@ -137,8 +139,15 @@ export interface Booking {
   tax_amount: number;
   discount_amount: number;
   deposit_amount: number;
-  deposit_status: "none" | "held" | "released" | "claimed";
+  deposit_status: "none" | "pending_auth" | "held" | "captured" | "partially_captured" | "released" | "expired" | "claimed";
   deposit_payment_intent_id: string | null;
+  deposit_token: string | null;
+  deposit_captured_amount: number | null;
+  deposit_authorized_at: string | null;
+  deposit_captured_at: string | null;
+  deposit_released_at: string | null;
+  deposit_capture_reason: string | null;
+  late_fee_amount: number | null;
   stripe_payment_intent_id: string | null;
   status: BookingStatus;
   notes: string | null;
