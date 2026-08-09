@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Car, CheckCircle2, Calendar, Phone, Mail, User } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Car, CheckCircle2, Calendar, Phone, Mail, User, Upload,
+  AlertCircle, Shield, FileText, X, Loader2
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +38,6 @@ interface Operator {
   business_name: string;
   logo_url: string | null;
   brand_color: string;
-  // White label branding (Scale plan only)
   plan?: string;
   brand_logo_url?: string | null;
   brand_primary_color?: string | null;
@@ -66,6 +68,38 @@ const emptyForm: BookingForm = {
   end_date: "",
 };
 
+interface BookedRange {
+  start: string; // YYYY-MM-DD
+  end: string;   // YYYY-MM-DD
+}
+
+/** Returns true if the given YYYY-MM-DD string falls within any booked range */
+function isDateBooked(date: string, bookedRanges: BookedRange[]): boolean {
+  for (const range of bookedRanges) {
+    if (date >= range.start && date <= range.end) return true;
+  }
+  return false;
+}
+
+/** Returns true if the date range [start, end] overlaps with any booked range */
+function rangeOverlapsBooked(start: string, end: string, bookedRanges: BookedRange[]): boolean {
+  for (const range of bookedRanges) {
+    // Overlap: start < range.end AND end > range.start
+    if (start < range.end && end > range.start) return true;
+  }
+  return false;
+}
+
+/** Format a date as YYYY-MM-DD */
+function toDateStr(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+/** Today's date as YYYY-MM-DD */
+function today(): string {
+  return toDateStr(new Date());
+}
+
 export function BookingPageClient({ operator, vehicles, slug }: Props) {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [form, setForm] = useState<BookingForm>(emptyForm);
@@ -73,11 +107,55 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  // White label: if operator is on Scale plan and has set brand values, use them
+  // License upload state
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [licensePreview, setLicensePreview] = useState<string | null>(null);
+  const [licensePath, setLicensePath] = useState<string | null>(null);
+  const [licenseUploading, setLicenseUploading] = useState(false);
+  const [licenseError, setLicenseError] = useState("");
+  const licenseInputRef = useRef<HTMLInputElement>(null);
+
+  // Availability state per vehicle
+  const [bookedRanges, setBookedRanges] = useState<BookedRange[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  // White label
   const isScale = operator.plan === SCALE_PLAN;
   const accent = (isScale && operator.brand_primary_color) || operator.brand_color || "#2EBD6B";
   const displayName = (isScale && operator.brand_company_name) || operator.business_name;
   const displayLogo = (isScale && operator.brand_logo_url) || operator.logo_url;
+
+  // Fetch availability when a vehicle is selected
+  const fetchAvailability = useCallback(async (vehicleId: string) => {
+    setAvailabilityLoading(true);
+    setBookedRanges([]);
+    try {
+      const res = await fetch(
+        `/api/vehicles/availability?vehicle_id=${vehicleId}&operator_id=${operator.id}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setBookedRanges(data.bookedRanges || []);
+      }
+    } catch {
+      // Non-fatal — availability checking is best-effort on client side
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  }, [operator.id]);
+
+  // When vehicle selected: fetch availability + reset form
+  function handleSelectVehicle(v: Vehicle) {
+    setSelectedVehicle(v);
+    setForm(emptyForm);
+    setLicenseFile(null);
+    setLicensePreview(null);
+    setLicensePath(null);
+    setLicenseError("");
+    setSubmitted(false);
+    setError("");
+    fetchAvailability(v.id);
+  }
 
   function handleEmailBlur() {
     const email = form.email;
@@ -92,17 +170,98 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
     }));
   }
 
+  // Handle license file selection + upload
+  async function handleLicenseChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLicenseFile(file);
+    setLicenseError("");
+    setLicensePath(null);
+
+    // Preview for images
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setLicensePreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setLicensePreview(null);
+    }
+
+    // Upload immediately to storage
+    setLicenseUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("operator_id", operator.id);
+
+      const res = await fetch("/api/license/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setLicenseError(data.error || "Upload failed. Please try again.");
+        setLicensePath(null);
+      } else {
+        setLicensePath(data.path);
+      }
+    } catch {
+      setLicenseError("Upload failed. Please check your connection and try again.");
+    } finally {
+      setLicenseUploading(false);
+    }
+  }
+
+  function removeLicense() {
+    setLicenseFile(null);
+    setLicensePreview(null);
+    setLicensePath(null);
+    setLicenseError("");
+    if (licenseInputRef.current) licenseInputRef.current.value = "";
+  }
+
+  // Date validation helpers
+  const dateConflict = form.start_date && form.end_date
+    ? rangeOverlapsBooked(form.start_date, form.end_date, bookedRanges)
+    : false;
+
+  const daysCount = form.start_date && form.end_date
+    ? Math.max(1, Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  const estimatedTotal = selectedVehicle && daysCount > 0
+    ? selectedVehicle.daily_rate * daysCount
+    : 0;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedVehicle) return;
 
-    // Validate email before submit
+    // Email validation
     if (form.email) {
       const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
       if (!valid) {
         setForm((prev) => ({ ...prev, email_error: "Please enter a valid email address" }));
         return;
       }
+    }
+
+    // License required
+    if (!licensePath) {
+      if (licenseUploading) {
+        setError("Please wait for the license upload to complete.");
+        return;
+      }
+      setError("Driver's license is required to submit a booking request.");
+      return;
+    }
+
+    // Date conflict check (client-side)
+    if (dateConflict) {
+      setError("The selected dates are not available. Please choose different dates.");
+      return;
     }
 
     setSubmitting(true);
@@ -116,7 +275,12 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
           operator_id: operator.id,
           vehicle_id: selectedVehicle.id,
           vehicle_label: `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`,
-          ...form,
+          name: form.name,
+          phone: form.phone,
+          email: form.email || null,
+          start_date: form.start_date || null,
+          end_date: form.end_date || null,
+          license_file_path: licensePath,
           slug,
         }),
       });
@@ -141,7 +305,6 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
 
   return (
     <div className="min-h-screen bg-[#F8F9FC]" style={{ "--brand-primary": accent } as React.CSSProperties}>
-      {/* Inject CSS variable for brand color — used by accent elements throughout */}
       <style>{`:root { --brand-primary: ${accent}; }`}</style>
 
       {/* Header */}
@@ -211,12 +374,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
                     <Button
                       className="w-full text-white font-semibold"
                       style={{ backgroundColor: accent }}
-                      onClick={() => {
-                        setSelectedVehicle(v);
-                        setForm(emptyForm);
-                        setSubmitted(false);
-                        setError("");
-                      }}
+                      onClick={() => handleSelectVehicle(v)}
                     >
                       Request to Book
                     </Button>
@@ -229,20 +387,36 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
       </main>
 
       {/* Booking Request Dialog */}
-      <Dialog open={!!selectedVehicle && !submitted} onOpenChange={(o) => { if (!o) setSelectedVehicle(null); }}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={!!selectedVehicle && !submitted}
+        onOpenChange={(o) => { if (!o) setSelectedVehicle(null); }}
+      >
+        <DialogContent className="sm:max-w-lg max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request to Book</DialogTitle>
             <DialogDescription>
-              {selectedVehicle && `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model} — $${Number(selectedVehicle.daily_rate).toFixed(0)}/day`}
+              {selectedVehicle && (
+                <>
+                  {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
+                  {" — "}<span className="font-medium">${Number(selectedVehicle.daily_rate).toFixed(0)}/day</span>
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
 
+          {availabilityLoading && (
+            <div className="flex items-center gap-2 text-sm text-gray-500 py-1">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking availability...
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div className="space-y-2">
+            {/* Name */}
+            <div className="space-y-1.5">
               <Label htmlFor="req-name">
-                <User className="h-3.5 w-3.5 inline mr-1" />
-                Full Name
+                <User className="h-3.5 w-3.5 inline mr-1 opacity-60" />
+                Full Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="req-name"
@@ -253,10 +427,11 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
               />
             </div>
 
-            <div className="space-y-2">
+            {/* Phone */}
+            <div className="space-y-1.5">
               <Label htmlFor="req-phone">
-                <Phone className="h-3.5 w-3.5 inline mr-1" />
-                Phone Number
+                <Phone className="h-3.5 w-3.5 inline mr-1 opacity-60" />
+                Phone Number <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="req-phone"
@@ -268,9 +443,10 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
               />
             </div>
 
-            <div className="space-y-2">
+            {/* Email */}
+            <div className="space-y-1.5">
               <Label htmlFor="req-email">
-                <Mail className="h-3.5 w-3.5 inline mr-1" />
+                <Mail className="h-3.5 w-3.5 inline mr-1 opacity-60" />
                 Email Address
               </Label>
               <Input
@@ -288,67 +464,162 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="req-start">
-                  <Calendar className="h-3.5 w-3.5 inline mr-1" />
-                  Start Date
-                </Label>
-                <Input
-                  id="req-start"
-                  required
-                  type="date"
-                  value={form.start_date}
-                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                />
+            {/* Dates */}
+            <div className="space-y-1.5">
+              <Label>
+                <Calendar className="h-3.5 w-3.5 inline mr-1 opacity-60" />
+                Rental Dates
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500">Start Date</p>
+                  <Input
+                    type="date"
+                    value={form.start_date}
+                    min={today()}
+                    onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                    className={dateConflict ? "border-red-400" : ""}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500">End Date</p>
+                  <Input
+                    type="date"
+                    value={form.end_date}
+                    min={form.start_date || today()}
+                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                    className={dateConflict ? "border-red-400" : ""}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="req-end">End Date</Label>
-                <Input
-                  id="req-end"
-                  required
-                  type="date"
-                  value={form.end_date}
-                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                />
-              </div>
+
+              {/* Availability conflict warning */}
+              {dateConflict && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>These dates overlap with an existing booking. Please choose different dates.</span>
+                </div>
+              )}
+
+              {/* Booked ranges hint */}
+              {bookedRanges.length > 0 && !dateConflict && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ Some dates for this vehicle are unavailable. The form will alert you if your selection conflicts.
+                </p>
+              )}
+
+              {/* Pricing preview */}
+              {selectedVehicle && daysCount > 0 && !dateConflict && (
+                <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">{daysCount} day{daysCount !== 1 ? "s" : ""} × ${Number(selectedVehicle.daily_rate).toFixed(0)}/day</span>
+                    <span className="font-bold text-gray-900" style={{ color: accent }}>
+                      ${estimatedTotal.toFixed(2)} est.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Pricing preview — shown as soon as vehicle is selected; total when dates added */}
-            {selectedVehicle && (
-              <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Daily rate</span>
-                  <span className="font-semibold text-gray-900">${Number(selectedVehicle.daily_rate).toFixed(0)}/day</span>
-                </div>
-                {form.start_date && form.end_date && (() => {
-                  const days = Math.max(1, Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24)));
-                  const total = selectedVehicle.daily_rate * days;
-                  return days > 0 ? (
-                    <div className="flex items-center justify-between mt-1 pt-1 border-t border-gray-200">
-                      <span className="text-gray-500">{days} day{days !== 1 ? "s" : ""} total</span>
-                      <span className="font-bold text-[#2EBD6B]">${total.toFixed(2)}</span>
+            {/* Driver's License Upload */}
+            <div className="space-y-1.5">
+              <Label>
+                <Shield className="h-3.5 w-3.5 inline mr-1 opacity-60" />
+                Driver's License <span className="text-red-500">*</span>
+                <span className="ml-1 text-xs font-normal text-gray-400">(required to approve your rental)</span>
+              </Label>
+
+              {!licenseFile ? (
+                <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-200 rounded-xl py-6 px-4 cursor-pointer hover:border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                  <span className="text-sm font-medium text-gray-700">Upload front of license</span>
+                  <span className="text-xs text-gray-400 mt-1">JPEG, PNG, PDF • Max 10 MB</span>
+                  <span className="text-xs text-gray-400">Tap to browse or use camera</span>
+                  <input
+                    ref={licenseInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                    capture="environment"
+                    className="sr-only"
+                    onChange={handleLicenseChange}
+                  />
+                </label>
+              ) : (
+                <div className="relative rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  {licenseUploading ? (
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                      <span>Uploading license...</span>
                     </div>
-                  ) : null;
-                })()}
+                  ) : licensePath ? (
+                    <div className="flex items-center gap-3">
+                      {licensePreview ? (
+                        <img
+                          src={licensePreview}
+                          alt="License preview"
+                          className="h-16 w-24 object-cover rounded-lg border border-gray-200"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 bg-green-50 rounded-lg flex items-center justify-center border border-green-200">
+                          <FileText className="h-8 w-8 text-green-600" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{licenseFile.name}</p>
+                        <p className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Uploaded successfully
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeLicense}
+                        className="text-gray-400 hover:text-gray-600 shrink-0"
+                        aria-label="Remove license"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {licenseError && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>{licenseError}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {licenseError && !licenseFile && (
+                <p className="text-xs text-red-500">{licenseError}</p>
+              )}
+            </div>
+
+            {/* Form error */}
+            {error && (
+              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
 
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
-            )}
-
-            <DialogFooter>
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setSelectedVehicle(null)}>
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || licenseUploading || dateConflict}
                 className="text-white"
                 style={{ backgroundColor: accent }}
               >
-                {submitting ? "Submitting..." : "Submit Request"}
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : "Submit Request"}
               </Button>
             </DialogFooter>
           </form>
@@ -356,7 +627,10 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
       </Dialog>
 
       {/* Success Dialog */}
-      <Dialog open={submitted} onOpenChange={(o) => { if (!o) { setSubmitted(false); setSelectedVehicle(null); } }}>
+      <Dialog
+        open={submitted}
+        onOpenChange={(o) => { if (!o) { setSubmitted(false); setSelectedVehicle(null); } }}
+      >
         <DialogContent className="sm:max-w-md text-center">
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -365,7 +639,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
               <p className="text-gray-600">
-                Your request has been submitted! <strong>{displayName}</strong> will contact you shortly.
+                Your request has been submitted! <strong>{displayName}</strong> will contact you shortly to confirm your reservation.
               </p>
             </div>
             <Button

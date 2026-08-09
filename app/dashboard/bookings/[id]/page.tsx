@@ -64,6 +64,77 @@ import {
   Loader2,
 } from "lucide-react";
 
+// ── License Viewer Component ──────────────────────────────────────────
+
+function LicenseViewer({
+  bookingLicenseUrl,
+  renterLicenseUrl,
+}: {
+  bookingLicenseUrl: string | null;
+  renterLicenseUrl: string | null;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Prefer booking-level license, fall back to renter-level
+  const licensePath = bookingLicenseUrl || renterLicenseUrl;
+
+  if (!licensePath) {
+    return (
+      <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+        Not Uploaded
+      </Badge>
+    );
+  }
+
+  // If it's an external HTTP URL (old behavior), link directly
+  const isExternalUrl = licensePath.startsWith("http://") || licensePath.startsWith("https://");
+
+  async function viewLicense() {
+    if (!licensePath) return;
+    if (isExternalUrl) {
+      window.open(licensePath, "_blank", "noopener,noreferrer");
+      return;
+    }
+    // Private storage — request a signed URL
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/license/signed-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: licensePath }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to generate link");
+      } else {
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      setError("Failed to generate link");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+        {bookingLicenseUrl ? "Verified" : "On File"}
+      </Badge>
+      <button
+        onClick={viewLicense}
+        disabled={loading}
+        className="text-[#2EBD6B] text-xs hover:underline disabled:opacity-50"
+      >
+        {loading ? "Generating link..." : "View License"}
+      </button>
+      {error && <span className="text-xs text-red-500">{error}</span>}
+    </div>
+  );
+}
+
 // ── Status Flow Config ──────────────────────────────────────────────
 
 const STATUS_STEPS: BookingStatus[] = [
@@ -665,25 +736,10 @@ export default function BookingDetailPage({
                         </div>
                         <div className="flex items-center gap-2.5">
                           <IdCard className="h-3.5 w-3.5 text-slate-400" />
-                          {booking.drivers_license_url ? (
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                                Verified
-                              </Badge>
-                              <a
-                                href={booking.drivers_license_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#2EBD6B] text-xs hover:underline"
-                              >
-                                View License
-                              </a>
-                            </div>
-                          ) : (
-                            <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                              Not Uploaded
-                            </Badge>
-                          )}
+                          <LicenseViewer
+                            bookingLicenseUrl={booking.drivers_license_url || null}
+                            renterLicenseUrl={(booking as unknown as { renters?: { drivers_license_url?: string } }).renters?.drivers_license_url || null}
+                          />
                         </div>
                       </div>
                     </CardContent>

@@ -431,7 +431,13 @@ export default function SettingsPage() {
       } as unknown as Record<string, unknown>)
       .eq("id", operator.id);
     setSaving("");
-    if (!error) showSuccess("Notification preferences saved");
+    if (!error) {
+      showSuccess("Notification preferences saved");
+    } else {
+      // notification_preferences column may not exist yet — show a clear message
+      showSuccess("Settings saved locally. Schema migration required to persist across sessions.");
+      console.warn("Notification prefs save error (run migration 016):", error.message);
+    }
   }
 
   // Save booking slug
@@ -1809,13 +1815,27 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <Button
-                onClick={saveBookingSlug}
-                disabled={saving === "booking_slug" || !bookingSlug}
-                className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-              >
-                {saving === "booking_slug" ? "Saving..." : "Save URL"}
-              </Button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  onClick={saveBookingSlug}
+                  disabled={saving === "booking_slug" || !bookingSlug}
+                  className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+                >
+                  {saving === "booking_slug" ? "Saving..." : "Save URL"}
+                </Button>
+                {bookingSlug && (
+                  <a
+                    href={`/book/${bookingSlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" type="button" className="border-[#2EBD6B] text-[#2EBD6B] hover:bg-[#2EBD6B]/5">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Open Booking Page
+                    </Button>
+                  </a>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

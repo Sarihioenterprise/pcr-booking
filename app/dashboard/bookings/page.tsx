@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarDays } from "lucide-react";
+import { Plus, CalendarDays, ShieldCheck } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   inquiry: "bg-purple-500/10 text-purple-500 border-purple-500/20",
@@ -21,7 +21,7 @@ export default async function BookingsPage() {
 
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("*, vehicles(make, model, year)")
+    .select("*, vehicles(make, model, year), renters(drivers_license_url)")
     .eq("operator_id", operator.id)
     .order("created_at", { ascending: false });
 
@@ -48,7 +48,7 @@ export default async function BookingsPage() {
             <CalendarDays className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="font-semibold mb-1">No bookings yet</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Create your first booking or share your widget
+              Create your first booking or share your booking page
             </p>
             <Link href="/dashboard/bookings/new">
               <Button>Create Booking</Button>
@@ -57,39 +57,58 @@ export default async function BookingsPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {bookings.map((booking) => (
-            <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer mb-3">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold">{booking.renter_name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {booking.vehicles
-                          ? `${booking.vehicles.year} ${booking.vehicles.make} ${booking.vehicles.model}`
-                          : "No vehicle assigned"}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {booking.start_date} → {booking.end_date} &middot;{" "}
-                        {booking.duration_days} days
-                      </p>
+          {bookings.map((booking) => {
+            // License on file: check both booking-level and renter-level
+            const licenseOnFile = !!(
+              booking.drivers_license_url ||
+              (booking.renters as { drivers_license_url?: string } | null)?.drivers_license_url
+            );
+
+            return (
+              <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer mb-3">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold">{booking.renter_name}</h3>
+                          {licenseOnFile && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0"
+                            >
+                              <ShieldCheck className="h-3 w-3 mr-1" />
+                              License on file
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {booking.vehicles
+                            ? `${(booking.vehicles as { year: number; make: string; model: string }).year} ${(booking.vehicles as { year: number; make: string; model: string }).make} ${(booking.vehicles as { year: number; make: string; model: string }).model}`
+                            : "No vehicle assigned"}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {booking.start_date} → {booking.end_date} &middot;{" "}
+                          {booking.duration_days} days
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <Badge
+                          variant="outline"
+                          className={statusColors[booking.status]}
+                        >
+                          {booking.status}
+                        </Badge>
+                        <p className="text-lg font-bold mt-1">
+                          ${Number(booking.total_price).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <Badge
-                        variant="outline"
-                        className={statusColors[booking.status]}
-                      >
-                        {booking.status}
-                      </Badge>
-                      <p className="text-lg font-bold mt-1">
-                        ${Number(booking.total_price).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

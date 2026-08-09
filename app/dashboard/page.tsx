@@ -20,6 +20,7 @@ import {
   Plus,
   CalendarPlus,
   Eye,
+  ExternalLink,
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -198,6 +199,18 @@ export default async function DashboardPage() {
             View Calendar
           </Button>
         </Link>
+        {operator.booking_slug && (
+          <a
+            href={`/book/${operator.booking_slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" className="border-[#2EBD6B] text-[#2EBD6B] hover:bg-[#2EBD6B]/5">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              View Booking Page
+            </Button>
+          </a>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
