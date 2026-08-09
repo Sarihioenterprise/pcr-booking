@@ -48,18 +48,28 @@ export async function POST(request: NextRequest) {
     const renterName = booking.renters?.name || booking.renter_name || "N/A";
 
     let content = template.content;
+    const totalFmt = `$${Number(booking.total_price).toFixed(2)}`;
+    const depositFmt = `$${Number(booking.deposit_amount || 0).toFixed(2)}`;
+    const dailyRateFmt = `$${Number(booking.daily_rate || 0).toFixed(2)}`;
+
+    // Fetch operator for business_name merge field
+    const { data: operatorRow } = await supabase
+      .from('operators')
+      .select('business_name')
+      .eq('id', operator.id)
+      .single();
+    const businessName = operatorRow?.business_name || 'Your Rental Company';
+
     content = content.replace(/\{\{renter_name\}\}/g, renterName);
     content = content.replace(/\{\{vehicle\}\}/g, vehicleName);
     content = content.replace(/\{\{start_date\}\}/g, booking.start_date);
     content = content.replace(/\{\{end_date\}\}/g, booking.end_date);
-    content = content.replace(
-      /\{\{total_price\}\}/g,
-      `$${Number(booking.total_price).toLocaleString()}`
-    );
-    content = content.replace(
-      /\{\{deposit_amount\}\}/g,
-      `$${Number(booking.deposit_amount).toLocaleString()}`
-    );
+    content = content.replace(/\{\{total_price\}\}/g, totalFmt);
+    content = content.replace(/\{\{total\}\}/g, totalFmt);
+    content = content.replace(/\{\{deposit_amount\}\}/g, depositFmt);
+    content = content.replace(/\{\{daily_rate\}\}/g, dailyRateFmt);
+    content = content.replace(/\{\{business_name\}\}/g, businessName);
+    content = content.replace(/\{\{addons\}\}/g, ''); // Populated when add-ons are present
 
     // Create the agreement
     const { data: agreement, error: createError } = await supabase

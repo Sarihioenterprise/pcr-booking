@@ -63,6 +63,10 @@ import {
   Circle,
   PenLine,
   Loader2,
+  RefreshCw,
+  Eye,
+  Monitor,
+  Copy,
 } from "lucide-react";
 
 // ── License Viewer Component ──────────────────────────────────────────
@@ -447,35 +451,80 @@ export default function BookingDetailPage({
   }
 
   // ── Agreement ───────────────────────────────────────────────────
+  const [agreementSending, setAgreementSending] = useState(false);
+  const [agreementError, setAgreementError] = useState("");
+  const [agreementCopied, setAgreementCopied] = useState(false);
 
-  function generateAgreement() {
-    if (!booking || !vehicle) return;
-    const now = new Date().toISOString();
-    const newAgreement: RentalAgreement = {
-      id: `agr-${Date.now()}`,
-      operator_id: booking.operator_id,
-      booking_id: booking.id,
-      template_id: null,
-      content: `RENTAL AGREEMENT\n\nGenerated on ${formatDate(now)}\n\nRenter: ${booking.renter_name}\nVehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}\nPeriod: ${formatDate(booking.start_date)} — ${formatDate(booking.end_date)}\nRate: ${formatCurrency(booking.daily_rate)}/day\nTotal: ${formatCurrency(booking.total_price)}`,
-      status: "draft",
-      renter_signature: null,
-      signed_at: null,
-      created_at: now,
-      updated_at: now,
-    };
-    setAgreement(newAgreement);
-    setActivity((prev) => [
-      ...prev,
-      {
-        id: `act-${Date.now()}`,
-        type: "agreement",
-        title: "Agreement Generated",
-        description: "New rental agreement draft created.",
-        timestamp: now,
-        icon: "agreement",
-      },
-    ]);
-    showToast("Rental agreement generated");
+  async function sendAgreement(resend = false) {
+    if (!booking) return;
+    setAgreementSending(true);
+    setAgreementError("");
+    try {
+      const res = await fetch("/api/agreements/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: booking.id, resend }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send agreement");
+
+      const now = new Date().toISOString();
+      // Refresh agreement from API call response
+      setAgreement((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "sent",
+              sign_token: data.sign_token || prev.sign_token,
+              sent_at: now,
+              updated_at: now,
+            }
+          : {
+              id: data.agreement_id,
+              operator_id: booking.operator_id,
+              booking_id: booking.id,
+              template_id: null,
+              content: "",
+              status: "sent",
+              renter_signature: null,
+              signed_at: null,
+              sign_token: data.sign_token,
+              sent_at: now,
+              viewed_at: null,
+              signer_ip: null,
+              signer_ua: null,
+              signature_png_b64: null,
+              created_at: now,
+              updated_at: now,
+            }
+      );
+      setActivity((prev) => [
+        ...prev,
+        {
+          id: `act-${Date.now()}`,
+          type: "agreement",
+          title: resend ? "Agreement Resent" : "Agreement Sent for Signature",
+          description: `Email with signing link sent to ${booking.renter_email || booking.renter_name}.`,
+          timestamp: now,
+          icon: "agreement",
+        },
+      ]);
+      showToast(resend ? "Agreement resent!" : "Agreement sent for signature!");
+    } catch (err: unknown) {
+      setAgreementError(
+        err instanceof Error ? err.message : "Failed to send agreement"
+      );
+    } finally {
+      setAgreementSending(false);
+    }
+  }
+
+  function copySignLink() {
+    if (!agreement?.sign_token) return;
+    const url = `${window.location.origin}/sign/${agreement.sign_token}`;
+    navigator.clipboard.writeText(url);
+    setAgreementCopied(true);
+    setTimeout(() => setAgreementCopied(false), 2000);
   }
 
   function saveNotes() {
@@ -1020,7 +1069,7 @@ export default function BookingDetailPage({
                           }
                         >
                           {agreement.status === "signed"
-                            ? "Signed"
+                            ? "✓ Signed"
                             : agreement.status === "sent"
                               ? "Sent — Awaiting Signature"
                               : "Draft"}
@@ -1029,76 +1078,124 @@ export default function BookingDetailPage({
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {agreementError && (
+                      <div className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg p-3 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        {agreementError}
+                      </div>
+                    )}
                     {!agreement ? (
                       <div className="text-center py-10">
                         <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-500 mb-1">
-                          No agreement generated yet
+                        <p className="text-slate-500 mb-1 font-medium">
+                          No agreement sent yet
                         </p>
                         <p className="text-xs text-slate-400 mb-4">
-                          Create an agreement from the default template
+                          PCR Booking will generate and email the renter a signing link.
                         </p>
+                        {!booking.renter_email && (
+                          <p className="text-xs text-amber-600 bg-amber-50 rounded p-2 mb-4">
+                            ⚠️ No renter email on record.
+                          </p>
+                        )}
                         <Button
-                          onClick={generateAgreement}
+                          onClick={() => sendAgreement(false)}
+                          disabled={agreementSending || !booking.renter_email}
                           className="bg-[#2EBD6B] hover:bg-[#27a85e] text-white"
                         >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Generate Agreement
+                          {agreementSending ? (
+                            <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Sending...</>
+                          ) : (
+                            <><Send className="h-4 w-4 mr-1" /> Send for Signature</>
+                          )}
                         </Button>
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="bg-slate-50 rounded-lg p-5 border border-slate-100">
-                          <pre className="whitespace-pre-wrap text-sm text-slate-700 font-mono leading-relaxed">
-                            {agreement.content}
-                          </pre>
-                        </div>
-                        {agreement.renter_signature && (
+                        {agreement.content && (
+                          <div className="bg-slate-50 rounded-lg p-5 border border-slate-100 max-h-64 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                              {agreement.content}
+                            </pre>
+                          </div>
+                        )}
+                        {agreement.status === "signed" && (
                           <>
                             <Separator />
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-slate-400 mb-1">
-                                  Signed by
-                                </p>
-                                <p className="text-lg font-serif italic text-slate-800">
-                                  {agreement.renter_signature}
-                                </p>
+                            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+                              <div className="flex items-center gap-2 text-emerald-700 text-sm font-semibold">
+                                <CheckCircle2 className="h-4 w-4" /> Signed
                               </div>
-                              <div className="text-right">
-                                <p className="text-xs text-slate-400 mb-1">
-                                  Signed on
-                                </p>
-                                <p className="text-sm font-medium text-slate-700">
-                                  {agreement.signed_at
-                                    ? formatDateTime(agreement.signed_at)
-                                    : "—"}
-                                </p>
+                              <p className="text-xl italic text-emerald-800" style={{ fontFamily: "cursive" }}>
+                                {agreement.renter_signature}
+                              </p>
+                              {agreement.signature_png_b64 && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={agreement.signature_png_b64} alt="sig" className="max-h-12 border rounded bg-white" />
+                              )}
+                              <div className="pt-2 border-t border-emerald-200 text-xs text-emerald-700 space-y-1">
+                                {agreement.sent_at && <div><Send className="inline h-3 w-3 mr-1" />Sent {formatDateTime(agreement.sent_at)}</div>}
+                                {agreement.viewed_at && <div><Eye className="inline h-3 w-3 mr-1" />Viewed {formatDateTime(agreement.viewed_at)}</div>}
+                                {agreement.signed_at && <div><CheckCircle2 className="inline h-3 w-3 mr-1" />Signed {formatDateTime(agreement.signed_at)}</div>}
+                                {agreement.signer_ip && <div><Monitor className="inline h-3 w-3 mr-1" />IP: <span className="font-mono">{agreement.signer_ip}</span></div>}
+                              </div>
+                            </div>
+                            <Link href={`/dashboard/agreements/${agreement.id}`}>
+                              <Button variant="outline" size="sm">
+                                <FileText className="h-3.5 w-3.5 mr-1" /> Full Details
+                              </Button>
+                            </Link>
+                          </>
+                        )}
+                        {agreement.status === "sent" && (
+                          <>
+                            <Separator />
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded-lg p-3">
+                                <Clock className="h-4 w-4 flex-shrink-0" />
+                                Signing link sent. Awaiting renter signature.
+                                {agreement.viewed_at && " (Viewed ✓)"}
+                              </div>
+                              {agreement.sign_token && (
+                                <div className="flex items-center gap-2">
+                                  <code className="text-xs bg-slate-100 rounded px-2 py-1 flex-1 truncate">/sign/{agreement.sign_token.slice(0, 16)}…</code>
+                                  <Button variant="outline" size="sm" onClick={copySignLink}>
+                                    {agreementCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </div>
+                              )}
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => sendAgreement(true)} disabled={agreementSending}>
+                                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${agreementSending ? 'animate-spin' : ''}`} />
+                                  Resend
+                                </Button>
+                                <Link href={`/dashboard/agreements/${agreement.id}`}>
+                                  <Button variant="ghost" size="sm"><Eye className="h-3.5 w-3.5 mr-1" />Details</Button>
+                                </Link>
                               </div>
                             </div>
                           </>
                         )}
                         {agreement.status === "draft" && (
-                          <div className="flex gap-2">
-                            <Button
-                              className="bg-[#2EBD6B] hover:bg-[#27a85e] text-white"
-                              onClick={() => {
-                                setAgreement((prev) =>
-                                  prev
-                                    ? {
-                                        ...prev,
-                                        status: "sent",
-                                        updated_at: new Date().toISOString(),
-                                      }
-                                    : prev
-                                );
-                                showToast("Agreement sent to renter");
-                              }}
-                            >
-                              <Send className="h-4 w-4 mr-1" />
-                              Send to Renter
-                            </Button>
-                          </div>
+                          <>
+                            <Separator />
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                className="bg-[#2EBD6B] hover:bg-[#27a85e] text-white"
+                                onClick={() => sendAgreement(false)}
+                                disabled={agreementSending || !booking.renter_email}
+                              >
+                                {agreementSending ? (
+                                  <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Sending...</>
+                                ) : (
+                                  <><Send className="h-4 w-4 mr-1" /> Send for Signature</>
+                                )}
+                              </Button>
+                              <Link href={`/dashboard/agreements/${agreement.id}`}>
+                                <Button variant="outline"><FileText className="h-4 w-4 mr-1" /> View</Button>
+                              </Link>
+                            </div>
+                          </>
                         )}
                       </div>
                     )}

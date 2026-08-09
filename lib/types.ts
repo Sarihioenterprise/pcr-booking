@@ -268,6 +268,13 @@ export interface RentalAgreement {
   status: "draft" | "sent" | "signed";
   renter_signature: string | null;
   signed_at: string | null;
+  // E-signature fields (migration 019)
+  sign_token: string | null;
+  sent_at: string | null;
+  viewed_at: string | null;
+  signer_ip: string | null;
+  signer_ua: string | null;
+  signature_png_b64: string | null;
   created_at: string;
   updated_at: string;
   booking?: Booking;

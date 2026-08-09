@@ -32,8 +32,8 @@ const statusStyles: Record<string, string> = {
 
 const statusLabels: Record<string, string> = {
   draft: "Draft",
-  sent: "Sent",
-  signed: "Signed",
+  sent: "Sent — Awaiting",
+  signed: "✓ Signed",
 };
 
 function formatDate(iso: string) {

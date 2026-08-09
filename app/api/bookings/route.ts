@@ -250,7 +250,7 @@ ${addonsRows}
         body: JSON.stringify({
           to: operator.business_email,
           subject: `New Booking: ${renter_name}`,
-          body: `<p>A new booking has been created for <strong>${renter_name}</strong>.</p><p>Dates: ${start_date} to ${end_date} (${duration_days} day${duration_days !== 1 ? "s" : ""})</p><p>Status: ${status}</p>${addonsTableHtml}${addonsSnapshot.length === 0 && total_with_addons > 0 ? `<p>Total: $${total_with_addons.toFixed(2)}</p>` : ""}<p><a href="${baseUrl}/dashboard/bookings/${booking.id}">View booking →</a></p>`,
+          body: `<p>A new booking has been created for <strong>${renter_name}</strong>.</p><p>Dates: ${start_date} to ${end_date} (${duration_days} day${duration_days !== 1 ? "s" : ""})</p><p>Status: ${status}</p>${addonsTableHtml}${addonsSnapshot.length === 0 && total_with_addons > 0 ? `<p>Total: $${total_with_addons.toFixed(2)}</p>` : ""}<p><a href="${baseUrl}/dashboard/bookings/${booking.id}" style="display:inline-block;background:#2EBD6B;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;margin-right:8px;">View Booking →</a>${renter_email ? `<a href="${baseUrl}/dashboard/bookings/${booking.id}" style="display:inline-block;background:#f3f4f6;color:#374151;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">Send Agreement for Signature →</a><p style="font-size:12px;color:#9ca3af;margin-top:8px;">Tip: Open the booking → Agreement tab → &quot;Send for Signature&quot; to email the renter their signing link.</p>` : ""}</p>`,
           templateType: "operator_notification",
         }),
       }).catch(() => {});

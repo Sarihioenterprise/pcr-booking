@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, Send, Copy } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Eye, MapPin, Monitor } from "lucide-react";
 import Link from "next/link";
 import { AgreementActions } from "./agreement-actions";
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com";
 
 const statusStyles: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700 border-slate-200",
@@ -19,6 +21,17 @@ function formatDate(iso: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   });
 }
 
@@ -44,7 +57,22 @@ export default async function AgreementDetailPage({
     notFound();
   }
 
-  const booking = agreement.bookings;
+  const booking = agreement.bookings as {
+    id: string;
+    renter_name: string;
+    renter_email: string | null;
+    start_date: string;
+    end_date: string;
+    duration_days: number;
+    total_price: number;
+    daily_rate: number;
+    status: string;
+    vehicles?: { make: string; model: string; year: number };
+  } | null;
+
+  const signUrl = agreement.sign_token
+    ? `${BASE_URL}/sign/${agreement.sign_token}`
+    : null;
 
   return (
     <div className="space-y-6">
@@ -83,43 +111,134 @@ export default async function AgreementDetailPage({
             </CardContent>
           </Card>
 
-          {/* Signature */}
-          {agreement.status === "signed" && agreement.renter_signature && (
+          {/* ── Signed state: signature + audit trail ── */}
+          {agreement.status === "signed" && (
             <Card className="border-0 bg-white shadow-sm ring-0">
-              <CardContent className="p-6">
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    <p className="font-medium text-emerald-800">
-                      Signed by Renter
-                    </p>
-                  </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-emerald-700">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Signed
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Typed name */}
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+                  <p className="text-xs text-emerald-600 mb-2 font-medium uppercase tracking-wide">
+                    Electronic Signature
+                  </p>
                   <p
-                    className="text-3xl text-emerald-700 italic"
+                    className="text-3xl text-emerald-800 italic"
                     style={{ fontFamily: "cursive" }}
                   >
                     {agreement.renter_signature}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Signed on {formatDate(agreement.signed_at!)}
+                </div>
+
+                {/* Drawn signature image */}
+                {agreement.signature_png_b64 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
+                      Drawn Signature
+                    </p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={agreement.signature_png_b64}
+                      alt="Drawn signature"
+                      className="border rounded-lg bg-white max-h-24 w-auto"
+                    />
+                  </div>
+                )}
+
+                {/* Audit trail */}
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+                    Audit Trail
                   </p>
+                  <div className="space-y-2">
+                    {agreement.sent_at && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Clock className="h-3.5 w-3.5 text-blue-600" />
+                        </div>
+                        <div>
+                          <span className="font-medium">Sent</span>
+                          <span className="text-muted-foreground ml-2">
+                            {formatDateTime(agreement.sent_at)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {agreement.viewed_at && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <Eye className="h-3.5 w-3.5 text-amber-600" />
+                        </div>
+                        <div>
+                          <span className="font-medium">Viewed by renter</span>
+                          <span className="text-muted-foreground ml-2">
+                            {formatDateTime(agreement.viewed_at)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {agreement.signed_at && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <span className="font-medium">Signed</span>
+                          <span className="text-muted-foreground ml-2">
+                            {formatDateTime(agreement.signed_at)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {agreement.signer_ip && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                          <MapPin className="h-3.5 w-3.5 text-slate-500" />
+                        </div>
+                        <div>
+                          <span className="font-medium">IP Address</span>
+                          <span className="text-muted-foreground ml-2 font-mono text-xs">
+                            {agreement.signer_ip}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {agreement.signer_ua && (
+                      <div className="flex items-start gap-3 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Monitor className="h-3.5 w-3.5 text-slate-500" />
+                        </div>
+                        <div>
+                          <span className="font-medium">Device</span>
+                          <span className="text-muted-foreground ml-2 text-xs break-all">
+                            {agreement.signer_ua}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Actions */}
+          {/* ── Send / Resend Actions (draft or sent) ── */}
           {(agreement.status === "draft" || agreement.status === "sent") && (
             <AgreementActions
               agreementId={agreement.id}
               bookingId={agreement.booking_id}
               currentStatus={agreement.status}
+              signToken={agreement.sign_token}
             />
           )}
         </div>
 
         {/* Booking Sidebar */}
-        <div>
+        <div className="space-y-4">
           <Card className="border-0 bg-white shadow-sm ring-0">
             <CardHeader>
               <CardTitle>Booking Details</CardTitle>
@@ -149,7 +268,7 @@ export default async function AgreementDetailPage({
                   <div>
                     <p className="text-muted-foreground">Dates</p>
                     <p className="font-medium">
-                      {booking.start_date} - {booking.end_date}
+                      {booking.start_date} → {booking.end_date}
                     </p>
                   </div>
                   <div>
@@ -174,7 +293,7 @@ export default async function AgreementDetailPage({
             </CardContent>
           </Card>
 
-          <Card className="border-0 bg-white shadow-sm ring-0 mt-4">
+          <Card className="border-0 bg-white shadow-sm ring-0">
             <CardHeader>
               <CardTitle>Timeline</CardTitle>
             </CardHeader>
@@ -185,18 +304,45 @@ export default async function AgreementDetailPage({
                   {formatDate(agreement.created_at)}
                 </p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Last Updated</p>
-                <p className="font-medium">
-                  {formatDate(agreement.updated_at)}
-                </p>
-              </div>
+              {agreement.sent_at && (
+                <div>
+                  <p className="text-muted-foreground">Sent</p>
+                  <p className="font-medium">
+                    {formatDate(agreement.sent_at)}
+                  </p>
+                </div>
+              )}
+              {agreement.viewed_at && (
+                <div>
+                  <p className="text-muted-foreground">Viewed</p>
+                  <p className="font-medium">
+                    {formatDate(agreement.viewed_at)}
+                  </p>
+                </div>
+              )}
               {agreement.signed_at && (
                 <div>
                   <p className="text-muted-foreground">Signed</p>
                   <p className="font-medium">
                     {formatDate(agreement.signed_at)}
                   </p>
+                </div>
+              )}
+
+              {/* Sign link (if not yet signed) */}
+              {signUrl && agreement.status !== "signed" && (
+                <div className="pt-2 border-t">
+                  <p className="text-muted-foreground text-xs mb-1">
+                    Signing Link
+                  </p>
+                  <a
+                    href={signUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[#2EBD6B] underline break-all"
+                  >
+                    {signUrl}
+                  </a>
                 </div>
               )}
             </CardContent>
