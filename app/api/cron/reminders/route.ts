@@ -11,9 +11,8 @@
  *     for bookings with status: active
  *
  * Idempotency:
- *   - Uses reminder_sent_pickup / reminder_sent_return boolean columns on bookings
- *     (available after migration 016_tier1_features.sql)
- *   - Falls back to notifications table lookup if columns are missing
+ *   - Primary: notifications table lookup (type=reminder_pickup|reminder_return, link=booking URL)
+ *   - Secondary: reminder_sent_pickup/return columns (after migration 016_tier1_features.sql)
  *
  * Security: requires Authorization: Bearer <CRON_SECRET> header
  */
@@ -53,13 +52,15 @@ export async function GET(request: NextRequest) {
 
   // ── 1. Pickup Reminders (start_date = tomorrow) ──────────────────────────
   try {
+    // Note: Do NOT select reminder_sent_pickup here — column may not exist yet (pre-migration)
+    // Idempotency is handled via the notifications table lookup below
     const { data: pickupBookings, error: pickupError } = await supabase
       .from("bookings")
       .select(`
         id, operator_id, renter_name, renter_email, start_date, end_date,
-        duration_days, total_price, reminder_sent_pickup,
+        duration_days, total_price,
         vehicles(make, model, year),
-        operators(business_name, business_email, notification_phone)
+        operators(business_name, business_email)
       `)
       .eq("start_date", tomorrowStr)
       .in("status", PICKUP_STATUSES);
@@ -69,19 +70,15 @@ export async function GET(request: NextRequest) {
     } else {
       for (const booking of pickupBookings || []) {
         try {
-          // Idempotency check — column-based (after migration)
-          if (booking.reminder_sent_pickup) {
-            pickupSkipped++;
-            continue;
-          }
+          const bookingLink = `/dashboard/bookings/${booking.id}`;
 
-          // Fallback idempotency: check notifications table
+          // Primary idempotency: notifications table lookup
           const { data: existingNotif } = await supabase
             .from("notifications")
             .select("id")
             .eq("operator_id", booking.operator_id)
             .eq("type", "reminder_pickup")
-            .eq("link", `/dashboard/bookings/${booking.id}`)
+            .eq("link", bookingLink)
             .maybeSingle();
 
           if (existingNotif) {
@@ -90,11 +87,11 @@ export async function GET(request: NextRequest) {
           }
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const vehicle = (booking.vehicles as any)?.[0] as { make: string; model: string; year: number } | null
-            || (booking.vehicles as unknown as { make: string; model: string; year: number } | null);
+          const vehicleArr = booking.vehicles as any;
+          const vehicle = Array.isArray(vehicleArr) ? vehicleArr[0] : vehicleArr;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const op = (booking.operators as any)?.[0] as { business_name: string; business_email?: string } | null
-            || (booking.operators as unknown as { business_name: string; business_email?: string } | null);
+          const opArr = booking.operators as any;
+          const op = Array.isArray(opArr) ? opArr[0] : opArr;
           const vehicleLabel = vehicle
             ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             : "your rental vehicle";
@@ -130,22 +127,22 @@ export async function GET(request: NextRequest) {
             });
           }
 
-          // Mark reminder as sent (column-based, fails gracefully if column missing)
+          // Secondary idempotency: update column (if migration has run)
           try {
             await supabase
               .from("bookings")
-              .update({ reminder_sent_pickup: true })
+              .update({ reminder_sent_pickup: true } as Record<string, unknown>)
               .eq("id", booking.id);
-          } catch { /* non-fatal */ }
+          } catch { /* non-fatal — column may not exist yet */ }
 
-          // Also record in notifications (fallback idempotency + operator dashboard)
+          // Record in notifications (primary idempotency + dashboard visibility)
           try {
             await supabase.from("notifications").insert({
               operator_id: booking.operator_id,
               type: "reminder_pickup",
               title: `Pickup Reminder Sent — ${booking.renter_name}`,
               message: `Pickup reminder sent for ${vehicleLabel} on ${formatDate(booking.start_date)}.`,
-              link: `/dashboard/bookings/${booking.id}`,
+              link: bookingLink,
               is_read: false,
             });
           } catch { /* non-fatal */ }
@@ -166,7 +163,7 @@ export async function GET(request: NextRequest) {
       .from("bookings")
       .select(`
         id, operator_id, renter_name, renter_email, start_date, end_date,
-        duration_days, total_price, reminder_sent_return,
+        duration_days, total_price,
         vehicles(make, model, year),
         operators(business_name, business_email)
       `)
@@ -178,18 +175,15 @@ export async function GET(request: NextRequest) {
     } else {
       for (const booking of returnBookings || []) {
         try {
-          // Idempotency check
-          if (booking.reminder_sent_return) {
-            returnSkipped++;
-            continue;
-          }
+          const bookingLink = `/dashboard/bookings/${booking.id}`;
 
+          // Idempotency check
           const { data: existingNotif } = await supabase
             .from("notifications")
             .select("id")
             .eq("operator_id", booking.operator_id)
             .eq("type", "reminder_return")
-            .eq("link", `/dashboard/bookings/${booking.id}`)
+            .eq("link", bookingLink)
             .maybeSingle();
 
           if (existingNotif) {
@@ -198,11 +192,11 @@ export async function GET(request: NextRequest) {
           }
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const vehicle = (booking.vehicles as any)?.[0] as { make: string; model: string; year: number } | null
-            || (booking.vehicles as unknown as { make: string; model: string; year: number } | null);
+          const vehicleArr = booking.vehicles as any;
+          const vehicle = Array.isArray(vehicleArr) ? vehicleArr[0] : vehicleArr;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const op = (booking.operators as any)?.[0] as { business_name: string; business_email?: string } | null
-            || (booking.operators as unknown as { business_name: string; business_email?: string } | null);
+          const opArr = booking.operators as any;
+          const op = Array.isArray(opArr) ? opArr[0] : opArr;
           const vehicleLabel = vehicle
             ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             : "your rental vehicle";
@@ -236,13 +230,13 @@ export async function GET(request: NextRequest) {
             });
           }
 
-          // Mark reminder as sent
+          // Secondary idempotency: update column (if migration has run)
           try {
             await supabase
               .from("bookings")
-              .update({ reminder_sent_return: true })
+              .update({ reminder_sent_return: true } as Record<string, unknown>)
               .eq("id", booking.id);
-          } catch { /* non-fatal */ }
+          } catch { /* non-fatal — column may not exist yet */ }
 
           try {
             await supabase.from("notifications").insert({
@@ -250,7 +244,7 @@ export async function GET(request: NextRequest) {
               type: "reminder_return",
               title: `Return Reminder Sent — ${booking.renter_name}`,
               message: `Return reminder sent for ${vehicleLabel} due ${formatDate(booking.end_date)}.`,
-              link: `/dashboard/bookings/${booking.id}`,
+              link: bookingLink,
               is_read: false,
             });
           } catch { /* non-fatal */ }
