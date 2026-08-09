@@ -23,6 +23,7 @@ import {
   Target,
   Upload,
   AlertCircle,
+  Package,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
@@ -42,6 +43,7 @@ const navItems = [
   { href: "/dashboard/support", label: "Support", icon: HeadphonesIcon },
   { href: "/dashboard/leads", label: "Lead Pipeline", icon: Target },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/addons", label: "Add-ons", icon: Package },
   { href: "/dashboard/locations", label: "Locations", icon: MapPin },
   { href: "/dashboard/importer", label: "Import Tool", icon: Upload },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },

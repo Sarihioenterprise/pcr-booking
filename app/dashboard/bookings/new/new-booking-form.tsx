@@ -34,8 +34,10 @@ import {
   FileText,
   Plus,
   Minus,
+  Shield,
+  Package,
 } from "lucide-react";
-import type { BookingStatus } from "@/lib/types";
+import type { BookingStatus, Addon } from "@/lib/types";
 
 interface Vehicle {
   id: string;
@@ -68,6 +70,10 @@ export function NewBookingForm() {
   const [installmentCount, setInstallmentCount] = useState(2);
   const [submitError, setSubmitError] = useState("");
 
+  // Add-ons state
+  const [availableAddons, setAvailableAddons] = useState<Addon[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
+
   const [form, setForm] = useState({
     renter_name: "",
     renter_phone: "",
@@ -81,7 +87,7 @@ export function NewBookingForm() {
     notes: "",
   });
 
-  // Load vehicles on mount
+  // Load vehicles and add-ons on mount
   useEffect(() => {
     fetch("/api/vehicles")
       .then((r) => r.json())
@@ -90,7 +96,27 @@ export function NewBookingForm() {
       })
       .catch(() => setVehicles([]))
       .finally(() => setLoadingVehicles(false));
+
+    fetch("/api/addons")
+      .then((r) => r.json())
+      .then((data) => {
+        const addons: Addon[] = data.addons ?? [];
+        setAvailableAddons(addons);
+        // Pre-select required add-ons
+        setSelectedAddonIds(new Set(addons.filter((a) => a.required && a.active).map((a) => a.id)));
+      })
+      .catch(() => { /* addons table may not exist */ });
   }, []);
+
+  function toggleAddon(addonId: string, required: boolean) {
+    if (required) return;
+    setSelectedAddonIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(addonId)) next.delete(addonId);
+      else next.add(addonId);
+      return next;
+    });
+  }
 
   // Handlers ----------------------------------------------------------------
 
@@ -200,6 +226,16 @@ export function NewBookingForm() {
     };
   }, [duration, selectedVehicles]);
 
+  // Add-ons total
+  const addonsTotal = useMemo(() => {
+    if (duration <= 0) return 0;
+    return availableAddons
+      .filter((a) => selectedAddonIds.has(a.id) && a.active)
+      .reduce((sum, a) => {
+        return sum + (a.pricing_type === "per_day" ? Number(a.price) * duration : Number(a.price));
+      }, 0);
+  }, [availableAddons, selectedAddonIds, duration]);
+
   const paymentSchedule = useMemo(() => {
     if (!pricing.isLongTerm || pricing.total === 0) return [];
     const amountPerPayment = pricing.total / installmentCount;
@@ -255,6 +291,7 @@ export function NewBookingForm() {
         status: form.status,
         notes: form.notes || null,
         pickup_instructions: form.pickup_instructions || null,
+        selected_addon_ids: Array.from(selectedAddonIds),
       };
 
       const res = await fetch("/api/bookings", {
@@ -647,6 +684,143 @@ export function NewBookingForm() {
                 )}
               </CardContent>
             </Card>
+
+            {/* --- Add-ons --- */}
+            {availableAddons.filter((a) => a.active).length > 0 && (
+              <Card className="border-0 bg-white shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
+                      <Package className="h-3.5 w-3.5 text-[#2EBD6B]" />
+                    </div>
+                    Add-ons & Insurance
+                    {selectedAddonIds.size > 0 && (
+                      <Badge variant="secondary" className="ml-2 bg-[#2EBD6B]/10 text-[#2EBD6B]">
+                        {selectedAddonIds.size} selected
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {/* Insurance */}
+                  {availableAddons.filter((a) => a.active && a.category === "insurance").length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Insurance & Protection</span>
+                      </div>
+                      {availableAddons
+                        .filter((a) => a.active && a.category === "insurance")
+                        .map((addon) => {
+                          const selected = selectedAddonIds.has(addon.id);
+                          const addonAmt = duration > 0
+                            ? addon.pricing_type === "per_day" ? Number(addon.price) * duration : Number(addon.price)
+                            : null;
+                          return (
+                            <label
+                              key={addon.id}
+                              onClick={() => toggleAddon(addon.id, addon.required)}
+                              className={`flex items-start gap-3 rounded-xl border-2 p-3 transition-all ${
+                                selected
+                                  ? "border-blue-400 bg-blue-50"
+                                  : "border-gray-100 bg-[#F8F9FC] hover:border-gray-200"
+                              } ${addon.required ? "cursor-default" : "cursor-pointer"}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                readOnly
+                                disabled={addon.required}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                  {addon.required && (
+                                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Required</span>
+                                  )}
+                                </div>
+                                {addon.description && (
+                                  <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-bold text-gray-900">
+                                  ${Number(addon.price).toFixed(2)}
+                                  <span className="text-xs font-normal text-gray-400">
+                                    {addon.pricing_type === "per_day" ? "/day" : " flat"}
+                                  </span>
+                                </p>
+                                {addonAmt !== null && (
+                                  <p className="text-xs text-gray-400">= ${addonAmt.toFixed(2)}</p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  )}
+                  {/* Extras */}
+                  {availableAddons.filter((a) => a.active && a.category === "extra").length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-emerald-600" />
+                        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Extras & Upgrades</span>
+                      </div>
+                      {availableAddons
+                        .filter((a) => a.active && a.category === "extra")
+                        .map((addon) => {
+                          const selected = selectedAddonIds.has(addon.id);
+                          const addonAmt = duration > 0
+                            ? addon.pricing_type === "per_day" ? Number(addon.price) * duration : Number(addon.price)
+                            : null;
+                          return (
+                            <label
+                              key={addon.id}
+                              onClick={() => toggleAddon(addon.id, addon.required)}
+                              className={`flex items-start gap-3 rounded-xl border-2 p-3 transition-all ${
+                                selected
+                                  ? "border-[#2EBD6B] bg-emerald-50"
+                                  : "border-gray-100 bg-[#F8F9FC] hover:border-gray-200"
+                              } ${addon.required ? "cursor-default" : "cursor-pointer"}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                readOnly
+                                disabled={addon.required}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                  {addon.required && (
+                                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Required</span>
+                                  )}
+                                </div>
+                                {addon.description && (
+                                  <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-bold text-gray-900">
+                                  ${Number(addon.price).toFixed(2)}
+                                  <span className="text-xs font-normal text-gray-400">
+                                    {addon.pricing_type === "per_day" ? "/day" : " flat"}
+                                  </span>
+                                </p>
+                                {addonAmt !== null && (
+                                  <p className="text-xs text-gray-400">= ${addonAmt.toFixed(2)}</p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* ============ RIGHT COLUMN (Sidebar) ============ */}
@@ -732,6 +906,17 @@ export function NewBookingForm() {
                             </div>
                           )}
 
+                          {addonsTotal > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-500">
+                                Add-ons ({selectedAddonIds.size})
+                              </span>
+                              <span className="font-medium text-gray-700">
+                                +${addonsTotal.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+
                           <Separator />
 
                           <div className="flex items-center justify-between">
@@ -739,7 +924,7 @@ export function NewBookingForm() {
                               Total Price
                             </span>
                             <span className="text-2xl font-bold text-[#2EBD6B]">
-                              ${pricing.total.toFixed(2)}
+                              ${(pricing.total + addonsTotal).toFixed(2)}
                             </span>
                           </div>
                         </div>

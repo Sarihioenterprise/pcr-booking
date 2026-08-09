@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { AddonSnapshot } from "@/lib/types";
 
 // Public endpoint — uses service role to bypass RLS on the leads table
 export async function POST(request: NextRequest) {
@@ -14,7 +15,8 @@ export async function POST(request: NextRequest) {
       email,
       start_date,
       end_date,
-      license_file_path, // NEW: storage path from license upload
+      license_file_path, // Storage path from license upload
+      selected_addon_ids = [], // Array of addon IDs selected by renter (client hint only)
     } = body;
 
     if (!operator_id || !name || !phone) {
@@ -35,7 +37,6 @@ export async function POST(request: NextRequest) {
         .eq("operator_id", operator_id)
         .in("status", ["confirmed", "active", "pending"])
         .or(
-          // Overlap: existing.start < requested.end AND existing.end > requested.start
           `and(start_date.lt.${end_date},end_date.gt.${start_date})`
         );
 
@@ -76,6 +77,66 @@ export async function POST(request: NextRequest) {
       // Table may not exist - silently skip
     }
 
+    // ── Server-side add-on price computation ─────────────────────────────────
+    // Never trust client totals. Re-fetch prices from DB and compute.
+    let addonsSnapshot: AddonSnapshot[] = [];
+    let addonsTotal = 0;
+
+    const daysCount =
+      start_date && end_date
+        ? Math.max(
+            1,
+            Math.ceil(
+              (new Date(end_date).getTime() - new Date(start_date).getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          )
+        : 1;
+
+    if (selected_addon_ids.length > 0 || true) {
+      // Always fetch active add-ons for this operator to apply required ones even
+      // if client somehow missed them.
+      try {
+        const { data: dbAddons, error: addonsErr } = await supabase
+          .from("addons")
+          .select("id, name, description, pricing_type, price, category, required")
+          .eq("operator_id", operator_id)
+          .eq("active", true);
+
+        if (!addonsErr && dbAddons) {
+          // Merge: include all required add-ons + those the client selected
+          const effectiveIds = new Set([
+            ...dbAddons.filter((a) => a.required).map((a) => a.id),
+            ...(Array.isArray(selected_addon_ids) ? selected_addon_ids : []),
+          ]);
+
+          for (const addon of dbAddons) {
+            if (!effectiveIds.has(addon.id)) continue;
+            const amount =
+              addon.pricing_type === "per_day"
+                ? Number(addon.price) * daysCount
+                : Number(addon.price);
+            addonsSnapshot.push({
+              id: addon.id,
+              name: addon.name,
+              description: addon.description,
+              pricing_type: addon.pricing_type,
+              price: Number(addon.price),
+              category: addon.category,
+              required: addon.required,
+              days: addon.pricing_type === "per_day" ? daysCount : 1,
+              amount,
+            });
+            addonsTotal += amount;
+          }
+        }
+      } catch {
+        // addons table may not exist yet (migration pending) — skip gracefully
+        addonsSnapshot = [];
+        addonsTotal = 0;
+      }
+    }
+
     const datesNote = start_date && end_date
       ? `${start_date} to ${end_date}`
       : start_date || "";
@@ -100,7 +161,6 @@ export async function POST(request: NextRequest) {
 
           if (existingRenter) {
             existingRenterId = existingRenter.id;
-            // Update existing renter's license URL
             await supabase
               .from("renters")
               .update({ drivers_license_url: license_file_path })
@@ -109,7 +169,6 @@ export async function POST(request: NextRequest) {
         }
 
         if (!existingRenterId) {
-          // Create new renter with license
           await supabase.from("renters").insert({
             operator_id,
             name,
@@ -119,7 +178,6 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (renterErr) {
-        // Non-fatal — renter upsert failure doesn't block the lead creation
         console.error("Renter upsert error (non-fatal):", renterErr);
       }
     }
@@ -137,18 +195,20 @@ export async function POST(request: NextRequest) {
       source: "booking_widget",
     };
 
-    // Try inserting with license_file_path column (available after migration 016)
+    // Try inserting with all new columns (license_file_path, addons, addons_total)
     const { data: leadData, error } = await supabase
       .from("leads")
       .insert({
         ...baseLeadData,
-        // Conditionally include license_file_path — column exists post-migration
         ...(license_file_path ? { license_file_path } : {}),
+        ...(addonsSnapshot.length > 0
+          ? { addons: addonsSnapshot, addons_total: addonsTotal }
+          : {}),
       })
       .select("id");
 
     if (error) {
-      // Column may not exist yet (migration pending) — retry without it
+      // Columns may not exist yet (migration pending) — retry minimal insert
       const { data: simpleLead, error: err2 } = await supabase
         .from("leads")
         .insert({
@@ -190,6 +250,29 @@ export async function POST(request: NextRequest) {
           const licenseNote = license_file_path
             ? "<p><strong>✅ Driver's license uploaded</strong> — visible in your leads dashboard.</p>"
             : "";
+
+          // Build itemized add-ons table for operator email
+          const addonsEmailTable =
+            addonsSnapshot.length > 0
+              ? `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+<thead><tr style="background:#f3f4f6">
+<th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Add-on</th>
+<th style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">Amount</th>
+</tr></thead>
+<tbody>
+${addonsSnapshot
+  .map(
+    (a) =>
+      `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb">${a.name}${a.pricing_type === "per_day" ? ` (${a.days} day${a.days !== 1 ? "s" : ""} × $${a.price.toFixed(2)}/day)` : " (flat)"}</td><td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">$${a.amount.toFixed(2)}</td></tr>`
+  )
+  .join("")}
+<tr style="font-weight:bold;background:#f9fafb">
+<td style="padding:6px 10px;border:1px solid #e5e7eb">Add-ons Subtotal</td>
+<td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">$${addonsTotal.toFixed(2)}</td>
+</tr>
+</tbody></table>`
+              : "";
+
           fetch(`${baseUrl}/api/email/send`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -203,6 +286,7 @@ ${email ? `<p><strong>Email:</strong> ${email}</p>` : ""}
 ${vehicle_label ? `<p><strong>Vehicle:</strong> ${vehicle_label}</p>` : ""}
 ${datesNote ? `<p><strong>Dates:</strong> ${datesNote}</p>` : ""}
 ${licenseNote}
+${addonsEmailTable}
 <p><a href="https://pcrbooking.com/dashboard/leads">View leads &rarr;</a></p>`,
               templateType: "operator_lead_notification",
             }),
@@ -216,6 +300,31 @@ ${licenseNote}
     // ── Customer confirmation email ───────────────────────────────────────────
     if (email) {
       const baseUrl = request.headers.get("origin") || "https://pcrbooking.com";
+
+      // Build itemized breakdown for customer
+      const customerAddonsTable =
+        addonsSnapshot.length > 0
+          ? `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+<thead><tr style="background:#f3f4f6">
+<th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Item</th>
+<th style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">Amount</th>
+</tr></thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid #e5e7eb">${vehicle_label || "Vehicle"}${datesNote ? ` — ${datesNote}` : ""}</td><td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">TBD</td></tr>
+${addonsSnapshot
+  .map(
+    (a) =>
+      `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb">${a.name}${a.pricing_type === "per_day" ? ` (${a.days}×$${a.price.toFixed(2)}/day)` : " (flat)"}</td><td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">$${a.amount.toFixed(2)}</td></tr>`
+  )
+  .join("")}
+<tr style="font-weight:bold;background:#f9fafb">
+<td style="padding:6px 10px;border:1px solid #e5e7eb">Add-ons Total</td>
+<td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">$${addonsTotal.toFixed(2)}</td>
+</tr>
+</tbody></table>
+<p style="font-size:12px;color:#6b7280">Final total will be confirmed by ${operatorName}.</p>`
+          : "";
+
       fetch(`${baseUrl}/api/email/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,6 +336,7 @@ ${licenseNote}
 ${vehicle_label ? `<p><strong>Vehicle:</strong> ${vehicle_label}</p>` : ""}
 <p><strong>Requested dates:</strong> ${datesNote || "To be confirmed"}</p>
 ${license_file_path ? "<p>✅ Your driver's license has been submitted successfully.</p>" : ""}
+${customerAddonsTable}
 <p>${operatorName} will contact you shortly to confirm your reservation.</p>
 <p>Thank you!</p>`,
           templateType: "customer_booking_confirmation",
@@ -248,7 +358,11 @@ ${license_file_path ? "<p>✅ Your driver's license has been submitted successfu
       }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      addons_total: addonsTotal,
+      addons_count: addonsSnapshot.length,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });

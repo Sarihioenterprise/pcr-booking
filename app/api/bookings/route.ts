@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       status = "inquiry",
       notes,
       pickup_instructions,
+      selected_addon_ids = [],
     } = body;
 
     if (!renter_name || !start_date || !end_date) {
@@ -108,6 +109,54 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Server-side add-on computation ─────────────────────────────────────
+    let addonsSnapshot: Array<{
+      id: string; name: string; description: string | null;
+      pricing_type: string; price: number; category: string;
+      required: boolean; days: number; amount: number;
+    }> = [];
+    let addonsTotal = 0;
+
+    if (Array.isArray(selected_addon_ids) && selected_addon_ids.length > 0) {
+      try {
+        const { data: dbAddons } = await supabase
+          .from("addons")
+          .select("id, name, description, pricing_type, price, category, required")
+          .eq("operator_id", operator.id)
+          .eq("active", true);
+
+        if (dbAddons) {
+          const effectiveIds = new Set([
+            ...dbAddons.filter((a) => a.required).map((a) => a.id),
+            ...selected_addon_ids,
+          ]);
+          for (const addon of dbAddons) {
+            if (!effectiveIds.has(addon.id)) continue;
+            const amount =
+              addon.pricing_type === "per_day"
+                ? Number(addon.price) * duration_days
+                : Number(addon.price);
+            addonsSnapshot.push({
+              id: addon.id,
+              name: addon.name,
+              description: addon.description,
+              pricing_type: addon.pricing_type,
+              price: Number(addon.price),
+              category: addon.category,
+              required: addon.required,
+              days: addon.pricing_type === "per_day" ? duration_days : 1,
+              amount,
+            });
+            addonsTotal += amount;
+          }
+        }
+      } catch {
+        // addons table may not exist yet — skip gracefully
+      }
+    }
+
+    const total_with_addons = total_price + addonsTotal;
+
     // Create the booking
     const { data: booking, error } = await supabase
       .from("bookings")
@@ -122,7 +171,7 @@ export async function POST(request: NextRequest) {
         end_date,
         duration_days,
         daily_rate,
-        total_price,
+        total_price: total_with_addons,
         tax_amount: 0,
         discount_amount: 0,
         deposit_amount: operator.deposit_amount || 0,
@@ -130,6 +179,7 @@ export async function POST(request: NextRequest) {
         status,
         notes: notes || null,
         pickup_instructions: pickup_instructions || operator.default_pickup_instructions || null,
+        ...(addonsSnapshot.length > 0 ? { addons: addonsSnapshot, addons_total: addonsTotal } : {}),
       })
       .select()
       .single();
@@ -154,14 +204,39 @@ export async function POST(request: NextRequest) {
 
     // Fire confirmation email (fire-and-forget)
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com";
+
+    // Build itemized add-ons rows for email
+    const addonsRows = addonsSnapshot
+      .map(
+        (a) =>
+          `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb">${a.name}${
+            a.pricing_type === "per_day" ? ` (${a.days} day${a.days !== 1 ? "s" : ""} × $${a.price.toFixed(2)}/day)` : " (flat)"
+          }</td><td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">$${a.amount.toFixed(2)}</td></tr>`
+      )
+      .join("");
+
+    const addonsTableHtml =
+      addonsSnapshot.length > 0
+        ? `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+<thead><tr style="background:#f3f4f6">
+<th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Item</th>
+<th style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">Amount</th>
+</tr></thead>
+<tbody>
+<tr><td style="padding:6px 10px;border:1px solid #e5e7eb">Vehicle rental (${duration_days} day${duration_days !== 1 ? "s" : ""})</td><td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">$${total_price.toFixed(2)}</td></tr>
+${addonsRows}
+<tr style="font-weight:bold;background:#f9fafb"><td style="padding:6px 10px;border:1px solid #e5e7eb">Total</td><td style="text-align:right;padding:6px 10px;border:1px solid #e5e7eb">$${total_with_addons.toFixed(2)}</td></tr>
+</tbody></table>`
+        : "";
+
     if (renter_email) {
       fetch(`${baseUrl}/api/email/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: renter_email,
-          subject: "Booking Request Received",
-          body: `<p>Hi ${renter_name},</p><p>Your booking request has been received and is currently <strong>${status}</strong>.</p><p>Dates: ${start_date} to ${end_date} (${duration_days} day${duration_days !== 1 ? "s" : ""})</p>${total_price > 0 ? `<p>Estimated total: <strong>$${total_price.toFixed(2)}</strong></p>` : ""}<p>We will be in touch shortly to confirm your reservation.</p><p>Thank you!</p>`,
+          subject: "Booking Confirmation",
+          body: `<p>Hi ${renter_name},</p><p>Your booking has been created and is currently <strong>${status}</strong>.</p><p><strong>Dates:</strong> ${start_date} to ${end_date} (${duration_days} day${duration_days !== 1 ? "s" : ""})</p>${addonsTableHtml}${addonsSnapshot.length === 0 && total_with_addons > 0 ? `<p>Estimated total: <strong>$${total_with_addons.toFixed(2)}</strong></p>` : ""}<p>We will be in touch shortly to confirm your reservation.</p><p>Thank you!</p>`,
           templateType: "booking_confirmation",
         }),
       }).catch(() => {});
@@ -175,7 +250,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           to: operator.business_email,
           subject: `New Booking: ${renter_name}`,
-          body: `<p>A new booking has been created for <strong>${renter_name}</strong>.</p><p>Dates: ${start_date} to ${end_date} (${duration_days} day${duration_days !== 1 ? "s" : ""})</p><p>Status: ${status}</p>${total_price > 0 ? `<p>Total: $${total_price.toFixed(2)}</p>` : ""}<p><a href="${baseUrl}/dashboard/bookings/${booking.id}">View booking →</a></p>`,
+          body: `<p>A new booking has been created for <strong>${renter_name}</strong>.</p><p>Dates: ${start_date} to ${end_date} (${duration_days} day${duration_days !== 1 ? "s" : ""})</p><p>Status: ${status}</p>${addonsTableHtml}${addonsSnapshot.length === 0 && total_with_addons > 0 ? `<p>Total: $${total_with_addons.toFixed(2)}</p>` : ""}<p><a href="${baseUrl}/dashboard/bookings/${booking.id}">View booking →</a></p>`,
           templateType: "operator_notification",
         }),
       }).catch(() => {});

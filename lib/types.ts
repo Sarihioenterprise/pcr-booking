@@ -523,6 +523,34 @@ export interface ActivityItem {
   timestamp: string;
 }
 
+// Add-ons (Tier 3A)
+export interface Addon {
+  id: string;
+  operator_id: string;
+  name: string;
+  description: string | null;
+  pricing_type: "per_day" | "flat";
+  price: number;
+  category: "insurance" | "extra";
+  required: boolean;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+/** Snapshot stored in leads.addons / bookings.addons at booking time */
+export interface AddonSnapshot {
+  id: string;
+  name: string;
+  description: string | null;
+  pricing_type: "per_day" | "flat";
+  price: number;
+  category: "insurance" | "extra";
+  required: boolean;
+  days: number;       // number of rental days (1 for flat)
+  amount: number;     // computed: price * days (or flat price)
+}
+
 // Earnings Estimator (PCR Exclusive)
 export interface EarningsEstimate {
   city: string;

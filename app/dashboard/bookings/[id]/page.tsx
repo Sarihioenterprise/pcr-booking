@@ -4,6 +4,7 @@ import { use, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SMSButton } from "@/components/dashboard/sms-button";
+import { AddonsBreakdown } from "@/components/dashboard/addons-breakdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -870,6 +871,15 @@ export default function BookingDetailPage({
                           </span>
                         </div>
                       )}
+                      {/* Add-ons breakdown */}
+                      {(booking as typeof booking & { addons?: unknown[]; addons_total?: number }).addons_total ? (
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Add-ons</span>
+                          <span className="font-medium">
+                            +{formatCurrency((booking as typeof booking & { addons_total?: number }).addons_total!)}
+                          </span>
+                        </div>
+                      ) : null}
                       <Separator />
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-slate-900">
@@ -900,6 +910,14 @@ export default function BookingDetailPage({
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Add-ons Breakdown */}
+                {(booking as typeof booking & { addons?: unknown[] }).addons && (booking as typeof booking & { addons?: unknown[] }).addons!.length > 0 && (
+                  <AddonsBreakdown
+                    addons={(booking as typeof booking & { addons?: import("@/lib/types").AddonSnapshot[] }).addons!}
+                    addons_total={(booking as typeof booking & { addons_total?: number }).addons_total}
+                  />
+                )}
 
                 {/* Pickup Instructions */}
                 {booking.pickup_instructions && (

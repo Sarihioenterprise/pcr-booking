@@ -26,7 +26,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
-import type { Lead } from "@/lib/types";
+import type { Lead, AddonSnapshot } from "@/lib/types";
+import { AddonsBreakdown } from "@/components/dashboard/addons-breakdown";
 
 const followupLabels: Record<string, string> = {
   none: "New",
@@ -261,6 +262,14 @@ export default function LeadDetailPage() {
           </Button>
         )}
       </div>
+
+      {/* Add-ons Breakdown (if any were selected) */}
+      {(lead as Lead & { addons?: AddonSnapshot[]; addons_total?: number }).addons?.length ? (
+        <AddonsBreakdown
+          addons={(lead as Lead & { addons?: AddonSnapshot[] }).addons!}
+          addons_total={(lead as Lead & { addons_total?: number }).addons_total}
+        />
+      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Contact Info */}

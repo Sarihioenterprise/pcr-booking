@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Car, CheckCircle2, Calendar, Phone, Mail, User, Upload,
-  AlertCircle, Shield, FileText, X, Loader2
+  AlertCircle, Shield, FileText, X, Loader2, Package, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface Vehicle {
   id: string;
@@ -73,6 +74,17 @@ interface BookedRange {
   end: string;   // YYYY-MM-DD
 }
 
+interface PublicAddon {
+  id: string;
+  name: string;
+  description: string | null;
+  pricing_type: "per_day" | "flat";
+  price: number;
+  category: "insurance" | "extra";
+  required: boolean;
+  sort_order: number;
+}
+
 /** Returns true if the given YYYY-MM-DD string falls within any booked range */
 function isDateBooked(date: string, bookedRanges: BookedRange[]): boolean {
   for (const range of bookedRanges) {
@@ -84,7 +96,6 @@ function isDateBooked(date: string, bookedRanges: BookedRange[]): boolean {
 /** Returns true if the date range [start, end] overlaps with any booked range */
 function rangeOverlapsBooked(start: string, end: string, bookedRanges: BookedRange[]): boolean {
   for (const range of bookedRanges) {
-    // Overlap: start < range.end AND end > range.start
     if (start < range.end && end > range.start) return true;
   }
   return false;
@@ -98,6 +109,11 @@ function toDateStr(d: Date): string {
 /** Today's date as YYYY-MM-DD */
 function today(): string {
   return toDateStr(new Date());
+}
+
+/** Compute addon amount given days count */
+function addonAmount(addon: PublicAddon, days: number): number {
+  return addon.pricing_type === "per_day" ? addon.price * days : addon.price;
 }
 
 export function BookingPageClient({ operator, vehicles, slug }: Props) {
@@ -119,11 +135,36 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
   const [bookedRanges, setBookedRanges] = useState<BookedRange[]>([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
+  // Add-ons state
+  const [availableAddons, setAvailableAddons] = useState<PublicAddon[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
+  const [addonsLoaded, setAddonsLoaded] = useState(false);
+
   // White label
   const isScale = operator.plan === SCALE_PLAN;
   const accent = (isScale && operator.brand_primary_color) || operator.brand_color || "#2EBD6B";
   const displayName = (isScale && operator.brand_company_name) || operator.business_name;
   const displayLogo = (isScale && operator.brand_logo_url) || operator.logo_url;
+
+  // Fetch add-ons once when dialog opens (or operator changes)
+  const fetchAddons = useCallback(async () => {
+    if (addonsLoaded) return;
+    try {
+      const res = await fetch(`/api/addons/public?operator_id=${operator.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const addons: PublicAddon[] = data.addons ?? [];
+        setAvailableAddons(addons);
+        // Pre-select required add-ons
+        const required = new Set(addons.filter((a) => a.required).map((a) => a.id));
+        setSelectedAddonIds(required);
+        setAddonsLoaded(true);
+      }
+    } catch {
+      // Non-fatal — booking works without add-ons
+      setAddonsLoaded(true);
+    }
+  }, [operator.id, addonsLoaded]);
 
   // Fetch availability when a vehicle is selected
   const fetchAvailability = useCallback(async (vehicleId: string) => {
@@ -138,7 +179,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
         setBookedRanges(data.bookedRanges || []);
       }
     } catch {
-      // Non-fatal — availability checking is best-effort on client side
+      // Non-fatal
     } finally {
       setAvailabilityLoading(false);
     }
@@ -155,6 +196,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
     setSubmitted(false);
     setError("");
     fetchAvailability(v.id);
+    fetchAddons();
   }
 
   function handleEmailBlur() {
@@ -179,7 +221,6 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
     setLicenseError("");
     setLicensePath(null);
 
-    // Preview for images
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (ev) => setLicensePreview(ev.target?.result as string);
@@ -188,7 +229,6 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
       setLicensePreview(null);
     }
 
-    // Upload immediately to storage
     setLicenseUploading(true);
     try {
       const fd = new FormData();
@@ -222,6 +262,19 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
     if (licenseInputRef.current) licenseInputRef.current.value = "";
   }
 
+  function toggleAddon(addonId: string, required: boolean) {
+    if (required) return; // required add-ons cannot be deselected
+    setSelectedAddonIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(addonId)) {
+        next.delete(addonId);
+      } else {
+        next.add(addonId);
+      }
+      return next;
+    });
+  }
+
   // Date validation helpers
   const dateConflict = form.start_date && form.end_date
     ? rangeOverlapsBooked(form.start_date, form.end_date, bookedRanges)
@@ -231,15 +284,27 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
     ? Math.max(1, Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  const estimatedTotal = selectedVehicle && daysCount > 0
+  const vehicleSubtotal = selectedVehicle && daysCount > 0
     ? selectedVehicle.daily_rate * daysCount
     : 0;
+
+  const addonsTotal = daysCount > 0
+    ? availableAddons
+        .filter((a) => selectedAddonIds.has(a.id))
+        .reduce((sum, a) => sum + addonAmount(a, daysCount), 0)
+    : 0;
+
+  const estimatedTotal = vehicleSubtotal + addonsTotal;
+
+  const selectedAddonsList = availableAddons.filter((a) => selectedAddonIds.has(a.id));
+
+  const insuranceAddons = availableAddons.filter((a) => a.category === "insurance");
+  const extraAddons = availableAddons.filter((a) => a.category === "extra");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedVehicle) return;
 
-    // Email validation
     if (form.email) {
       const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
       if (!valid) {
@@ -248,7 +313,6 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
       }
     }
 
-    // License required
     if (!licensePath) {
       if (licenseUploading) {
         setError("Please wait for the license upload to complete.");
@@ -258,7 +322,6 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
       return;
     }
 
-    // Date conflict check (client-side)
     if (dateConflict) {
       setError("The selected dates are not available. Please choose different dates.");
       return;
@@ -281,6 +344,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
           start_date: form.start_date || null,
           end_date: form.end_date || null,
           license_file_path: licensePath,
+          selected_addon_ids: Array.from(selectedAddonIds),
           slug,
         }),
       });
@@ -493,7 +557,6 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
                 </div>
               </div>
 
-              {/* Availability conflict warning */}
               {dateConflict && (
                 <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
                   <AlertCircle className="h-4 w-4 shrink-0" />
@@ -501,25 +564,177 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
                 </div>
               )}
 
-              {/* Booked ranges hint */}
               {bookedRanges.length > 0 && !dateConflict && (
                 <p className="text-xs text-amber-600">
                   ⚠️ Some dates for this vehicle are unavailable. The form will alert you if your selection conflicts.
                 </p>
               )}
+            </div>
 
-              {/* Pricing preview */}
-              {selectedVehicle && daysCount > 0 && !dateConflict && (
-                <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500">{daysCount} day{daysCount !== 1 ? "s" : ""} × ${Number(selectedVehicle.daily_rate).toFixed(0)}/day</span>
-                    <span className="font-bold text-gray-900" style={{ color: accent }}>
-                      ${estimatedTotal.toFixed(2)} est.
+            {/* ── Add-ons: Insurance ── */}
+            {insuranceAddons.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-semibold text-gray-900">Protect Your Trip</span>
+                  <span className="text-xs text-gray-400 ml-auto">Optional coverage</span>
+                </div>
+                <div className="space-y-2">
+                  {insuranceAddons.map((addon) => {
+                    const selected = selectedAddonIds.has(addon.id);
+                    const amount = daysCount > 0 ? addonAmount(addon, daysCount) : null;
+                    return (
+                      <label
+                        key={addon.id}
+                        className={`flex items-start gap-3 rounded-xl border-2 p-3 cursor-pointer transition-all ${
+                          selected
+                            ? "border-blue-400 bg-blue-50"
+                            : "border-gray-100 bg-white hover:border-gray-200"
+                        } ${addon.required ? "cursor-default" : ""}`}
+                        onClick={() => toggleAddon(addon.id, addon.required)}
+                      >
+                        <div className="relative flex items-center justify-center mt-0.5">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            readOnly
+                            disabled={addon.required}
+                            className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+                          />
+                          {addon.required && (
+                            <Lock className="h-2.5 w-2.5 absolute -top-1 -right-1 text-amber-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                            {addon.required && (
+                              <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                                Required
+                              </span>
+                            )}
+                          </div>
+                          {addon.description && (
+                            <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-gray-900">
+                            ${Number(addon.price).toFixed(0)}
+                            <span className="text-xs font-normal text-gray-400">
+                              {addon.pricing_type === "per_day" ? "/day" : " flat"}
+                            </span>
+                          </p>
+                          {amount !== null && daysCount > 0 && addon.pricing_type === "per_day" && (
+                            <p className="text-xs text-gray-400">${amount.toFixed(2)} total</p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Add-ons: Extras ── */}
+            {extraAddons.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-semibold text-gray-900">Extras & Upgrades</span>
+                </div>
+                <div className="space-y-2">
+                  {extraAddons.map((addon) => {
+                    const selected = selectedAddonIds.has(addon.id);
+                    const amount = daysCount > 0 ? addonAmount(addon, daysCount) : null;
+                    return (
+                      <label
+                        key={addon.id}
+                        className={`flex items-start gap-3 rounded-xl border-2 p-3 cursor-pointer transition-all ${
+                          selected
+                            ? "border-[#2EBD6B] bg-emerald-50"
+                            : "border-gray-100 bg-white hover:border-gray-200"
+                        } ${addon.required ? "cursor-default" : ""}`}
+                        onClick={() => toggleAddon(addon.id, addon.required)}
+                      >
+                        <div className="relative flex items-center justify-center mt-0.5">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            readOnly
+                            disabled={addon.required}
+                            className="h-4 w-4 rounded border-gray-300 accent-emerald-600"
+                          />
+                          {addon.required && (
+                            <Lock className="h-2.5 w-2.5 absolute -top-1 -right-1 text-amber-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                            {addon.required && (
+                              <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                                Required
+                              </span>
+                            )}
+                          </div>
+                          {addon.description && (
+                            <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-gray-900">
+                            ${Number(addon.price).toFixed(0)}
+                            <span className="text-xs font-normal text-gray-400">
+                              {addon.pricing_type === "per_day" ? "/day" : " flat"}
+                            </span>
+                          </p>
+                          {amount !== null && daysCount > 0 && addon.pricing_type === "per_day" && (
+                            <p className="text-xs text-gray-400">${amount.toFixed(2)} total</p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Pricing Breakdown ── */}
+            {selectedVehicle && daysCount > 0 && !dateConflict && (
+              <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">
+                    Vehicle ({daysCount} day{daysCount !== 1 ? "s" : ""} × ${Number(selectedVehicle.daily_rate).toFixed(0)}/day)
+                  </span>
+                  <span className="font-medium text-gray-700">${vehicleSubtotal.toFixed(2)}</span>
+                </div>
+
+                {selectedAddonsList.map((addon) => (
+                  <div key={addon.id} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">
+                      {addon.name}
+                      {addon.pricing_type === "per_day" && (
+                        <span className="text-gray-400"> ({daysCount}×${Number(addon.price).toFixed(0)}/day)</span>
+                      )}
+                    </span>
+                    <span className="font-medium text-gray-700">
+                      ${addonAmount(addon, daysCount).toFixed(2)}
                     </span>
                   </div>
+                ))}
+
+                {selectedAddonsList.length > 0 && <Separator />}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Estimated Total</span>
+                  <span className="text-lg font-bold" style={{ color: accent }}>
+                    ${estimatedTotal.toFixed(2)}
+                  </span>
                 </div>
-              )}
-            </div>
+                <p className="text-[10px] text-gray-400">Final amount confirmed by operator</p>
+              </div>
+            )}
 
             {/* Driver's License Upload */}
             <div className="space-y-1.5">
