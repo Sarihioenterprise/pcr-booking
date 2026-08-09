@@ -37,7 +37,6 @@ const navItems = [
   { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
   { href: "/dashboard/collections", label: "Collections", icon: AlertCircle },
   { href: "/dashboard/agreements", label: "Agreements", icon: FileText },
-  { href: "/dashboard/contracts", label: "Contracts", icon: FileText },
   { href: "/dashboard/inspections", label: "Inspections", icon: ClipboardCheck },
   { href: "/dashboard/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/dashboard/support", label: "Support", icon: HeadphonesIcon },
