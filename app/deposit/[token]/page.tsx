@@ -217,11 +217,9 @@ function DepositPageContent({ token }: { token: string }) {
           return;
         }
 
-        if (!info.stripe_connected) {
-          setError("Stripe payments are not yet configured. Please contact your rental company.");
-          setLoading(false);
-          return;
-        }
+        // Note: operator Stripe connection is enforced at deposit-link creation
+        // (/api/payments/deposit/initiate). If a link exists without a connected
+        // account, the charge falls back to the platform account server-side.
 
         // 2. Create / reuse PaymentIntent
         const piRes = await fetch("/api/payments/deposit", {
