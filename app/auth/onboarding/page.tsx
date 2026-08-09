@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, use } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,25 @@ function OnboardingPageInner() {
       resolvedUserId = user.id;
     }
 
+    // Auto-generate slug from business name
+    const slugBase = businessName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50) || "rental";
+
+    // Find a unique slug (check for conflicts)
+    let bookingSlug = slugBase;
+    for (let attempt = 2; attempt <= 99; attempt++) {
+      const { data: existing } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("booking_slug", bookingSlug)
+        .maybeSingle();
+      if (!existing) break;
+      bookingSlug = `${slugBase}-${attempt}`;
+    }
+
     const { data: operator, error: insertError } = await supabase
       .from("operators")
       .insert({
@@ -81,6 +100,7 @@ function OnboardingPageInner() {
         phone,
         city,
         state,
+        booking_slug: bookingSlug,
       })
       .select()
       .single();

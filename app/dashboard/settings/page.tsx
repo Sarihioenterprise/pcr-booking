@@ -60,7 +60,11 @@ import {
   Lock,
   Upload,
   ImageIcon,
+  Link,
+  Unlink,
+  RefreshCw,
 } from "lucide-react";
+import { canUseCustomDomain } from "@/lib/plan-tier";
 import type {
   Operator,
   TeamMember,
@@ -177,6 +181,15 @@ export default function SettingsPage() {
   // Booking page slug
   const [bookingSlug, setBookingSlug] = useState("");
   const [copiedSlug, setCopiedSlug] = useState(false);
+
+  // Custom domain
+  const [customDomain, setCustomDomain] = useState("");
+  const [customDomainInput, setCustomDomainInput] = useState("");
+  const [customDomainStatus, setCustomDomainStatus] = useState<string | null>(null);
+  const [dnsInstructions, setDnsInstructions] = useState<{ type: string; name: string; value: string }[]>([]);
+  const [connectingDomain, setConnectingDomain] = useState(false);
+  const [disconnectingDomain, setDisconnectingDomain] = useState(false);
+  const [checkingDomainStatus, setCheckingDomainStatus] = useState(false);
 
   // Saving state
   const [saving, setSaving] = useState("");
@@ -310,6 +323,17 @@ export default function SettingsPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setBookingSlug((op as any).booking_slug || op.referral_code || "");
 
+        // Custom domain
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cd = (op as any).custom_domain as string | null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cds = (op as any).custom_domain_status as string | null;
+        if (cd) {
+          setCustomDomain(cd);
+          setCustomDomainInput(cd);
+          setCustomDomainStatus(cds);
+        }
+
         // Notification preferences (stored in JSON field or separate columns)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const notifPrefs = (op as any).notification_preferences || {};
@@ -437,6 +461,68 @@ export default function SettingsPage() {
       // notification_preferences column may not exist yet — show a clear message
       showSuccess("Settings saved locally. Schema migration required to persist across sessions.");
       console.warn("Notification prefs save error (run migration 016):", error.message);
+    }
+  }
+
+  // Connect custom domain
+  async function handleConnectDomain() {
+    const domain = customDomainInput.toLowerCase().trim();
+    if (!domain) return;
+    setConnectingDomain(true);
+    try {
+      const res = await fetch("/api/domains/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setCustomDomain(domain);
+        setCustomDomainStatus("pending");
+        showSuccess("Domain connected! Configure DNS to activate.");
+        // Fetch DNS instructions
+        handleCheckDomainStatus();
+      } else {
+        showSuccess(data.error || "Failed to connect domain");
+      }
+    } finally {
+      setConnectingDomain(false);
+    }
+  }
+
+  // Disconnect custom domain
+  async function handleDisconnectDomain() {
+    if (!confirm("Remove your custom domain? Your booking page will revert to pcrbooking.com/book/" + bookingSlug)) return;
+    setDisconnectingDomain(true);
+    try {
+      const res = await fetch("/api/domains/disconnect", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        setCustomDomain("");
+        setCustomDomainInput("");
+        setCustomDomainStatus(null);
+        setDnsInstructions([]);
+        showSuccess("Custom domain disconnected");
+      } else {
+        showSuccess(data.error || "Failed to disconnect domain");
+      }
+    } finally {
+      setDisconnectingDomain(false);
+    }
+  }
+
+  // Check domain status
+  async function handleCheckDomainStatus() {
+    setCheckingDomainStatus(true);
+    try {
+      const res = await fetch("/api/domains/status");
+      const data = await res.json();
+      if (data.domain) {
+        setCustomDomainStatus(data.status);
+        if (data.dnsInstructions) setDnsInstructions(data.dnsInstructions);
+      }
+    } finally {
+      setCheckingDomainStatus(false);
     }
   }
 
@@ -1769,75 +1855,223 @@ export default function SettingsPage() {
 
         {/* ── Booking Page ── */}
         <TabsContent value="booking_page">
-          <Card className="border-0 bg-white shadow-sm ring-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Public Booking Page
-              </CardTitle>
-              <CardDescription>
-                Share this page with renters so they can browse your fleet and request bookings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="bookingSlug">Your Booking Page URL</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">pcrbooking.com/book/</span>
-                  <Input
-                    id="bookingSlug"
-                    value={bookingSlug}
-                    onChange={(e) => setBookingSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                    placeholder="your-business-name"
-                    className="max-w-xs"
-                  />
+          <div className="space-y-6">
+            {/* Booking page URL */}
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Public Booking Page
+                </CardTitle>
+                <CardDescription>
+                  Share this page with renters so they can browse your fleet and request bookings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="bookingSlug">Your Booking Page URL</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">pcrbooking.com/book/</span>
+                    <Input
+                      id="bookingSlug"
+                      value={bookingSlug}
+                      onChange={(e) => setBookingSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                      placeholder="your-business-name"
+                      className="max-w-xs"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Letters, numbers, and hyphens only. Auto-generated from your business name at signup.</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Letters, numbers, and hyphens only.</p>
-              </div>
 
-              {bookingSlug && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 border">
-                  <span className="text-sm font-mono flex-1 truncate">
-                    https://pcrbooking.com/book/{bookingSlug}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://pcrbooking.com/book/${bookingSlug}`);
-                      setCopiedSlug(true);
-                      setTimeout(() => setCopiedSlug(false), 2000);
-                    }}
-                  >
-                    {copiedSlug ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
-                    {copiedSlug ? "Copied!" : "Copy"}
-                  </Button>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 flex-wrap">
-                <Button
-                  onClick={saveBookingSlug}
-                  disabled={saving === "booking_slug" || !bookingSlug}
-                  className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-                >
-                  {saving === "booking_slug" ? "Saving..." : "Save URL"}
-                </Button>
                 {bookingSlug && (
-                  <a
-                    href={`/book/${bookingSlug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button variant="outline" type="button" className="border-[#2EBD6B] text-[#2EBD6B] hover:bg-[#2EBD6B]/5">
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                      Open Booking Page
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 border">
+                    <span className="text-sm font-mono flex-1 truncate">
+                      https://pcrbooking.com/book/{bookingSlug}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://pcrbooking.com/book/${bookingSlug}`);
+                        setCopiedSlug(true);
+                        setTimeout(() => setCopiedSlug(false), 2000);
+                      }}
+                    >
+                      {copiedSlug ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                      {copiedSlug ? "Copied!" : "Copy"}
                     </Button>
-                  </a>
+                  </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Button
+                    onClick={saveBookingSlug}
+                    disabled={saving === "booking_slug" || !bookingSlug}
+                    className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+                  >
+                    {saving === "booking_slug" ? "Saving..." : "Save URL"}
+                  </Button>
+                  {bookingSlug && (
+                    <a
+                      href={`/book/${bookingSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="outline" type="button" className="border-[#2EBD6B] text-[#2EBD6B] hover:bg-[#2EBD6B]/5">
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Open Booking Page
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Custom Domain Card */}
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link className="h-5 w-5 text-[#2EBD6B]" />
+                  Custom Domain
+                  <Badge className="bg-blue-100 text-blue-700 border-blue-200 ml-1">Growth+</Badge>
+                </CardTitle>
+                <CardDescription>
+                  Connect your own domain (e.g. book.yourbusiness.com) so renters see your brand, not pcrbooking.com.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!canUseCustomDomain(currentPlan) ? (
+                  /* Locked for Free plan */
+                  <div className="flex flex-col items-center justify-center py-10 text-center gap-4">
+                    <div className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center">
+                      <Lock className="h-7 w-7 text-slate-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Upgrade to Growth to connect a custom domain</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm">
+                        Growth plan and above lets you connect book.yourbusiness.com to your booking page. Renters see your brand.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => handleUpgrade("growth")}
+                      disabled={upgradingPlan === "growth"}
+                      className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white"
+                    >
+                      <Crown className="h-4 w-4 mr-2" />
+                      {upgradingPlan === "growth" ? "Redirecting…" : "Upgrade to Growth — $79/mo"}
+                    </Button>
+                  </div>
+                ) : customDomain ? (
+                  /* Domain connected */
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                        customDomainStatus === "active"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}>
+                        <span className={`h-2 w-2 rounded-full ${
+                          customDomainStatus === "active" ? "bg-emerald-500" : "bg-amber-400 animate-pulse"
+                        }`} />
+                        {customDomainStatus === "active" ? "Live" : "Pending DNS"}
+                      </div>
+                      <span className="font-mono text-sm text-gray-700">{customDomain}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCheckDomainStatus}
+                        disabled={checkingDomainStatus}
+                        className="ml-auto"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 mr-1 ${checkingDomainStatus ? "animate-spin" : ""}`} />
+                        Check status
+                      </Button>
+                    </div>
+
+                    {customDomainStatus !== "active" && dnsInstructions.length > 0 && (
+                      <div className="rounded-lg border bg-slate-50 p-4 space-y-3">
+                        <p className="text-sm font-semibold">Configure your DNS records:</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-muted-foreground">
+                                <th className="text-left pb-2 pr-4">Type</th>
+                                <th className="text-left pb-2 pr-4">Name</th>
+                                <th className="text-left pb-2">Value</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dnsInstructions.map((rec, i) => (
+                                <tr key={i}>
+                                  <td className="pr-4 py-1 font-mono font-bold">{rec.type}</td>
+                                  <td className="pr-4 py-1 font-mono">{rec.name}</td>
+                                  <td className="py-1 font-mono text-blue-700">{rec.value}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <p className="text-xs text-muted-foreground">DNS changes can take up to 24 hours. Click &quot;Check status&quot; to refresh.</p>
+                      </div>
+                    )}
+
+                    {customDomainStatus === "active" && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                        <Check className="h-4 w-4 text-emerald-600" />
+                        <span className="text-sm text-emerald-800">
+                          Your booking page is live at <a href={`https://${customDomain}`} target="_blank" rel="noopener noreferrer" className="font-mono underline">{customDomain}</a>
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleDisconnectDomain}
+                        disabled={disconnectingDomain}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      >
+                        <Unlink className="h-4 w-4 mr-1.5" />
+                        {disconnectingDomain ? "Disconnecting..." : "Disconnect Domain"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  /* No domain yet — connect form */
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="customDomainInput">Your Domain</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="customDomainInput"
+                          value={customDomainInput}
+                          onChange={(e) => setCustomDomainInput(e.target.value.toLowerCase().trim())}
+                          placeholder="book.yourbusiness.com"
+                          className="max-w-xs font-mono"
+                        />
+                        <Button
+                          onClick={handleConnectDomain}
+                          disabled={connectingDomain || !customDomainInput}
+                          className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white"
+                        >
+                          <Link className="h-4 w-4 mr-1.5" />
+                          {connectingDomain ? "Connecting..." : "Connect"}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Use a subdomain like <span className="font-mono">book.yourbusiness.com</span> (recommended) or an apex domain like <span className="font-mono">yourbusiness.com</span>.
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-blue-50 p-3 space-y-1">
+                      <p className="text-xs font-medium text-blue-800">After connecting, you&apos;ll need to add a DNS record:</p>
+                      <p className="text-xs text-blue-700 font-mono">CNAME → cname.vercel-dns.com (subdomain)</p>
+                      <p className="text-xs text-blue-700 font-mono">A → 76.76.21.21 (apex domain)</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
