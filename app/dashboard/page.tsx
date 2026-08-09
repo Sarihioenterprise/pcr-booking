@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
 import OnboardingChecklist from "@/components/dashboard/onboarding-checklist";
+import { LeadSourcesWidget } from "@/components/dashboard/lead-sources-widget";
 import {
   Card,
   CardContent,
@@ -77,13 +78,12 @@ export default async function DashboardPage() {
       .eq("operator_id", operator.id)
       .eq("status", "active"),
 
-    // Leads today
+    // Leads today + this month by source (for Lead Sources Widget)
     supabase
       .from("leads")
-      .select("id")
+      .select("id, source, created_at")
       .eq("operator_id", operator.id)
-      .gte("created_at", todayStart)
-      .lte("created_at", todayEnd),
+      .gte("created_at", `${monthStart}T00:00:00`),
 
     // Upcoming returns (bookings ending in next 7 days)
     supabase
@@ -116,7 +116,18 @@ export default async function DashboardPage() {
     .filter((b) => ["completed", "active", "confirmed"].includes(b.status))
     .reduce((sum, b) => sum + (b.total_price || 0), 0);
   const activeRentalsCount = activeRentalsRes.data?.length || 0;
-  const leadsToday = leadsRes.data?.length || 0;
+  const leadsThisMonth = leadsRes.data || [];
+
+  // Lead sources breakdown for this month
+  const bookingWidgetLeads = leadsThisMonth.filter((l) => l.source === "booking_widget").length;
+  const pcrLeadsLeads = leadsThisMonth.filter((l) => l.source === "pcr_leads").length;
+  const otherLeads = leadsThisMonth.filter(
+    (l) => l.source !== "booking_widget" && l.source !== "pcr_leads"
+  ).length;
+  const leadsToday = leadsThisMonth.filter(
+    (l) => l.created_at >= todayStart && l.created_at <= todayEnd
+  ).length;
+
   const upcomingReturns = upcomingReturnsRes.data || [];
   const recentBookings = recentBookingsRes.data || [];
   const vehicleCount = vehiclesRes.count || 0;
@@ -212,6 +223,14 @@ export default async function DashboardPage() {
           </a>
         )}
       </div>
+
+      {/* Lead Sources Widget */}
+      <LeadSourcesWidget
+        bookingWidgetCount={bookingWidgetLeads}
+        pcrLeadsCount={pcrLeadsLeads}
+        otherCount={otherLeads}
+        pcrConversions={0}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Bookings */}

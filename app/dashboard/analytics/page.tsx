@@ -17,7 +17,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { AnalyticsClient } from "./analytics-client";
-import { PCRLeadsUpsell } from "@/components/dashboard/pcr-leads-upsell";
+import { LeadSourcesWidget } from "@/components/dashboard/lead-sources-widget";
 import { AnalyticsGate } from "@/components/dashboard/analytics-gate";
 
 export default async function AnalyticsPage() {
@@ -31,6 +31,14 @@ export default async function AnalyticsPage() {
 
   // Last 30 days
   const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  // Lead sources this month (for widget)
+  const { data: leadsThisMonth } = await supabase
+    .from("leads")
+    .select("id, source")
+    .eq("operator_id", operator.id)
+    .gte("created_at", thisMonthStart + "T00:00:00Z")
+    .lte("created_at", thisMonthEnd + "T23:59:59Z");
 
   // Total bookings this year
   const { data: allBookings } = await supabase
@@ -166,10 +174,12 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
-      {/* PCR Leads Upsell Banner */}
-      <PCRLeadsUpsell
-        operatorCreatedAt={operator.created_at}
-        bookingsLast30Days={last30DaysBookings.length}
+      {/* Lead Sources Widget */}
+      <LeadSourcesWidget
+        bookingWidgetCount={(leadsThisMonth || []).filter((l) => l.source === "booking_widget").length}
+        pcrLeadsCount={(leadsThisMonth || []).filter((l) => l.source === "pcr_leads").length}
+        otherCount={(leadsThisMonth || []).filter((l) => l.source !== "booking_widget" && l.source !== "pcr_leads").length}
+        pcrConversions={0}
       />
 
       <AnalyticsGate operatorPlan={operator.plan}>

@@ -37,6 +37,7 @@ import type {
   Vehicle,
   PaymentScheduleItem,
   RentalAgreement,
+  Inspection,
 } from "@/lib/types";
 import {
   ArrowLeft,
@@ -70,6 +71,10 @@ import {
   Eye,
   Monitor,
   Copy,
+  ClipboardCheck,
+  Gauge,
+  Fuel,
+  Camera,
 } from "lucide-react";
 
 // ── License Viewer Component ──────────────────────────────────────────
@@ -223,6 +228,228 @@ interface ActivityEvent {
   icon: "status" | "payment" | "agreement" | "note" | "system";
 }
 
+// ── BookingInspectionsPanel ────────────────────────────────────────
+
+function InspectionCard({
+  inspection,
+  label,
+}: {
+  inspection: Inspection;
+  label: string;
+}) {
+  const checklist = inspection.checklist || {};
+  const checklistItems = [
+    { key: "exterior_clean", label: "Exterior Clean" },
+    { key: "interior_clean", label: "Interior Clean" },
+    { key: "tires_ok", label: "Tires OK" },
+    { key: "lights_working", label: "Lights Working" },
+    { key: "brakes_ok", label: "Brakes OK" },
+    { key: "windshield_ok", label: "Windshield OK" },
+    { key: "mirrors_ok", label: "Mirrors OK" },
+    { key: "ac_working", label: "A/C Working" },
+  ] as const;
+
+  return (
+    <Card className="border-0 bg-white shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <ClipboardCheck className="h-4 w-4 text-[#2EBD6B]" />
+          {label}
+          <Badge className={`ml-auto text-xs ${
+            inspection.status === "completed"
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-amber-50 text-amber-700 border-amber-200"
+          }`}>
+            {inspection.status === "completed" ? "Completed" : "Pending"}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Gauge className="h-4 w-4 text-gray-400" />
+            <span className="text-gray-500">Odometer:</span>
+            <span className="font-semibold">
+              {inspection.mileage != null ? `${inspection.mileage.toLocaleString()} mi` : "—"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Fuel className="h-4 w-4 text-gray-400" />
+            <span className="text-gray-500">Fuel:</span>
+            <span className="font-semibold">{inspection.fuel_level || "—"}</span>
+          </div>
+        </div>
+        {inspection.notes && (
+          <p className="text-xs text-gray-600 bg-gray-50 rounded p-2">{inspection.notes}</p>
+        )}
+        <div className="grid grid-cols-2 gap-1.5">
+          {checklistItems.map(({ key, label: itemLabel }) => {
+            const val = (checklist as unknown as Record<string, boolean>)[key];
+            return (
+              <div key={key} className="flex items-center gap-1.5 text-xs">
+                {val ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                )}
+                <span className={val ? "text-gray-700" : "text-amber-700 font-medium"}>
+                  {itemLabel}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        {Array.isArray(inspection.signed_photo_urls) && inspection.signed_photo_urls.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {inspection.signed_photo_urls.map((url, i) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Photo ${i + 1}`}
+                  className="h-16 w-16 rounded object-cover border border-gray-200 hover:opacity-80 transition-opacity"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function BookingInspectionsPanel({
+  bookingId,
+  vehicleId,
+  inspections,
+  operator,
+  onInspectionCreated,
+}: {
+  bookingId: string;
+  vehicleId: string;
+  inspections: Inspection[];
+  operator: Operator | null;
+  onInspectionCreated: () => void;
+}) {
+  const pickup = inspections.find((i) => i.type === "pre_rental");
+  const returning = inspections.find((i) => i.type === "post_rental");
+
+  // Miles driven + overage
+  const milesDriven =
+    pickup?.mileage != null && returning?.mileage != null
+      ? returning.mileage - pickup.mileage
+      : null;
+
+  const includedMiles =
+    operator?.included_miles_per_day != null ? operator.included_miles_per_day : null;
+  const overageRate =
+    operator?.overage_rate_per_mile != null ? operator.overage_rate_per_mile : null;
+
+  // We don't have booking duration here — overage is informational summary
+  // The new inspection page handles this on creation.
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <Camera className="h-4 w-4 text-[#2EBD6B]" />
+          Vehicle Inspections
+        </h3>
+        <Link href={`/dashboard/inspections/new?booking_id=${bookingId}&vehicle_id=${vehicleId}`}>
+          <Button size="sm" variant="outline" className="text-xs h-7 px-3">
+            <Plus className="h-3 w-3 mr-1" />
+            New Inspection
+          </Button>
+        </Link>
+      </div>
+
+      {inspections.length === 0 ? (
+        <Card className="border-0 bg-white shadow-sm">
+          <CardContent className="py-10 text-center">
+            <ClipboardCheck className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500 mb-1">No inspections recorded yet.</p>
+            <p className="text-xs text-gray-400">
+              Record a pickup inspection before the rental starts, and a return inspection when
+              the vehicle comes back.
+            </p>
+            <Link
+              href={`/dashboard/inspections/new?booking_id=${bookingId}&vehicle_id=${vehicleId}&type=pre_rental`}
+              className="mt-4 inline-block"
+            >
+              <Button size="sm" className="bg-[#2EBD6B] hover:bg-[#27a85e] text-white">
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Record Pickup Inspection
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {pickup ? (
+            <InspectionCard inspection={pickup} label="Pickup Inspection" />
+          ) : (
+            <Card className="border-0 bg-white shadow-sm border-dashed border-gray-200">
+              <CardContent className="py-8 text-center">
+                <p className="text-sm text-gray-400 mb-3">No pickup inspection</p>
+                <Link
+                  href={`/dashboard/inspections/new?booking_id=${bookingId}&vehicle_id=${vehicleId}&type=pre_rental`}
+                >
+                  <Button size="sm" variant="outline" className="text-xs">
+                    Record Pickup
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+          {returning ? (
+            <InspectionCard inspection={returning} label="Return Inspection" />
+          ) : (
+            <Card className="border-0 bg-white shadow-sm">
+              <CardContent className="py-8 text-center">
+                <p className="text-sm text-gray-400 mb-3">No return inspection</p>
+                <Link
+                  href={`/dashboard/inspections/new?booking_id=${bookingId}&vehicle_id=${vehicleId}&type=post_rental`}
+                >
+                  <Button size="sm" variant="outline" className="text-xs">
+                    Record Return
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Miles driven + overage summary */}
+      {milesDriven !== null && (
+        <Card className="border-0 bg-white shadow-sm">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Gauge className="h-4 w-4 text-[#2EBD6B]" />
+                <span className="text-sm font-semibold">Miles Driven</span>
+              </div>
+              <span className="text-lg font-bold">{milesDriven.toLocaleString()} mi</span>
+            </div>
+            {includedMiles != null && overageRate != null && (
+              <div className="mt-2 text-xs text-gray-500">
+                <span>Policy: {includedMiles} mi/day included @ ${overageRate}/mi overage.</span>
+                {milesDriven > includedMiles && (
+                  <span className="ml-2 text-amber-600 font-medium">
+                    Overage: {(milesDriven - includedMiles).toLocaleString()} mi over — add to
+                    deposit capture if applicable.
+                  </span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ── Component ───────────────────────────────────────────────────────
 
 export default function BookingDetailPage({
@@ -246,6 +473,7 @@ export default function BookingDetailPage({
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [notes, setNotes] = useState("");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
 
   // Dialogs
   const [statusDialog, setStatusDialog] = useState<{
@@ -352,7 +580,7 @@ export default function BookingDetailPage({
     fetchBooking();
   }, [id, router]);
 
-  // Load operator for DepositCard
+  // Load operator for DepositCard + mileage policy
   useEffect(() => {
     const supabase = createClient();
     async function loadOperator() {
@@ -370,6 +598,23 @@ export default function BookingDetailPage({
     loadOperator();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load inspections for this booking
+  useEffect(() => {
+    if (!id) return;
+    const supabase = createClient();
+    async function loadInspections() {
+      try {
+        const { data } = await supabase
+          .from("inspections")
+          .select("*")
+          .eq("booking_id", id)
+          .order("created_at", { ascending: true });
+        if (data) setInspections(data as Inspection[]);
+      } catch { /* inspections table may not exist — non-fatal */ }
+    }
+    loadInspections();
+  }, [id]);
 
   // ── Status Transitions ──────────────────────────────────────────
 
@@ -391,11 +636,12 @@ export default function BookingDetailPage({
     }
   }
 
-  function confirmStatusChange() {
+  async function confirmStatusChange() {
     if (!statusDialog.targetStatus || !booking) return;
     const target = statusDialog.targetStatus;
     const now = new Date().toISOString();
 
+    // Optimistic update
     setBooking((prev) => prev ? { ...prev, status: target, updated_at: now } : prev);
     setActivity((prev) => [
       ...prev,
@@ -410,12 +656,30 @@ export default function BookingDetailPage({
     ]);
     setStatusDialog({ open: false, targetStatus: null });
     showToast(`Booking status updated to ${STATUS_LABELS[target]}`);
+
+    // Persist via API
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: target }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Status persist failed:", err);
+        showToast("Warning: status may not have saved — please reload.");
+      }
+    } catch (e) {
+      console.error("Status persist network error:", e);
+      showToast("Warning: status may not have saved — please reload.");
+    }
   }
 
-  function confirmCancel() {
+  async function confirmCancel() {
     if (!cancelReason.trim() || !booking) return;
     const now = new Date().toISOString();
 
+    // Optimistic update
     setBooking((prev) =>
       prev ? { ...prev, status: "cancelled" as BookingStatus, updated_at: now } : prev
     );
@@ -433,6 +697,23 @@ export default function BookingDetailPage({
     setCancelDialog(false);
     setCancelReason("");
     showToast("Booking has been cancelled");
+
+    // Persist via API
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled", cancel_reason: cancelReason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Cancel persist failed:", err);
+        showToast("Warning: cancellation may not have saved — please reload.");
+      }
+    } catch (e) {
+      console.error("Cancel persist network error:", e);
+      showToast("Warning: cancellation may not have saved — please reload.");
+    }
   }
 
   // ── Payments ────────────────────────────────────────────────────
@@ -756,6 +1037,7 @@ export default function BookingDetailPage({
             <Tabs defaultValue="details" className="space-y-4">
               <TabsList className="bg-white border shadow-sm">
                 <TabsTrigger value="details">Booking Details</TabsTrigger>
+                <TabsTrigger value="inspections">Inspections</TabsTrigger>
                 <TabsTrigger value="agreement">Agreement</TabsTrigger>
                 <TabsTrigger value="payments">Payments</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -1436,6 +1718,24 @@ export default function BookingDetailPage({
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/* Inspections Tab */}
+              <TabsContent value="inspections" className="space-y-4">
+                <BookingInspectionsPanel
+                  bookingId={id as string}
+                  vehicleId={booking?.vehicle_id || ""}
+                  inspections={inspections}
+                  operator={operator}
+                  onInspectionCreated={() => {
+                    const sb = createClient();
+                    sb.from("inspections")
+                      .select("*")
+                      .eq("booking_id", id)
+                      .order("created_at", { ascending: true })
+                      .then(({ data }) => { if (data) setInspections(data as Inspection[]); });
+                  }}
+                />
               </TabsContent>
             </Tabs>
           </div>

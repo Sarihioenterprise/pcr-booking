@@ -17,7 +17,16 @@ export async function POST(request: NextRequest) {
       end_date,
       license_file_path, // Storage path from license upload
       selected_addon_ids = [], // Array of addon IDs selected by renter (client hint only)
+      lead_source, // Attribution: 'pcr_leads' | 'booking_widget' — set by page based on ?src= param
     } = body;
+
+    // Validate + sanitize lead source — only allow recognized values
+    const ALLOWED_SOURCES = ["booking_widget", "pcr_leads", "manual"] as const;
+    const resolvedSource: string =
+      typeof lead_source === "string" &&
+      (ALLOWED_SOURCES as readonly string[]).includes(lead_source)
+        ? lead_source
+        : "booking_widget";
 
     if (!operator_id || !name || !phone) {
       return NextResponse.json(
@@ -192,7 +201,7 @@ export async function POST(request: NextRequest) {
       email: email || null,
       dates_requested: vehicle_label ? `${vehicle_label} | ${datesNote}` : datesNote,
       stage: "new",
-      source: "booking_widget",
+      source: resolvedSource, // 'pcr_leads' when tagged via ad campaign
     };
 
     // Try inserting with all new columns (license_file_path, addons, addons_total)
@@ -217,7 +226,7 @@ export async function POST(request: NextRequest) {
           phone: phone || null,
           email: email || null,
           stage: "new",
-          source: "booking_widget",
+          source: resolvedSource,
         })
         .select("id");
 

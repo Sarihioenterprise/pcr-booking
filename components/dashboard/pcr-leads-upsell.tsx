@@ -1,93 +1,136 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, TrendingUp } from "lucide-react";
+import { X, TrendingUp, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PCRLeadsUpsellProps {
-  operatorCreatedAt?: string;
-  bookingsLast30Days?: number;
+  /** Number of PCR Leads-sourced leads this month (source='pcr_leads') */
+  pcrLeadsCount?: number;
+  /** Number of organic booking-widget leads this month */
+  organicCount?: number;
+  /** Number of those pcr_leads leads that converted to bookings */
+  pcrConversions?: number;
 }
 
+const DISMISS_KEY = "pcr-leads-upsell-dismissed-v2";
+const DISMISS_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 export function PCRLeadsUpsell({
-  operatorCreatedAt,
-  bookingsLast30Days = 0,
+  pcrLeadsCount = 0,
+  organicCount = 0,
+  pcrConversions = 0,
 }: PCRLeadsUpsellProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem("pcr-leads-upsell-dismissed");
-    if (dismissed === "true") {
-      setIsLoading(false);
-      return;
-    }
-
-    let shouldShow = false;
-
-    if (operatorCreatedAt) {
-      const createdDate = new Date(operatorCreatedAt);
-      const now = new Date();
-      const daysSinceCreation =
-        (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceCreation > 7) {
-        shouldShow = true;
+    try {
+      const raw = localStorage.getItem(DISMISS_KEY);
+      if (raw) {
+        const ts = parseInt(raw, 10);
+        if (Date.now() - ts < DISMISS_DURATION_MS) {
+          return; // Still within dismiss window
+        }
       }
+    } catch {
+      // localStorage unavailable — just show it
     }
+    setVisible(true);
+  }, []);
 
-    if (bookingsLast30Days === 0) {
-      shouldShow = true;
+  function handleDismiss() {
+    try {
+      localStorage.setItem(DISMISS_KEY, String(Date.now()));
+    } catch {
+      /* noop */
     }
-
-    setIsVisible(shouldShow);
-    setIsLoading(false);
-  }, [operatorCreatedAt, bookingsLast30Days]);
-
-  const handleDismiss = () => {
-    localStorage.setItem("pcr-leads-upsell-dismissed", "true");
-    setIsVisible(false);
-  };
-
-  if (isLoading || !isVisible) {
-    return null;
+    setVisible(false);
   }
 
+  if (!visible) return null;
+
+  const hasPcrLeads = pcrLeadsCount > 0;
+
+  if (hasPcrLeads) {
+    // Performance state — they're a customer, show value
+    return (
+      <div className="relative rounded-xl overflow-hidden border border-[#2EBD6B]/40 bg-[#0a1f14]">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#2EBD6B]" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 pl-6">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/20 border border-[#2EBD6B]/30">
+            <Zap className="h-5 w-5 text-[#2EBD6B]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold text-white leading-snug">
+              PCR Leads is working 🎉
+            </h3>
+            <p className="mt-1 text-sm text-gray-300 leading-relaxed">
+              <span className="font-semibold text-[#2EBD6B]">{pcrLeadsCount} new renters</span> from
+              PCR Leads campaigns this month
+              {organicCount > 0 ? ` vs ${organicCount} organic` : ""}.
+              {pcrConversions > 0 && (
+                <> <span className="font-semibold text-white">{pcrConversions} converted</span> to bookings.</>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="https://join.pcrleads.com?ref=pcrbooking"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button
+                size="sm"
+                className="bg-[#2EBD6B] hover:bg-[#1a9952] text-white font-semibold px-5"
+              >
+                View Campaign
+              </Button>
+            </a>
+            <button
+              onClick={handleDismiss}
+              className="p-1.5 hover:bg-white/10 rounded transition-colors flex-shrink-0"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4 text-gray-400" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pitch state — they have zero pcr_leads leads
   return (
     <div className="relative rounded-xl overflow-hidden border border-[#2EBD6B]/40 bg-[#0a1f14]">
-      {/* Solid green left accent bar */}
       <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#2EBD6B]" />
-
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 pl-6">
-        {/* Icon */}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/20 border border-[#2EBD6B]/30">
           <TrendingUp className="h-5 w-5 text-[#2EBD6B]" />
         </div>
-
-        {/* Text */}
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-bold text-white leading-snug">
-            Want More Bookings?
+            Fill the Top of the Funnel with PCR Leads
           </h3>
           <p className="mt-1 text-sm text-gray-300 leading-relaxed">
-            Let <span className="font-semibold text-white">PCR Leads</span> run Google & Facebook ads for your rental business.
-            Operators using our ads see{" "}
-            <span className="font-semibold text-[#2EBD6B]">3–5x more bookings</span>.
+            Your booking page converts renters you already have.{" "}
+            <span className="font-semibold text-white">PCR Leads</span> fills the top of the funnel:
+            managed Facebook ads that send{" "}
+            <span className="font-semibold text-[#2EBD6B]">new renters</span> to this exact page.
+            Clients typically see{" "}
+            <span className="font-semibold text-[#2EBD6B]">20–50+ leads/month</span>.
           </p>
         </div>
-
-        {/* CTA + Dismiss */}
         <div className="flex items-center gap-2 shrink-0">
           <a
             href="https://join.pcrleads.com?ref=pcrbooking"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto"
           >
             <Button
               size="sm"
-              className="w-full sm:w-auto bg-[#2EBD6B] hover:bg-[#1a9952] text-white font-semibold px-5"
+              className="bg-[#2EBD6B] hover:bg-[#1a9952] text-white font-semibold px-5"
             >
-              Get More Bookings
+              Get More Leads
             </Button>
           </a>
           <button

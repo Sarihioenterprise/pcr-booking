@@ -32,6 +32,9 @@ export interface Operator {
   brand_logo_url: string | null;
   brand_primary_color: string | null;
   brand_company_name: string | null;
+  // Mileage policy (migration 021) — graceful fallback: null = not configured
+  included_miles_per_day: number | null;
+  overage_rate_per_mile: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -299,15 +302,17 @@ export interface Inspection {
   vehicle_id: string;
   type: InspectionType;
   status: "pending" | "completed";
-  mileage: number | null;
+  mileage: number | null; // odometer reading at time of inspection
   fuel_level: string | null;
   notes: string | null;
   checklist: InspectionChecklist;
+  photo_paths: string[] | null; // private bucket paths (migration 021)
   created_at: string;
   updated_at: string;
   vehicle?: Vehicle;
   booking?: Booking;
   photos?: InspectionPhoto[];
+  signed_photo_urls?: string[]; // populated server-side on demand
 }
 
 export interface InspectionChecklist {

@@ -49,6 +49,7 @@ interface Props {
   operator: Operator;
   vehicles: Vehicle[];
   slug: string;
+  leadSource?: string;
 }
 
 interface BookingForm {
@@ -116,7 +117,7 @@ function addonAmount(addon: PublicAddon, days: number): number {
   return addon.pricing_type === "per_day" ? addon.price * days : addon.price;
 }
 
-export function BookingPageClient({ operator, vehicles, slug }: Props) {
+export function BookingPageClient({ operator, vehicles, slug, leadSource = "booking_widget" }: Props) {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [form, setForm] = useState<BookingForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -346,6 +347,7 @@ export function BookingPageClient({ operator, vehicles, slug }: Props) {
           license_file_path: licensePath,
           selected_addon_ids: Array.from(selectedAddonIds),
           slug,
+          lead_source: leadSource,
         }),
       });
 

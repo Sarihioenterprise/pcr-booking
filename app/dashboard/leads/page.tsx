@@ -32,6 +32,25 @@ import { createClient } from "@/lib/supabase/client";
 import type { Lead } from "@/lib/types";
 import { PCRLeadsUpsell } from "@/components/dashboard/pcr-leads-upsell";
 
+// Wrapper to compute pcr_leads counts from live leads data
+function PCRLeadsUpsellDynamic({ leads }: { leads: Lead[] }) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthlyLeads = leads.filter((l) => l.created_at >= monthStart);
+  const pcrLeadsCount = monthlyLeads.filter((l) => l.source === "pcr_leads").length;
+  const organicCount = monthlyLeads.filter((l) => l.source === "booking_widget").length;
+  const pcrConversions = leads.filter(
+    (l) => l.source === "pcr_leads" && l.followup_status === "converted"
+  ).length;
+  return (
+    <PCRLeadsUpsell
+      pcrLeadsCount={pcrLeadsCount}
+      organicCount={organicCount}
+      pcrConversions={pcrConversions}
+    />
+  );
+}
+
 type FollowupStatus = Lead["followup_status"];
 type ViewMode = "pipeline" | "table";
 
@@ -366,8 +385,8 @@ export default function LeadsPage() {
     >
       {showAddModal && <AddLeadModal />}
 
-      {/* PCR Leads Upsell Banner */}
-      <PCRLeadsUpsell />
+      {/* PCR Leads Upsell Banner — pitch vs performance based on pcr_leads source data */}
+      <PCRLeadsUpsellDynamic leads={leads} />
 
       {/* Header */}
       <div className="flex items-center justify-between">

@@ -4,12 +4,22 @@ import { BookingPageClient } from "./booking-page-client";
 
 interface Params {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 // Public page — must use admin client to bypass RLS since visitors are unauthenticated
-export default async function PublicBookingPage({ params }: Params) {
+export default async function PublicBookingPage({ params, searchParams }: Params) {
   const { slug } = await params;
+  const sp = await searchParams;
   const supabase = createAdminClient();
+
+  // PCR Leads attribution: ?src=pcrleads or ?utm_source=pcrleads
+  // Alton's ad campaigns tag links with either param.
+  const srcParam = (sp.src as string | undefined) || (sp.utm_source as string | undefined) || null;
+  const leadSource =
+    srcParam && ["pcrleads", "pcr_leads", "pcr-leads"].includes(srcParam.toLowerCase())
+      ? "pcr_leads"
+      : "booking_widget";
 
   // Find operator by booking_slug or referral_code
   // Also fetch white label branding fields (Scale plan only — applied client-side)
@@ -35,6 +45,7 @@ export default async function PublicBookingPage({ params }: Params) {
       operator={operator}
       vehicles={vehicles ?? []}
       slug={slug}
+      leadSource={leadSource}
     />
   );
 }
