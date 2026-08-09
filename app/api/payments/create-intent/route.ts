@@ -70,6 +70,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 🔒 HARD GUARD: money can NEVER enter the system unless the operator has
+    // Stripe connected. All funds route to the operator's own Stripe account
+    // (transfer_data.destination). The platform account never holds client money.
+    if (!booking.operators?.stripe_account_id) {
+      return NextResponse.json(
+        { error: "This rental company hasn't finished setting up payments yet. Please contact them directly to complete your payment." },
+        { status: 403 }
+      );
+    }
+
     const stripe = getStripe();
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -80,13 +90,9 @@ export async function POST(request: NextRequest) {
         operator_id: booking.operator_id,
         renter_name: booking.renter_name,
       },
-      ...(booking.operators?.stripe_account_id
-        ? {
-            transfer_data: {
-              destination: booking.operators.stripe_account_id,
-            },
-          }
-        : {}),
+      transfer_data: {
+        destination: booking.operators.stripe_account_id,
+      },
     });
 
     await supabase

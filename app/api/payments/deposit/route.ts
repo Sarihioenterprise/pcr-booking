@@ -163,6 +163,16 @@ export async function POST(request: NextRequest) {
     const operatorData = booking.operators as any;
     const operator = Array.isArray(operatorData) ? operatorData[0] : operatorData;
 
+    // 🔒 HARD GUARD: money can NEVER enter the system unless the operator has
+    // Stripe connected. All funds route to the operator's own Stripe account
+    // (transfer_data.destination). The platform account never holds client money.
+    if (!operator?.stripe_account_id) {
+      return NextResponse.json(
+        { error: "This rental company hasn't finished setting up payments yet. Please contact them directly to complete your deposit." },
+        { status: 403 }
+      );
+    }
+
     const depositAmount = amount ?? booking.deposit_amount;
     if (!depositAmount || Number(depositAmount) <= 0) {
       return NextResponse.json({ error: "Invalid deposit amount" }, { status: 400 });

@@ -163,6 +163,31 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Stripe not connected — payments are hard-blocked until this is done */}
+      {!operator.stripe_account_id && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+            <DollarSign className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900">
+              Connect Stripe to accept payments
+            </p>
+            <p className="text-sm text-amber-800">
+              Renters can&apos;t pay you or authorize deposits until your Stripe
+              account is connected. Payments go directly to your bank — we never
+              hold your money.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/settings?tab=payment"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+          >
+            Connect Stripe
+          </Link>
+        </div>
+      )}
+
       {/* Onboarding Checklist */}
       <OnboardingChecklist hasVehicles={hasVehicles} />
 
