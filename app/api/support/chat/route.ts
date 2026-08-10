@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
   // Agent loop with tool calls (max 4 rounds)
   let finalText = "";
   let currentTier: "frontline" | "specialist" = tier;
+  let handoff = false;
   try {
     for (let round = 0; round < 4; round++) {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
           let args: Record<string, unknown> = {};
           try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* empty */ }
           const out = await executeTool(tc.function.name, args, operator, conversationId);
-          if (out.specialistRequested) currentTier = "specialist";
+          if (out.specialistRequested) handoff = true;
           chat.push({ role: "tool", tool_call_id: tc.id, content: out.result });
         }
         continue;
@@ -205,9 +206,10 @@ export async function POST(request: NextRequest) {
     finalText = "Let me look into that and get back to you here in just a bit.";
   }
 
-  // Human-like delayed delivery
-  const delay = replyDelaySeconds(currentTier, isFirstReply || currentTier !== tier);
-  const deliverAfter = new Date(Date.now() + delay * 1000).toISOString();
+  // Human-like delayed delivery. On a handoff, the goodbye line stays with the
+  // frontline persona, then the specialist introduces themselves in a second,
+  // later message.
+  const delay = replyDelaySeconds(currentTier, isFirstReply);
   const persona = PERSONAS[currentTier];
 
   await supabase.from("support_conversation_messages").insert({
@@ -215,8 +217,44 @@ export async function POST(request: NextRequest) {
     role: "agent",
     content: finalText,
     agent_name: `${persona.name} · ${persona.title}`,
-    deliver_after: deliverAfter,
+    deliver_after: new Date(Date.now() + delay * 1000).toISOString(),
   });
+
+  if (handoff && currentTier === "frontline") {
+    currentTier = "specialist";
+    let introText = "";
+    try {
+      const specialistChat = [
+        { role: "system", content: systemPrompt("specialist", snapshot) },
+        ...(history ?? []).map((m) => ({
+          role: m.role === "operator" ? "user" : "assistant",
+          content: m.content,
+        })),
+        { role: "user", content: message },
+        { role: "assistant", content: finalText },
+        { role: "user", content: "(You have just joined this conversation as the senior specialist. Introduce yourself and address their issue.)" },
+      ];
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: PERSONAS.specialist.model, messages: specialistChat, temperature: 0.7, max_tokens: 500 }),
+      });
+      const data = await res.json();
+      introText = String(data.choices?.[0]?.message?.content ?? "").trim();
+    } catch { /* fall back below */ }
+    if (!introText) {
+      introText = "Hi, this is Marcus, one of the senior specialists here. I've read back through your conversation. What can I sort out for you?";
+    }
+    const introDelay = delay + replyDelaySeconds("specialist", true);
+    await supabase.from("support_conversation_messages").insert({
+      conversation_id: conversationId,
+      role: "agent",
+      content: introText,
+      agent_name: `${PERSONAS.specialist.name} · ${PERSONAS.specialist.title}`,
+      deliver_after: new Date(Date.now() + introDelay * 1000).toISOString(),
+    });
+  }
+
   await supabase
     .from("support_conversations")
     .update({ updated_at: new Date().toISOString(), agent_tier: currentTier })
