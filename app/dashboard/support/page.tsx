@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
 import { NewTicketButton } from "@/components/dashboard/new-ticket-button";
+import { SupportChat } from "@/components/dashboard/support-chat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,9 @@ export default async function SupportPage({
         </div>
         <NewTicketButton />
       </div>
+
+      {/* Live support chat */}
+      <SupportChat />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
