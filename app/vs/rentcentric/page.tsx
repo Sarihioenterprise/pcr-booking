@@ -126,7 +126,7 @@ export default function RentCentricAlternativePage() {
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
-          Free forever for up to 3 cars. No credit card required.
+          14-day free trial. Cancel anytime.
         </p>
       </section>
 
@@ -239,7 +239,7 @@ export default function RentCentricAlternativePage() {
           <div className="space-y-5">
             {[
               "Rent Centric was built for traditional car rental companies with large enterprise fleets. PCR Booking was built for independent operators — the setup is simpler, the price is lower, and the features are what you actually need.",
-              "At $300+/month, Rent Centric costs more than most operators make in their first month. PCR Booking starts free — no credit card required.",
+              "At $300+/month, Rent Centric costs more than most operators make in their first month. PCR Booking starts at just $79/month — try it free for 14 days.",
               "No long-term contracts. No setup fees. No surprise charges. Cancel anytime.",
             ].map((point, i) => (
               <div
@@ -312,11 +312,11 @@ export default function RentCentricAlternativePage() {
               className="text-lg font-bold px-10 py-6 rounded-xl shadow-2xl"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free — No Credit Card
+              Start Free Trial
             </Button>
           </Link>
           <p className="mt-5 text-sm text-white/40">
-            Free forever for up to 3 cars. No credit card required.
+            14-day free trial. Cancel anytime.
           </p>
         </div>
       </section>

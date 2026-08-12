@@ -5,18 +5,22 @@ const PRICE_IDS: Record<string, string> = {
   growth: process.env.STRIPE_PRICE_GROWTH!,
   pro: process.env.STRIPE_PRICE_PRO!,
   scale: process.env.STRIPE_PRICE_SCALE!,
+  fleet: process.env.STRIPE_PRICE_FLEET!,
   growth_annual: process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID || "price_annual_growth_placeholder",
   pro_annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || "price_annual_pro_placeholder",
   scale_annual: process.env.STRIPE_SCALE_ANNUAL_PRICE_ID || "price_annual_scale_placeholder",
+  fleet_annual: process.env.STRIPE_FLEET_ANNUAL_PRICE_ID || "price_annual_fleet_placeholder",
 };
 
 const PLAN_VALUES: Record<string, number> = {
   growth: 79,
   pro: 149,
   scale: 249,
+  fleet: 499,
   growth_annual: 790,
   pro_annual: 1490,
   scale_annual: 2490,
+  fleet_annual: 4990,
 };
 
 export async function POST(req: NextRequest) {

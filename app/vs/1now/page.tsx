@@ -112,8 +112,8 @@ export default function OneNowAlternativePage() {
           <span style={{ color: "#2EBD6B" }}>1Now Alternative?</span>
         </h1>
         <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
-          1Now requires a demo just to see pricing. PCR Booking lets you start free in under
-          10 minutes — no sales call, no credit card, no gatekeeping.
+          1Now requires a demo just to see pricing. PCR Booking shows you the price up front and lets you get started in under
+          10 minutes — no sales call, no gatekeeping.
         </p>
         <Link href="/auth/signup">
           <Button
@@ -124,7 +124,7 @@ export default function OneNowAlternativePage() {
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
-          Free forever for up to 3 cars. No credit card required.
+          14-day free trial. Cancel anytime.
         </p>
       </section>
 
@@ -272,11 +272,11 @@ export default function OneNowAlternativePage() {
               className="text-lg font-bold px-10 py-6 rounded-xl shadow-2xl"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free — No Credit Card
+              Start Free Trial
             </Button>
           </Link>
           <p className="mt-5 text-sm text-white/40">
-            Free forever for up to 3 cars. No credit card required.
+            14-day free trial. Cancel anytime.
           </p>
         </div>
       </section>

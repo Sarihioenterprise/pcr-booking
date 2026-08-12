@@ -585,7 +585,7 @@ async function generateBlogPostContent(
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `;
 }
 

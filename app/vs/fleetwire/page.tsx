@@ -114,7 +114,7 @@ export default function FleetwireAlternativePage() {
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
-          Free forever for up to 3 cars. No credit card required.
+          14-day free trial. Cancel anytime.
         </p>
       </section>
 
@@ -240,11 +240,11 @@ export default function FleetwireAlternativePage() {
               className="text-lg font-bold px-10 py-6 rounded-xl shadow-2xl"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free — No Credit Card
+              Start Free Trial
             </Button>
           </Link>
           <p className="mt-5 text-sm text-white/40">
-            Free forever for up to 3 cars. No credit card required.
+            14-day free trial. Cancel anytime.
           </p>
         </div>
       </section>

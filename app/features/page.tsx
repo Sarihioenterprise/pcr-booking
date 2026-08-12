@@ -359,12 +359,11 @@ export default function FeaturesPage() {
             Ready to Take Control?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-gray-400">
-            Start your free trial today. No credit card required. See all these
-            features in action.
+            Start your 14-day free trial today. See all these features in action.
           </p>
           <Link href="/auth/signup">
             <Button className="mt-8 h-12 px-8 text-base font-semibold bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
-              Start Free — No Credit Card Required
+              Start Your Free Trial
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>

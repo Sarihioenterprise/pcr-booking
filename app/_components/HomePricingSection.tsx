@@ -13,11 +13,11 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-type PlanId = "free" | "growth" | "pro" | "scale";
+type PlanId = "growth" | "pro" | "scale" | "fleet";
 type Billing = "monthly" | "annual";
 
-const MONTHLY_PRICES: Record<string, number> = { growth: 79, pro: 149, scale: 249 };
-const ANNUAL_PRICES: Record<string, number> = { growth: 790, pro: 1490, scale: 2490 };
+const MONTHLY_PRICES: Record<PlanId, number> = { growth: 79, pro: 149, scale: 249, fleet: 499 };
+const ANNUAL_PRICES: Record<PlanId, number> = { growth: 790, pro: 1490, scale: 2490, fleet: 4990 };
 
 interface PricingTier {
   id: PlanId;
@@ -28,19 +28,6 @@ interface PricingTier {
 }
 
 const pricingTiers: PricingTier[] = [
-  {
-    id: "free",
-    name: "Free",
-    description: "Get started — no credit card needed",
-    features: [
-      "Up to 3 vehicles",
-      "Booking widget",
-      "Basic fleet management",
-      "Email support",
-      "Free forever",
-    ],
-    highlighted: false,
-  },
   {
     id: "growth",
     name: "Growth",
@@ -72,11 +59,24 @@ const pricingTiers: PricingTier[] = [
     name: "Scale",
     description: "For established fleet operators",
     features: [
-      "Unlimited vehicles",
+      "Up to 100 vehicles",
       "Everything in Pro",
       "White-label branding",
       "API access",
       "Custom booking page branding",
+    ],
+    highlighted: false,
+  },
+  {
+    id: "fleet",
+    name: "Fleet",
+    description: "Unlimited growth, white-glove service",
+    features: [
+      "Unlimited vehicles",
+      "Everything in Scale",
+      "White-glove migration included",
+      "Dedicated account manager",
+      "Custom integrations",
     ],
     highlighted: false,
   },
@@ -91,11 +91,6 @@ export function HomePricingSection() {
     setCheckoutError(null);
     setLoadingPlan(plan);
     try {
-      if (plan === "free") {
-        window.location.href = "/auth/signup";
-        return;
-      }
-
       const res = await fetch("/api/billing/checkout-public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,7 +106,6 @@ export function HomePricingSection() {
   }
 
   function getPriceDisplay(tier: PricingTier) {
-    if (tier.id === "free") return { price: "$0", period: "/mo", badge: null };
     const monthly = MONTHLY_PRICES[tier.id];
     const annual = ANNUAL_PRICES[tier.id];
     if (billing === "annual") {
@@ -207,11 +201,7 @@ export function HomePricingSection() {
                   disabled={loadingPlan !== null}
                   onClick={() => handleStartTrial(tier.id)}
                 >
-                  {loadingPlan === tier.id
-                    ? "Redirecting..."
-                    : tier.id === "free"
-                    ? "Get Started Free"
-                    : "Start Free Trial"}
+                  {loadingPlan === tier.id ? "Redirecting..." : "Start Free Trial"}
                 </Button>
               </CardFooter>
             </Card>

@@ -760,7 +760,7 @@ export default function TourPage() {
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href="/auth/signup">
               <Button className="h-12 px-8 text-base font-semibold bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
-                Start Free — No Credit Card
+                Start Free Trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>

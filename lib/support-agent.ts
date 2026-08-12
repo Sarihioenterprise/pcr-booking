@@ -166,7 +166,7 @@ export async function buildAccountSnapshot(operator: OperatorRow): Promise<strin
   ]);
   return [
     `Business: ${operator.business_name ?? "not set"}`,
-    `Plan: ${operator.plan ?? "free"}`,
+    `Plan: ${operator.plan ?? "growth"}`,
     `Stripe connected: ${operator.stripe_account_id ? "yes" : "no (payments blocked until connected)"}`,
     `Vehicles: ${vehicleCount ?? 0} | Bookings: ${bookingCount ?? 0}`,
     `Booking page: ${APP_URL}/book/${operator.booking_slug ?? "(no slug)"}`,

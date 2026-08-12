@@ -28,7 +28,8 @@ export async function getOperator(): Promise<Operator> {
   // If they JUST came through onboarding with a Stripe session, the webhook may
   // not have fired yet — in that case, let them into the dashboard anyway.
   // Also allow through if operator already has a plan set (manual/admin-provisioned accounts).
-  const hasActivePlan = operator.plan && operator.plan !== "free";
+  // All DB plans are paid tiers (free was retired); any plan value counts as active.
+  const hasActivePlan = !!operator.plan;
   if (!operator.stripe_subscription_id && !hasActivePlan) {
     const headersList = await headers();
     const referer = headersList.get("referer") || "";

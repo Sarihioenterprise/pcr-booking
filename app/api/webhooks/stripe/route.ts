@@ -80,9 +80,11 @@ function priceIdToPlan(priceId: string | undefined): string | null {
     [process.env.STRIPE_PRICE_GROWTH ?? ""]: "growth",
     [process.env.STRIPE_PRICE_PRO ?? ""]: "pro",
     [process.env.STRIPE_PRICE_SCALE ?? ""]: "scale",
+    [process.env.STRIPE_PRICE_FLEET ?? ""]: "fleet",
     [process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID ?? ""]: "growth",
     [process.env.STRIPE_PRO_ANNUAL_PRICE_ID ?? ""]: "pro",
     [process.env.STRIPE_SCALE_ANNUAL_PRICE_ID ?? ""]: "scale",
+    [process.env.STRIPE_FLEET_ANNUAL_PRICE_ID ?? ""]: "fleet",
   };
   delete map[""];
   return map[priceId] ?? null;
@@ -92,7 +94,7 @@ function priceIdToPlan(priceId: string | undefined): string | null {
 function lookupKeyToPlan(lookupKey: string | null | undefined): string | null {
   if (!lookupKey) return null;
   const base = lookupKey.replace(/_(annual|monthly|yearly)$/, "");
-  return base === "growth" || base === "pro" || base === "scale" ? base : null;
+  return base === "growth" || base === "pro" || base === "scale" || base === "fleet" ? base : null;
 }
 
 function getPlanFromSubscription(subscription: Stripe.Subscription): string {
@@ -209,12 +211,13 @@ async function handlePaymentFailed(
   const customerId = invoice.customer as string;
   if (!customerId) return;
 
-  // Lock the account — set stripe_subscription_id to null so get-operator redirects to plan page
+  // Lock the account — clear stripe_subscription_id so get-operator redirects to subscription-issue page.
+  // We do NOT update plan here; the DB constraint forbids 'free' and we keep the previous plan value
+  // so the operator still knows what tier they were on when they recover payment.
   const { error, data: updatedOps } = await supabase
     .from("operators")
     .update({
       stripe_subscription_id: null,
-      plan: "free",
     })
     .eq("stripe_customer_id", customerId)
     .select();

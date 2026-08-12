@@ -94,7 +94,7 @@ export async function createOrUpdateContact(operator: {
   };
 
   // Add plan if available
-  if (operator.plan && operator.plan !== "free") {
+  if (operator.plan) {
     contact.customFields!.push({
       key: "plan",
       field_value: operator.plan,

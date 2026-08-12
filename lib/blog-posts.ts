@@ -285,7 +285,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -321,7 +321,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -357,7 +357,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -393,7 +393,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -429,7 +429,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -465,7 +465,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -501,7 +501,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -537,7 +537,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -573,7 +573,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -609,7 +609,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -645,7 +645,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -681,7 +681,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -717,7 +717,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -753,7 +753,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -789,7 +789,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -825,7 +825,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -861,7 +861,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -897,7 +897,7 @@ export const blogPosts: BlogPost[] = [
 
     <h2>Get Started Today</h2>
     <p>Most operators are live with their booking widget the same day.
-    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a> — no credit card required.</strong></p>
+    <strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com — cancel anytime.</a></strong></p>
   `,
   },
   {
@@ -1078,7 +1078,7 @@ export const blogPosts: BlogPost[] = [
 
     <p>The future of car rental is independent operators building their own booking systems. If you're tired of complex, expensive software or platforms that take a cut of every booking, it's time to take control.</p>
 
-    <p><strong>Ready to build your booking system? Start your free trial today. No credit card required.</strong></p>
+    <p><strong>Ready to build your booking system? Start your 14-day free trial today. Cancel anytime.</strong></p>
   `,
   },
   {
@@ -1149,7 +1149,7 @@ export const blogPosts: BlogPost[] = [
 
     <p>The future of car rental is independent operators building their own booking systems. If you're tired of complex, expensive software or platforms that take a cut of every booking, it's time to take control.</p>
 
-    <p><strong>Ready to build your booking system? Start your free trial today. No credit card required.</strong></p>
+    <p><strong>Ready to build your booking system? Start your 14-day free trial today. Cancel anytime.</strong></p>
   `,
   },
   {
@@ -1220,7 +1220,7 @@ export const blogPosts: BlogPost[] = [
 
     <p>The future of car rental is independent operators building their own booking systems. If you're tired of complex, expensive software or platforms that take a cut of every booking, it's time to take control.</p>
 
-    <p><strong>Ready to build your booking system? Start your free trial today. No credit card required.</strong></p>
+    <p><strong>Ready to build your booking system? Start your 14-day free trial today. Cancel anytime.</strong></p>
   `,
   },
   {
@@ -1291,7 +1291,7 @@ export const blogPosts: BlogPost[] = [
 
     <p>The future of car rental is independent operators building their own booking systems. If you're tired of complex, expensive software or platforms that take a cut of every booking, it's time to take control.</p>
 
-    <p><strong>Ready to build your booking system? Start your free trial today. No credit card required.</strong></p>
+    <p><strong>Ready to build your booking system? Start your 14-day free trial today. Cancel anytime.</strong></p>
   `,
   },
   {
@@ -1362,7 +1362,7 @@ export const blogPosts: BlogPost[] = [
 
     <p>The future of car rental is independent operators building their own booking systems. If you're tired of complex, expensive software or platforms that take a cut of every booking, it's time to take control.</p>
 
-    <p><strong>Ready to build your booking system? Start your free trial today. No credit card required.</strong></p>
+    <p><strong>Ready to build your booking system? Start your 14-day free trial today. Cancel anytime.</strong></p>
   `,
   },
   {
@@ -1433,7 +1433,7 @@ export const blogPosts: BlogPost[] = [
 
     <p>The future of car rental is independent operators building their own booking systems. If you're tired of complex, expensive software or platforms that take a cut of every booking, it's time to take control.</p>
 
-    <p><strong>Ready to build your booking system? Start your free trial today. No credit card required.</strong></p>
+    <p><strong>Ready to build your booking system? Start your 14-day free trial today. Cancel anytime.</strong></p>
   `,
   },
   {
@@ -1582,7 +1582,7 @@ export const blogPosts: BlogPost[] = [
 
       <p>If you've outgrown spreadsheets and Turo but RentCentric is too expensive and complex, PCR Booking is built for exactly your situation. You get professional booking management at a price that makes sense for independent operators.</p>
 
-      <p><strong>Ready to upgrade your booking system? Start your free trial today. No credit card required.</strong></p>
+      <p><strong>Ready to upgrade your booking system? Start your 14-day free trial today. Cancel anytime.</strong></p>
     `,
   },
   {
@@ -2007,7 +2007,7 @@ export const blogPosts: BlogPost[] = [
       <p>Unlike complex marketplaces, PCR Booking is designed for speed. Here's how to get started:</p>
 
       <ol>
-        <li>Sign up at pcrbooking.com (no credit card required)</li>
+        <li>Sign up at pcrbooking.com (14-day free trial, cancel anytime)</li>
         <li>Add your vehicles and set daily rates</li>
         <li>Paste one line of embed code on your website</li>
         <li>Start receiving bookings directly from your own customers</li>
@@ -2021,7 +2021,7 @@ export const blogPosts: BlogPost[] = [
 
       <p>If you're tired of giving Turo a third of your revenue, it's time to make the switch. PCR Booking is built for operators like you—people who've earned the right to keep what they make.</p>
 
-      <p><strong>Ready to take control of your rental business? Start your free trial today. No credit card required.</strong></p>
+      <p><strong>Ready to take control of your rental business? Start your 14-day free trial today. Cancel anytime.</strong></p>
     `,
   },
   {

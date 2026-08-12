@@ -136,7 +136,7 @@ export default async function BlogPostPage({
             <h2 className="text-2xl font-bold">Ready to Start Your Business?</h2>
             <p className="mx-auto mt-3 max-w-2xl text-gray-400">
               Join independent rental operators keeping 100% of their revenue.
-              Start your free trial today — no credit card required.
+              Start your 14-day free trial today. Cancel anytime.
             </p>
             <Link href="/auth/signup">
               <Button className="mt-6 h-12 px-8 text-base font-semibold bg-[#2EBD6B] text-white hover:bg-[#1a9952]">

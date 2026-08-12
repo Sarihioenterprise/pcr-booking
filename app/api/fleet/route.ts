@@ -31,11 +31,33 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ vehicles, count: vehicles?.length || 0 });
 }
 
+const PLAN_LIMITS: Record<string, number> = {
+  growth: 15,
+  pro: 40,
+  scale: 100,
+  fleet: Infinity,
+};
+
 export async function POST(request: NextRequest) {
   try {
     const operator = await getOperator();
     const supabase = createAdminClient();
     const body = await request.json();
+
+    // Server-side vehicle limit enforcement (prevents API bypass of client-side cap)
+    const planLimit = PLAN_LIMITS[operator.plan] ?? 15;
+    if (planLimit !== Infinity) {
+      const { count } = await supabase
+        .from("vehicles")
+        .select("id", { count: "exact", head: true })
+        .eq("operator_id", operator.id);
+      if ((count ?? 0) >= planLimit) {
+        return NextResponse.json(
+          { error: `Vehicle limit reached for your ${operator.plan} plan (max ${planLimit}). Upgrade to add more vehicles.` },
+          { status: 403 }
+        );
+      }
+    }
 
     const { data, error } = await supabase
       .from("vehicles")

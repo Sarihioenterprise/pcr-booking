@@ -56,7 +56,7 @@ export default function QuitTuroPage() {
             className="text-base font-bold px-8 py-5 rounded-xl shadow-lg"
             style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
           >
-            Start Free — No Credit Card
+            Start Free Trial
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">Free for up to 3 cars. Paid plans from $79/mo.</p>
@@ -346,7 +346,7 @@ export default function QuitTuroPage() {
             </Button>
           </Link>
           <p className="mt-5 text-sm text-white/40">
-            Free forever for up to 3 cars. No credit card required.
+            14-day free trial. Cancel anytime.
           </p>
         </div>
       </section>

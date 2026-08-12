@@ -55,7 +55,7 @@ const steps = [
   {
     num: "1",
     title: "Sign Up",
-    description: "Create your account in under 2 minutes. No credit card required.",
+    description: "Create your account in under 2 minutes. Your 14-day free trial starts immediately.",
   },
   {
     num: "2",
@@ -402,7 +402,7 @@ export default function HomePage() {
           <HomePricingSection />
 
           <p className="mt-8 text-center text-sm text-gray-500">
-            All plans include a 14-day free trial. No credit card required — cancel anytime.
+            All plans include a 14-day free trial. Cancel anytime.
           </p>
           <p className="mt-3 text-center text-sm text-gray-600">
             Already have an account?{" "}
@@ -455,7 +455,7 @@ export default function HomePage() {
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-gray-400">
             Join operators who are keeping 100% of their revenue. Start your
-            free trial today — no credit card required.
+            free trial today. Cancel anytime.
           </p>
           <Link href="/auth/signup">
             <Button className="mt-8 h-12 px-8 text-base font-semibold bg-[#2EBD6B] text-white hover:bg-[#1a9952]">

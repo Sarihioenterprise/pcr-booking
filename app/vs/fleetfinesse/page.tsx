@@ -125,7 +125,7 @@ export default function FleetFinesseAlternativePage() {
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
-          Free forever for up to 3 cars. No credit card required.
+          14-day free trial. Cancel anytime.
         </p>
       </section>
 
@@ -238,7 +238,7 @@ export default function FleetFinesseAlternativePage() {
             {[
               "FleetFinesse is recommended by a lot of YouTube coaches — but PCR Booking was built by someone who actually runs ads for private rental car operators. Every feature exists because real operators asked for it.",
               "PCR Booking includes automated SMS dunning for late payments, a renter blacklist to block bad actors, and 24/7 AI support — none of which FleetFinesse offers.",
-              "Start free with up to 3 cars and see the difference yourself. No credit card, no sales call, no commitment.",
+              "Try PCR Booking free for 14 days and see the difference yourself. No sales call required, no long-term commitment.",
             ].map((point, i) => (
               <div
                 key={i}
@@ -272,11 +272,11 @@ export default function FleetFinesseAlternativePage() {
               className="text-lg font-bold px-10 py-6 rounded-xl shadow-2xl"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free — No Credit Card
+              Start Free Trial
             </Button>
           </Link>
           <p className="mt-5 text-sm text-white/40">
-            Free forever for up to 3 cars. No credit card required.
+            14-day free trial. Cancel anytime.
           </p>
         </div>
       </section>

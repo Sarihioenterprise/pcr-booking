@@ -18,11 +18,11 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-type PlanId = "free" | "growth" | "pro" | "scale";
+type PlanId = "growth" | "pro" | "scale" | "fleet";
 type Billing = "monthly" | "annual";
 
-const MONTHLY_PRICES: Record<string, number> = { growth: 79, pro: 149, scale: 249 };
-const ANNUAL_PRICES: Record<string, number> = { growth: 790, pro: 1490, scale: 2490 };
+const MONTHLY_PRICES: Record<PlanId, number> = { growth: 79, pro: 149, scale: 249, fleet: 499 };
+const ANNUAL_PRICES: Record<PlanId, number> = { growth: 790, pro: 1490, scale: 2490, fleet: 4990 };
 
 interface PricingTier {
   id: PlanId;
@@ -33,19 +33,6 @@ interface PricingTier {
 }
 
 const pricingTiers: PricingTier[] = [
-  {
-    id: "free",
-    name: "Free",
-    description: "Get started with the essentials",
-    features: [
-      "Up to 3 vehicles",
-      "Booking widget",
-      "Basic fleet management",
-      "Email support",
-      "Perfect for getting started",
-    ],
-    highlighted: false,
-  },
   {
     id: "growth",
     name: "Growth",
@@ -78,12 +65,26 @@ const pricingTiers: PricingTier[] = [
     name: "Scale",
     description: "For established fleet operators",
     features: [
-      "Unlimited vehicles",
+      "Up to 100 vehicles",
       "Everything in Pro",
       "White-label branding",
       "API access",
       "Custom booking page branding",
       "Custom integrations",
+    ],
+    highlighted: false,
+  },
+  {
+    id: "fleet",
+    name: "Fleet",
+    description: "Unlimited growth, white-glove service",
+    features: [
+      "Unlimited vehicles",
+      "Everything in Scale",
+      "White-glove migration included",
+      "Dedicated account manager",
+      "Custom integrations",
+      "Priority onboarding",
     ],
     highlighted: false,
   },
@@ -93,7 +94,7 @@ const faqs = [
   {
     question: "Is there a free trial?",
     answer:
-      "Yes. We offer a free forever plan with up to 3 vehicles. Paid plans include a 14-day free trial — no credit card required. Cancel anytime.",
+      "Yes. Every new account starts with a 14-day free trial — your card is collected at signup so billing begins automatically on day 15. Cancel anytime before then and you won't be charged.",
   },
   {
     question: "Can I switch plans later?",
@@ -123,7 +124,6 @@ const faqs = [
 ];
 
 function getPriceDisplay(tier: PricingTier, billing: Billing) {
-  if (tier.id === "free") return { price: "$0", period: "forever", annualNote: null };
   const monthly = MONTHLY_PRICES[tier.id];
   const annual = ANNUAL_PRICES[tier.id];
   if (billing === "annual") {
@@ -149,11 +149,6 @@ export default function PricingPage() {
     setCheckoutError(null);
     setLoadingPlan(plan);
     try {
-      if (plan === "free") {
-        window.location.href = "/auth/signup";
-        return;
-      }
-
       const res = await fetch("/api/billing/checkout-public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -260,8 +255,8 @@ export default function PricingPage() {
 
       {/* Pricing Cards */}
       <section className="px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-3">
-          {pricingTiers.filter((t) => t.id !== "free").map((tier) => {
+        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-4">
+          {pricingTiers.map((tier) => {
             const { price, period, annualNote } = getPriceDisplay(tier, billing);
             return (
               <Card
@@ -328,7 +323,7 @@ export default function PricingPage() {
         )}
 
         <p className="mt-8 text-center text-sm text-[#6B7280]">
-          All paid plans include a 14-day free trial. No credit card required — cancel anytime.
+          All plans include a 14-day free trial. Cancel anytime.
         </p>
       </section>
 
@@ -362,14 +357,14 @@ export default function PricingPage() {
             Ready to take control of your bookings?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-gray-400">
-            Join operators who are keeping 100% of their revenue. Start your free trial today.
+            Join operators who are keeping 100% of their revenue. Start your 14-day free trial today.
           </p>
           <Button
             className="mt-6 h-11 bg-[#2EBD6B] px-6 text-base font-semibold text-white hover:bg-[#1a9952]"
             onClick={() => handleStartTrial("pro")}
             disabled={loadingPlan !== null}
           >
-            {loadingPlan === "pro" ? "Redirecting..." : "Get Started Free"}
+            {loadingPlan === "pro" ? "Redirecting..." : "Start Your Free Trial"}
             {loadingPlan !== "pro" && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </div>

@@ -29,17 +29,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Location, Operator } from "@/lib/types";
 
 const PLAN_LIMITS = {
-  free: 3,
   growth: 15,
   pro: 40,
-  scale: Infinity,
+  scale: 100,
+  fleet: Infinity,
 };
 
 const NEXT_PLAN = {
-  free: "growth",
   growth: "pro",
   pro: "scale",
-  scale: "scale",
+  scale: "fleet",
+  fleet: "fleet",
 };
 
 export default function NewVehiclePage() {
@@ -166,7 +166,7 @@ export default function NewVehiclePage() {
       if (!operator) throw new Error("Operator not found");
 
       // Check vehicle limit
-      const planLimit = PLAN_LIMITS[operator.plan as keyof typeof PLAN_LIMITS] || 3;
+      const planLimit = PLAN_LIMITS[operator.plan as keyof typeof PLAN_LIMITS] ?? 15;
       if (vehicleCount >= planLimit) {
         setShowUpgradeModal(true);
         setLoading(false);
@@ -568,14 +568,14 @@ export default function NewVehiclePage() {
               <DialogTitle className="text-lg">Vehicle Limit Reached</DialogTitle>
             </div>
             <DialogDescription className="text-base text-gray-600 mt-3">
-              {operator?.plan === "free" && (
-                "You've added 3 vehicles — upgrade to Growth to manage up to 15, plus unlock automated payment reminders and SMS notifications."
-              )}
               {operator?.plan === "growth" && (
                 "You're at 15 vehicles — upgrade to Pro to manage up to 40, plus unlock revenue analytics and collections automation."
               )}
               {operator?.plan === "pro" && (
-                "You're at 40 vehicles — upgrade to Scale for unlimited vehicles, white-label branding, and API access."
+                "You're at 40 vehicles — upgrade to Scale for up to 100 vehicles, white-label branding, and API access."
+              )}
+              {operator?.plan === "scale" && (
+                "You're at 100 vehicles — upgrade to Fleet for unlimited vehicles and white-glove migration support."
               )}
               {!operator?.plan && (
                 "You've reached your plan limit. Upgrade to add more vehicles and unlock additional features."

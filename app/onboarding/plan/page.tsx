@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Check } from "lucide-react";
 
-type Plan = "growth" | "pro" | "scale";
+type Plan = "growth" | "pro" | "scale" | "fleet";
 type Billing = "monthly" | "annual";
 
-const MONTHLY_PRICES: Record<Plan, number> = { growth: 79, pro: 149, scale: 249 };
-const ANNUAL_PRICES: Record<Plan, number> = { growth: 790, pro: 1490, scale: 2490 };
+const MONTHLY_PRICES: Record<Plan, number> = { growth: 79, pro: 149, scale: 249, fleet: 499 };
+const ANNUAL_PRICES: Record<Plan, number> = { growth: 790, pro: 1490, scale: 2490, fleet: 4990 };
 
 const plans: { id: Plan; name: string; description: string; features: string[]; popular: boolean }[] = [
   {
@@ -18,7 +18,7 @@ const plans: { id: Plan; name: string; description: string; features: string[]; 
     name: "Growth",
     description: "Perfect for small fleets getting started.",
     features: [
-      "Up to 10 cars",
+      "Up to 15 vehicles",
       "Online booking portal",
       "Customer management",
       "Basic analytics",
@@ -31,7 +31,7 @@ const plans: { id: Plan; name: string; description: string; features: string[]; 
     name: "Pro",
     description: "For growing businesses that need more.",
     features: [
-      "Up to 25 cars",
+      "Up to 40 vehicles",
       "Everything in Growth",
       "Priority support",
       "Advanced analytics",
@@ -43,14 +43,28 @@ const plans: { id: Plan; name: string; description: string; features: string[]; 
   {
     id: "scale",
     name: "Scale",
-    description: "Enterprise-grade for large operations.",
+    description: "For established fleet operators.",
     features: [
-      "Unlimited cars",
+      "Up to 100 vehicles",
       "Everything in Pro",
       "White-label branding",
       "Custom booking page branding",
       "API access",
       "Custom integrations",
+    ],
+    popular: false,
+  },
+  {
+    id: "fleet",
+    name: "Fleet",
+    description: "Unlimited growth, white-glove service.",
+    features: [
+      "Unlimited vehicles",
+      "Everything in Scale",
+      "White-glove migration included",
+      "Dedicated account manager",
+      "Custom integrations",
+      "Priority onboarding",
     ],
     popular: false,
   },
@@ -138,7 +152,7 @@ export default function PlanPage() {
       </div>
 
       {/* Plan Cards */}
-      <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => (
           <Card
             key={plan.id}
