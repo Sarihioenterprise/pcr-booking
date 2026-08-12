@@ -72,15 +72,48 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Explicit price-ID -> plan map. Authoritative: env vars are the source of truth,
+// so monthly/annual price IDs both resolve to the correct base plan tier.
+function priceIdToPlan(priceId: string | undefined): string | null {
+  if (!priceId) return null;
+  const map: Record<string, string> = {
+    [process.env.STRIPE_PRICE_GROWTH ?? ""]: "growth",
+    [process.env.STRIPE_PRICE_PRO ?? ""]: "pro",
+    [process.env.STRIPE_PRICE_SCALE ?? ""]: "scale",
+    [process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID ?? ""]: "growth",
+    [process.env.STRIPE_PRO_ANNUAL_PRICE_ID ?? ""]: "pro",
+    [process.env.STRIPE_SCALE_ANNUAL_PRICE_ID ?? ""]: "scale",
+  };
+  delete map[""];
+  return map[priceId] ?? null;
+}
+
+// Normalize a Stripe lookup_key (e.g. "pro_annual") down to its base plan tier.
+function lookupKeyToPlan(lookupKey: string | null | undefined): string | null {
+  if (!lookupKey) return null;
+  const base = lookupKey.replace(/_(annual|monthly|yearly)$/, "");
+  return base === "growth" || base === "pro" || base === "scale" ? base : null;
+}
+
 function getPlanFromSubscription(subscription: Stripe.Subscription): string {
-  const priceId = subscription.items.data[0]?.price?.id;
-  const lookupKey = subscription.items.data[0]?.price?.lookup_key;
-  // Map by lookup_key or fall back to a default
-  if (lookupKey === "scale" || lookupKey === "pro" || lookupKey === "growth") {
-    return lookupKey;
-  }
-  // Fallback: log the price ID for debugging
-  console.log("Unknown price mapping for:", priceId);
+  const price = subscription.items.data[0]?.price;
+  const priceId = price?.id;
+
+  // 1) Price ID is the most reliable signal — matches our configured env vars.
+  const byPriceId = priceIdToPlan(priceId);
+  if (byPriceId) return byPriceId;
+
+  // 2) Fall back to lookup_key (now set on all prices in Stripe).
+  const byLookupKey = lookupKeyToPlan(price?.lookup_key);
+  if (byLookupKey) return byLookupKey;
+
+  // 3) Nothing matched — this is a real misconfiguration. Log loudly and keep
+  //    "growth" only as a last resort so the customer still gets access.
+  console.error(
+    `[stripe-webhook] UNMAPPED PRICE: could not resolve plan for price_id=${priceId} ` +
+      `lookup_key=${price?.lookup_key ?? "none"} subscription=${subscription.id}. ` +
+      `Defaulting to "growth" — verify STRIPE_PRICE_* env vars.`
+  );
   return "growth";
 }
 
