@@ -536,8 +536,8 @@ export default function BookingDetailPage({
           setAgreement(sorted[0]);
         }
 
-        if (data.payment_schedule_items) {
-          setPayments(data.payment_schedule_items);
+        if (data.payment_schedule) {
+          setPayments(data.payment_schedule);
         }
 
         // Build initial activity from booking data

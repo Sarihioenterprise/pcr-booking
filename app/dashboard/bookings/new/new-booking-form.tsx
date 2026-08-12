@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ export function NewBookingForm() {
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [installmentCount, setInstallmentCount] = useState(2);
   const [submitError, setSubmitError] = useState("");
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   // Add-ons state
   const [availableAddons, setAvailableAddons] = useState<Addon[]>([]);
@@ -256,9 +257,27 @@ export function NewBookingForm() {
 
   // Submit ------------------------------------------------------------------
 
+  /** Scroll the actions card into view so errors are always visible */
+  function scrollToActions() {
+    actionsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
+
+    // Validate required fields
+    if (!form.renter_name.trim()) {
+      setSubmitError("Full name is required.");
+      scrollToActions();
+      return;
+    }
+
+    if (!form.start_date || !form.end_date) {
+      setSubmitError("Start date and end date are required.");
+      scrollToActions();
+      return;
+    }
 
     // Validate email before submit
     if (form.renter_email) {
@@ -268,12 +287,14 @@ export function NewBookingForm() {
           ...prev,
           renter_email_error: "Please enter a valid email address",
         }));
+        scrollToActions();
         return;
       }
     }
 
     if (selectedVehicleIds.length === 0) {
-      setSubmitError("Please select at least one vehicle");
+      setSubmitError("Please select at least one vehicle before creating a booking.");
+      scrollToActions();
       return;
     }
 
@@ -303,14 +324,18 @@ export function NewBookingForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setSubmitError(data.error || "Failed to create booking");
+        const msg = data?.error || "Failed to create booking. Please try again.";
+        setSubmitError(msg);
+        scrollToActions();
         return;
       }
 
       // Navigate to the new booking
       router.push(`/dashboard/bookings/${data.booking.id}`);
-    } catch {
-      setSubmitError("Network error. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Network error. Please try again.";
+      setSubmitError(msg);
+      scrollToActions();
     } finally {
       setLoading(false);
     }
@@ -360,6 +385,134 @@ export function NewBookingForm() {
         >
           {/* ============ LEFT COLUMN ============ */}
           <div className="space-y-6">
+            {/* --- Vehicle Selection --- */}
+            <Card className="border-0 bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
+                      <Car className="h-3.5 w-3.5 text-[#2EBD6B]" />
+                    </div>
+                    Vehicle Selection
+                    {selectedVehicleIds.length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-2 bg-[#2EBD6B]/10 text-[#2EBD6B]"
+                      >
+                        {selectedVehicleIds.length} selected
+                      </Badge>
+                    )}
+                  </CardTitle>
+
+                  <div className="flex shrink-0 items-center rounded-lg border border-gray-200 bg-[#F8F9FC] p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => handleModeSwitch(false)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                        !multiVehicle
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Single
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleModeSwitch(true)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                        multiVehicle
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Multi
+                    </button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingVehicles ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-24 rounded-xl bg-gray-100 animate-pulse" />
+                    ))}
+                  </div>
+                ) : vehicles.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Car className="h-8 w-8 text-gray-300 mb-2" />
+                    <p className="text-sm text-gray-500">No active vehicles in your fleet.</p>
+                    <Link href="/dashboard/fleet/new" className="mt-2 text-sm text-[#2EBD6B] hover:underline">
+                      Add a vehicle →
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {vehicles.map((v) => {
+                      const isSelected = selectedVehicleIds.includes(v.id);
+                      const isAvailable = v.status === "active";
+
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          disabled={!isAvailable}
+                          onClick={() => toggleVehicle(v.id)}
+                          className={`group relative rounded-xl border-2 p-4 text-left transition-all ${
+                            isSelected
+                              ? "border-[#2EBD6B] bg-[#2EBD6B]/[0.03] shadow-sm"
+                              : isAvailable
+                                ? "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm"
+                                : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[#2EBD6B]">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-900">
+                              {v.year} {v.make} {v.model}
+                            </span>
+                          </div>
+
+                          <div className="mb-3 flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${statusColor(v.status)}`}
+                            >
+                              {v.status}
+                            </Badge>
+                            {v.plate && (
+                              <span className="text-xs text-gray-400">{v.plate}</span>
+                            )}
+                          </div>
+
+                          <div className="flex items-baseline gap-0.5">
+                            <span className="text-lg font-bold text-gray-900">
+                              ${v.daily_rate}
+                            </span>
+                            <span className="text-xs text-gray-400">/day</span>
+                            {v.weekly_rate && (
+                              <span className="ml-2 text-[10px] text-gray-400">
+                                ${v.weekly_rate}/wk
+                              </span>
+                            )}
+                            {v.monthly_rate && (
+                              <span className="ml-1 text-[10px] text-gray-400">
+                                ${v.monthly_rate}/mo
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* --- Renter Information --- */}
             <Card className="border-0 bg-white shadow-sm">
               <CardHeader className="pb-4">
@@ -386,7 +539,7 @@ export function NewBookingForm() {
                       className="border-gray-200 bg-[#F8F9FC] focus-visible:ring-[#2EBD6B]"
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 min-w-0">
                     <Label htmlFor="renter_phone">Phone</Label>
                     <Input
                       id="renter_phone"
@@ -395,12 +548,12 @@ export function NewBookingForm() {
                       placeholder="+1 (555) 123-4567"
                       value={form.renter_phone}
                       onChange={handleChange}
-                      className="border-gray-200 bg-[#F8F9FC] focus-visible:ring-[#2EBD6B]"
+                      className="border-gray-200 bg-[#F8F9FC] focus-visible:ring-[#2EBD6B] w-full min-w-0"
                     />
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 min-w-0">
                     <Label htmlFor="renter_email">Email</Label>
                     <Input
                       id="renter_email"
@@ -411,7 +564,7 @@ export function NewBookingForm() {
                       value={form.renter_email}
                       onChange={handleChange}
                       onBlur={handleEmailBlur}
-                      className={`border-gray-200 bg-[#F8F9FC] focus-visible:ring-[#2EBD6B] ${
+                      className={`w-full min-w-0 border-gray-200 bg-[#F8F9FC] focus-visible:ring-[#2EBD6B] ${
                         form.renter_email_error ? "border-red-400" : ""
                       }`}
                     />
@@ -557,133 +710,6 @@ export function NewBookingForm() {
               </CardContent>
             </Card>
 
-            {/* --- Vehicle Selection --- */}
-            <Card className="border-0 bg-white shadow-sm">
-              <CardHeader className="pb-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
-                      <Car className="h-3.5 w-3.5 text-[#2EBD6B]" />
-                    </div>
-                    Vehicle Selection
-                    {selectedVehicleIds.length > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-2 bg-[#2EBD6B]/10 text-[#2EBD6B]"
-                      >
-                        {selectedVehicleIds.length} selected
-                      </Badge>
-                    )}
-                  </CardTitle>
-
-                  <div className="flex shrink-0 items-center rounded-lg border border-gray-200 bg-[#F8F9FC] p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => handleModeSwitch(false)}
-                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                        !multiVehicle
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      Single
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleModeSwitch(true)}
-                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                        multiVehicle
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      Multi
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingVehicles ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-24 rounded-xl bg-gray-100 animate-pulse" />
-                    ))}
-                  </div>
-                ) : vehicles.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Car className="h-8 w-8 text-gray-300 mb-2" />
-                    <p className="text-sm text-gray-500">No active vehicles in your fleet.</p>
-                    <Link href="/dashboard/fleet/new" className="mt-2 text-sm text-[#2EBD6B] hover:underline">
-                      Add a vehicle →
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {vehicles.map((v) => {
-                      const isSelected = selectedVehicleIds.includes(v.id);
-                      const isAvailable = v.status === "active";
-
-                      return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          disabled={!isAvailable}
-                          onClick={() => toggleVehicle(v.id)}
-                          className={`group relative rounded-xl border-2 p-4 text-left transition-all ${
-                            isSelected
-                              ? "border-[#2EBD6B] bg-[#2EBD6B]/[0.03] shadow-sm"
-                              : isAvailable
-                                ? "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm"
-                                : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
-                          }`}
-                        >
-                          {isSelected && (
-                            <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[#2EBD6B]">
-                              <Check className="h-3 w-3 text-white" />
-                            </div>
-                          )}
-
-                          <div className="mb-2 flex items-center gap-2">
-                            <span className="text-sm font-semibold text-gray-900">
-                              {v.year} {v.make} {v.model}
-                            </span>
-                          </div>
-
-                          <div className="mb-3 flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${statusColor(v.status)}`}
-                            >
-                              {v.status}
-                            </Badge>
-                            {v.plate && (
-                              <span className="text-xs text-gray-400">{v.plate}</span>
-                            )}
-                          </div>
-
-                          <div className="flex items-baseline gap-0.5">
-                            <span className="text-lg font-bold text-gray-900">
-                              ${v.daily_rate}
-                            </span>
-                            <span className="text-xs text-gray-400">/day</span>
-                            {v.weekly_rate && (
-                              <span className="ml-2 text-[10px] text-gray-400">
-                                ${v.weekly_rate}/wk
-                              </span>
-                            )}
-                            {v.monthly_rate && (
-                              <span className="ml-1 text-[10px] text-gray-400">
-                                ${v.monthly_rate}/mo
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
             {/* --- Add-ons --- */}
             {availableAddons.filter((a) => a.active).length > 0 && (
@@ -1022,14 +1048,20 @@ export function NewBookingForm() {
             )}
 
             {/* --- Actions --- */}
-            <Card className="border-0 bg-white shadow-sm">
+            <Card ref={actionsRef} className="border-0 bg-white shadow-sm">
               <CardContent className="space-y-3 pt-6">
                 {submitError && (
-                  <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{submitError}</p>
+                  <div role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5">
+                    <span className="mt-0.5 h-4 w-4 shrink-0 text-red-500">✕</span>
+                    <p className="text-sm text-red-700">{submitError}</p>
+                  </div>
+                )}
+                {selectedVehicleIds.length === 0 && !submitError && (
+                  <p className="text-xs text-amber-600 text-center">Select a vehicle above to continue</p>
                 )}
                 <Button
                   type="submit"
-                  disabled={loading || selectedVehicleIds.length === 0}
+                  disabled={loading}
                   className="w-full bg-[#2EBD6B] text-white shadow-sm hover:bg-[#27a85e] disabled:opacity-50"
                 >
                   {loading ? (

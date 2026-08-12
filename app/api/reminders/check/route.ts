@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // ── 1. Reminders due in 3 days ──────────────────────────────────
     const { data: upcoming3 } = await supabase
-      .from("payment_schedule_items")
+      .from("payment_schedule")
       .select(`
         id, amount, due_date, booking_id,
         bookings(renter_name, renter_phone, operator_id,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // ── 2. Reminders due today ──────────────────────────────────────
     const { data: dueToday } = await supabase
-      .from("payment_schedule_items")
+      .from("payment_schedule")
       .select(`
         id, amount, due_date, booking_id,
         bookings(renter_name, renter_phone, operator_id,
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     // ── 3. Overdue payments ─────────────────────────────────────────
     const { data: overdue } = await supabase
-      .from("payment_schedule_items")
+      .from("payment_schedule")
       .select(`
         id, amount, due_date, booking_id,
         bookings(renter_name, renter_phone, operator_id,
