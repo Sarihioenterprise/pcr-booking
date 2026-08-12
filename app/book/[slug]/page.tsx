@@ -1,10 +1,40 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { BookingPageClient } from "./booking-page-client";
 
 interface Params {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export async function generateMetadata({ params }: Pick<Params, "params">): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = createAdminClient();
+  const { data: operator } = await supabase
+    .from("operators")
+    .select("business_name")
+    .or(`booking_slug.eq.${slug},referral_code.eq.${slug}`)
+    .single();
+
+  const businessName = operator?.business_name ?? "PCR Booking";
+  const title = `Book with ${businessName}`;
+  const description = `Reserve a vehicle directly with ${businessName}. No platform fees — book instantly online.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
 }
 
 // Public page — must use admin client to bypass RLS since visitors are unauthenticated

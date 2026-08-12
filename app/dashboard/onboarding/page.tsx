@@ -119,7 +119,7 @@ export default function OnboardingWizardPage() {
   }
 
   function handleCopyLink() {
-    const link = `${process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com"}/rent/${operator?.booking_slug}`;
+    const link = `${process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com"}/book/${operator?.booking_slug}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -321,7 +321,7 @@ export default function OnboardingWizardPage() {
                   Share this link on Facebook Marketplace, WhatsApp, or SMS. Customers can book directly without visiting your website.
                 </p>
                 <div className="relative bg-gray-50 p-4 rounded-lg border border-gray-200 font-mono text-sm break-all">
-                  {`${process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com"}/rent/${operator.booking_slug}`}
+                  {`${process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com"}/book/${operator.booking_slug}`}
                 </div>
                 <Button
                   onClick={handleCopyLink}

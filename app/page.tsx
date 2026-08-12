@@ -147,7 +147,7 @@ export default function HomePage() {
         </div>
         <div className="mx-auto max-w-4xl text-center">
           <Badge className="mb-6 border-[#2EBD6B]/30 bg-[#2EBD6B]/10 text-[#2EBD6B]">
-            Now in Early Access
+            Flat Monthly Fee · No Per-Booking Commission
           </Badge>
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
             Built for{" "}

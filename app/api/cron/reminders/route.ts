@@ -18,6 +18,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveOperatorEmail } from "@/lib/notify-email";
 
 const PICKUP_STATUSES = ["confirmed", "active"];
 const RETURN_STATUSES = ["active"];
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
         id, operator_id, renter_name, renter_email, start_date, end_date,
         duration_days, total_price,
         vehicles(make, model, year),
-        operators(business_name, business_email)
+        operators(business_name, business_email, user_id)
       `)
       .eq("start_date", tomorrowStr)
       .in("status", PICKUP_STATUSES);
@@ -96,6 +97,7 @@ export async function GET(request: NextRequest) {
             ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             : "your rental vehicle";
           const operatorName = op?.business_name || "PCR Booking";
+          const operatorNotifyEmailPickup = await resolveOperatorEmail(op ?? {});
 
           // Send to renter
           if (booking.renter_email) {
@@ -113,9 +115,9 @@ export async function GET(request: NextRequest) {
           }
 
           // Send to operator
-          if (op?.business_email) {
+          if (operatorNotifyEmailPickup) {
             await sendEmail(baseUrl, {
-              to: op.business_email,
+              to: operatorNotifyEmailPickup,
               subject: `Pickup Reminder: ${booking.renter_name} — ${vehicleLabel} tomorrow`,
               body: `<p>Pickup reminder for tomorrow:</p>
 <p><strong>Renter:</strong> ${booking.renter_name}</p>
@@ -165,7 +167,7 @@ export async function GET(request: NextRequest) {
         id, operator_id, renter_name, renter_email, start_date, end_date,
         duration_days, total_price,
         vehicles(make, model, year),
-        operators(business_name, business_email)
+        operators(business_name, business_email, user_id)
       `)
       .eq("end_date", todayStr)
       .in("status", RETURN_STATUSES);
@@ -201,6 +203,7 @@ export async function GET(request: NextRequest) {
             ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             : "your rental vehicle";
           const operatorName = op?.business_name || "PCR Booking";
+          const operatorNotifyEmailReturn = await resolveOperatorEmail(op ?? {});
 
           // Send to renter
           if (booking.renter_email) {
@@ -217,9 +220,9 @@ export async function GET(request: NextRequest) {
           }
 
           // Send to operator
-          if (op?.business_email) {
+          if (operatorNotifyEmailReturn) {
             await sendEmail(baseUrl, {
-              to: op.business_email,
+              to: operatorNotifyEmailReturn,
               subject: `Return Due Today: ${booking.renter_name} — ${vehicleLabel}`,
               body: `<p>Return reminder for today:</p>
 <p><strong>Renter:</strong> ${booking.renter_name}</p>
@@ -306,6 +309,7 @@ export async function GET(request: NextRequest) {
             ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             : "rental vehicle";
           const operatorName = op?.business_name || "PCR Booking";
+          const operatorNotifyEmailOverdue = await resolveOperatorEmail(op ?? {});
 
           // Compute days overdue + late fee
           const daysOverdue = Math.floor(
@@ -319,9 +323,9 @@ export async function GET(request: NextRequest) {
             : 0;
 
           // Email operator
-          if (op?.business_email) {
+          if (operatorNotifyEmailOverdue) {
             await sendEmail(baseUrl, {
-              to: op.business_email,
+              to: operatorNotifyEmailOverdue,
               subject: `⚠️ Overdue Return: ${booking.renter_name} — ${vehicleLabel} (${daysOverdue} day${daysOverdue !== 1 ? "s" : ""})`,
               body: `<p>Vehicle overdue alert for <strong>${operatorName}</strong>:</p>
 <p><strong>Renter:</strong> ${booking.renter_name}</p>

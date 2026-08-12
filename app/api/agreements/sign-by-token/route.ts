@@ -9,6 +9,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveOperatorEmail } from "@/lib/notify-email";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com";
 
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     const { data: operator } = await supabase
       .from("operators")
-      .select("id, business_name, business_email, owner_name")
+      .select("id, business_name, business_email, owner_name, user_id")
       .eq("id", agreement.operator_id)
       .maybeSingle();
 
@@ -143,7 +144,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Email operator ────────────────────────────────────────────────────────
-    if (operator?.business_email) {
+    const operatorNotifyEmail = operator ? await resolveOperatorEmail(operator) : null;
+    if (operatorNotifyEmail) {
       const vehicleName = booking?.vehicles
         ? `${booking.vehicles.year} ${booking.vehicles.make} ${booking.vehicles.model}`
         : "Vehicle";
@@ -152,8 +154,8 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: operator.business_email,
-          subject: `✅ Agreement signed by ${typed_name.trim()} — ${operator.business_name || "PCR Booking"}`,
+          to: operatorNotifyEmail,
+          subject: `✅ Agreement signed by ${typed_name.trim()} — ${operator?.business_name || "PCR Booking"}`,
           body: buildOperatorConfirmation(
             typed_name.trim(),
             booking?.renter_email || "",

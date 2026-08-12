@@ -22,6 +22,7 @@ function OnboardingPageInner() {
   const [businessName, setBusinessName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
+  const [notificationEmail, setNotificationEmail] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +41,8 @@ function OnboardingPageInner() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
+        // Pre-fill notification email with the signed-in user's auth email
+        if (user.email) setNotificationEmail(user.email);
         setSessionChecked(true);
       } else if (attempts < maxAttempts) {
         attempts++;
@@ -101,6 +104,7 @@ function OnboardingPageInner() {
         city,
         state,
         booking_slug: bookingSlug,
+        business_email: notificationEmail || null,
       })
       .select()
       .single();
@@ -220,10 +224,24 @@ function OnboardingPageInner() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+91 98765 43210"
+                  placeholder="(555) 123-4567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="notification-email">
+                  Notification email
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">(where booking alerts are sent)</span>
+                </Label>
+                <Input
+                  id="notification-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={notificationEmail}
+                  onChange={(e) => setNotificationEmail(e.target.value)}
                 />
               </div>
 
@@ -250,13 +268,6 @@ function OnboardingPageInner() {
                     onChange={(e) => setState(e.target.value)}
                     required
                   />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Business logo (optional)</Label>
-                <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 text-sm text-muted-foreground">
-                  Logo upload coming soon
                 </div>
               </div>
 

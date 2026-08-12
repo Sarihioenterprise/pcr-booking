@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveOperatorEmail } from "@/lib/notify-email";
 import type { AddonSnapshot } from "@/lib/types";
 
 // Public endpoint — uses service role to bypass RLS on the leads table
@@ -248,13 +249,14 @@ export async function POST(request: NextRequest) {
     try {
       const { data: op } = await supabase
         .from("operators")
-        .select("business_name, business_email")
+        .select("business_name, business_email, user_id")
         .eq("id", operator_id)
         .single();
       if (op) {
         operatorName = op.business_name;
 
-        if (op.business_email) {
+        const operatorNotifyEmail = await resolveOperatorEmail(op);
+        if (operatorNotifyEmail) {
           const baseUrl = request.headers.get("origin") || "https://pcrbooking.com";
           const licenseNote = license_file_path
             ? "<p><strong>✅ Driver's license uploaded</strong> — visible in your leads dashboard.</p>"
@@ -286,7 +288,7 @@ ${addonsSnapshot
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              to: op.business_email,
+              to: operatorNotifyEmail,
               subject: `New Booking Request: ${name}`,
               body: `<p>A new booking request has been submitted via your booking page.</p>
 <p><strong>Name:</strong> ${name}</p>

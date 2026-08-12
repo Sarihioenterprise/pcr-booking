@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { resolveOperatorEmail } from "@/lib/notify-email";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       // Find booking by deposit_token
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
-        .select("id, operator_id, renter_name, renter_email, deposit_amount, deposit_status, deposit_payment_intent_id, vehicles(make, model, year), operators(business_name, business_email)")
+        .select("id, operator_id, renter_name, renter_email, deposit_amount, deposit_status, deposit_payment_intent_id, vehicles(make, model, year), operators(business_name, business_email, user_id)")
         .eq("deposit_token" as string, token)
         .maybeSingle();
 
@@ -96,12 +97,13 @@ export async function POST(request: NextRequest) {
       }
 
       // Operator notification
-      if (op?.business_email) {
+      const operatorNotifyEmail = op ? await resolveOperatorEmail(op) : null;
+      if (operatorNotifyEmail) {
         fetch(`${baseUrl}/api/email/send`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            to: op.business_email,
+            to: operatorNotifyEmail,
             subject: `Deposit Hold Authorized — ${booking.renter_name}`,
             body: `<p>Good news! ${booking.renter_name} has authorized the security deposit hold of <strong>$${Number(booking.deposit_amount).toFixed(2)}</strong> for <strong>${vehicleLabel}</strong>.</p>
 <p>The hold is now active. You can capture or release it from the booking detail page.</p>

@@ -7,26 +7,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface OnboardingChecklistProps {
   hasVehicles: boolean;
+  bookingSlug?: string | null;
 }
 
 export default function OnboardingChecklist({
   hasVehicles,
+  bookingSlug: bookingSlugProp,
 }: OnboardingChecklistProps) {
   const [dismissed, setDismissed] = useState(true);
   const [mounted, setMounted] = useState(false);
-
-  // Get user's booking slug from localStorage or use placeholder
-  const [bookingSlug, setBookingSlug] = useState("your-slug");
 
   useEffect(() => {
     setMounted(true);
     const isDismissed = localStorage.getItem("pcr_onboarding_v1");
     setDismissed(isDismissed === "dismissed");
-
-    // Try to get booking slug from localStorage (if stored elsewhere in the app)
-    const slug = localStorage.getItem("pcr_booking_slug") || "your-slug";
-    setBookingSlug(slug);
   }, []);
+
+  // Resolve slug: use server-provided value, fall back to a placeholder
+  const bookingSlug = bookingSlugProp || "your-slug";
 
   const handleDismiss = () => {
     localStorage.setItem("pcr_onboarding_v1", "dismissed");
