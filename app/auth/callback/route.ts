@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  // Carry Stripe session_id through the confirmation flow so onboarding can link the subscription
+  const sessionId = searchParams.get("session_id");
 
   if (code) {
     const supabase = await createClient();
@@ -22,7 +24,10 @@ export async function GET(request: Request) {
           .single();
 
         if (!operator) {
-          return NextResponse.redirect(`${origin}/auth/onboarding`);
+          const onboardingUrl = sessionId
+            ? `${origin}/auth/onboarding?session_id=${sessionId}`
+            : `${origin}/auth/onboarding`;
+          return NextResponse.redirect(onboardingUrl);
         }
 
         return NextResponse.redirect(`${origin}/dashboard`);

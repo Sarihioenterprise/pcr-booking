@@ -31,10 +31,12 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  // Redirect unauthenticated users trying to access dashboard
-  if (!user && path.startsWith("/dashboard")) {
+  // Redirect unauthenticated users trying to access protected routes
+  // /dashboard requires auth; /auth/onboarding requires auth (can't onboard without a session)
+  if (!user && (path.startsWith("/dashboard") || path === "/auth/onboarding")) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

@@ -36,6 +36,10 @@ export default function SignupPage(props: {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
+  const [confirmedEmail, setConfirmedEmail] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(false);
   const [stripeSessionLoading, setStripeSessionLoading] = useState(false);
   const [stripeEmail, setStripeEmail] = useState<string | null>(null);
   const [stripePlan, setStripePlan] = useState<string | null>(planParam || null);
@@ -80,11 +84,17 @@ export default function SignupPage(props: {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+
+    // Build emailRedirectTo — carry session_id through so the callback can forward it to onboarding
+    const callbackUrl = sessionId
+      ? `${window.location.origin}/auth/callback?session_id=${sessionId}`
+      : `${window.location.origin}/auth/callback`;
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl,
         data: {
           referral_code: referralCode || undefined,
         },
@@ -97,26 +107,57 @@ export default function SignupPage(props: {
       return;
     }
 
-    // Store stripe session_id in both sessionStorage and URL so onboarding can link the subscription
-    if (sessionId) {
-      sessionStorage.setItem("stripe_session_id", sessionId);
-      router.push(`/auth/onboarding?session_id=${sessionId}`);
-    } else {
-      router.push("/auth/onboarding");
+    // Already-registered edge case: Supabase returns a fake user with empty identities and no error
+    if (data.user && data.user.identities?.length === 0) {
+      setError(null);
+      setLoading(false);
+      // Re-use the confirmation state but signal already-registered
+      setConfirmedEmail("__already_registered__");
+      setConfirmationSent(true);
+      return;
     }
+
+    if (data.session) {
+      // Email confirmation disabled / auto-confirmed — proceed straight to onboarding
+      if (sessionId) {
+        sessionStorage.setItem("stripe_session_id", sessionId);
+        router.push(`/auth/onboarding?session_id=${sessionId}`);
+      } else {
+        router.push("/auth/onboarding");
+      }
+    } else {
+      // Email confirmation required — show "check your email" UI
+      setConfirmedEmail(email);
+      setConfirmationSent(true);
+      setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    if (resendCooldown || !confirmedEmail || confirmedEmail === "__already_registered__") return;
+    setResendLoading(true);
+    const supabase = createClient();
+    await supabase.auth.resend({ type: "signup", email: confirmedEmail });
+    setResendLoading(false);
+    setResendCooldown(true);
+    setTimeout(() => setResendCooldown(false), 30_000);
   }
 
   async function handleGoogleSignup() {
     setError(null);
-    // Store stripe session_id before OAuth redirect
+    // Store stripe session_id before OAuth redirect (best-effort; URL param is the reliable path)
     if (sessionId) {
       sessionStorage.setItem("stripe_session_id", sessionId);
     }
     const supabase = createClient();
+    // Pass session_id in redirectTo so callback can forward it to onboarding after OAuth
+    const callbackUrl = sessionId
+      ? `${window.location.origin}/auth/callback?session_id=${sessionId}`
+      : `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: callbackUrl,
         queryParams: {
           ...(referralCode ? { referral_code: referralCode } : {}),
         },
@@ -126,6 +167,87 @@ export default function SignupPage(props: {
     if (error) {
       setError(error.message);
     }
+  }
+
+  // ── Check-your-email confirmation screen ──────────────────────────────────
+  if (confirmationSent) {
+    if (confirmedEmail === "__already_registered__") {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-[#F8F9FC] px-4">
+          <div className="w-full max-w-md">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Email already registered</CardTitle>
+                <CardDescription>
+                  An account with this email already exists.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Please sign in with your existing password, or reset it if you\'ve forgotten it.
+                </p>
+                <Button
+                  className="w-full bg-[#2EBD6B] text-white hover:bg-[#2EBD6B]/90"
+                  size="lg"
+                  onClick={() => router.push("/auth/login")}
+                >
+                  Sign in instead
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FC] px-4">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-[#080812]">PCR Booking</h1>
+          </div>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Check your email ✉️</CardTitle>
+              <CardDescription>We sent a confirmation link to your inbox.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                <p className="text-sm font-semibold text-blue-800">{confirmedEmail}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Click the link in that email to activate your account and continue setup.
+                The link expires in 24 hours. Check your spam folder if you don\'t see it.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                size="lg"
+                onClick={handleResend}
+                disabled={resendLoading || resendCooldown}
+              >
+                {resendCooldown
+                  ? "Resent! Check your inbox"
+                  : resendLoading
+                  ? "Sending..."
+                  : "Resend confirmation email"}
+              </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                Wrong email?{" "}
+                <button
+                  type="button"
+                  className="font-medium text-[#2EBD6B] hover:underline"
+                  onClick={() => { setConfirmationSent(false); setError(null); }}
+                >
+                  Go back
+                </button>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (
