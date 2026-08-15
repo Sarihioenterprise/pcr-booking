@@ -124,10 +124,14 @@ export default function EmbedPage() {
           <label style={styles.label}>Phone *</label>
           <input
             style={styles.input}
-            type="tel"
-            placeholder="(555) 123-4567"
+            type="text"
+            inputMode="tel"
+            placeholder="+1 (555) 123-4567"
             value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            onChange={(e) => {
+              const v = e.target.value;
+              setForm((prev) => ({ ...prev, phone: v }));
+            }}
             required
           />
         </div>

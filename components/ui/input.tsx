@@ -1,11 +1,13 @@
 import * as React from "react"
-import { Input as InputPrimitive } from "@base-ui/react/input"
 
 import { cn } from "@/lib/utils"
 
+// Plain <input> wrapper — avoids @base-ui/react Field.Control's mergeProps
+// event-handler chaining which can cause display divergence when the component
+// is used outside of a Field.Root context (the common case in these forms).
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
-    <InputPrimitive
+    <input
       type={type}
       data-slot="input"
       className={cn(

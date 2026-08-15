@@ -544,7 +544,8 @@ export function NewBookingForm() {
                     <Input
                       id="renter_phone"
                       name="renter_phone"
-                      type="tel"
+                      type="text"
+                      inputMode="tel"
                       placeholder="+1 (555) 123-4567"
                       value={form.renter_phone}
                       onChange={handleChange}

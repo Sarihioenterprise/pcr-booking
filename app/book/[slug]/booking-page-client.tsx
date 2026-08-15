@@ -502,9 +502,13 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
               <Input
                 id="req-phone"
                 required
-                type="tel"
+                type="text"
+                inputMode="tel"
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setForm((prev) => ({ ...prev, phone: v }));
+                }}
                 placeholder="+1 (555) 000-0000"
               />
             </div>
@@ -519,8 +523,12 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
                 id="req-email"
                 type="text"
                 inputMode="email"
+                autoComplete="email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value, email_error: "" })}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setForm((prev) => ({ ...prev, email: v, email_error: "" }));
+                }}
                 onBlur={handleEmailBlur}
                 placeholder="john@example.com"
                 className={form.email_error ? "border-red-400" : ""}
