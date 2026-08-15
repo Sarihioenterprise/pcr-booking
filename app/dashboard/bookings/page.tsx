@@ -19,11 +19,20 @@ export default async function BookingsPage() {
   const operator = await getOperator();
   const supabase = createAdminClient();
 
-  const { data: bookings } = await supabase
+  // Use !left to prevent PostgREST inner-join from silently dropping bookings
+  // whose vehicle_id is NULL. Omit renters(...) embed entirely — there is no FK
+  // from bookings.renter_id to renters.id so PostgREST returns null for the whole
+  // query when that embed is present. drivers_license_url is already a column on
+  // the bookings table (migration 002) so we don't need the renter join.
+  const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
-    .select("*, vehicles(make, model, year), renters(drivers_license_url)")
+    .select("*, vehicles!left(make, model, year)")
     .eq("operator_id", operator.id)
     .order("created_at", { ascending: false });
+
+  if (bookingsError) {
+    console.error("Bookings query error:", bookingsError);
+  }
 
   return (
     <div className="space-y-6">
@@ -58,11 +67,9 @@ export default async function BookingsPage() {
       ) : (
         <div className="space-y-3">
           {bookings.map((booking) => {
-            // License on file: check both booking-level and renter-level
-            const licenseOnFile = !!(
-              booking.drivers_license_url ||
-              (booking.renters as { drivers_license_url?: string } | null)?.drivers_license_url
-            );
+            // License on file: check booking-level drivers_license_url
+            // (renter join removed — no FK; booking col added in migration 002)
+            const licenseOnFile = !!booking.drivers_license_url;
 
             return (
               <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
