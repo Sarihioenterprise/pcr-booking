@@ -56,10 +56,29 @@ export async function GET() {
 
     return NextResponse.redirect(accountLink.url);
   } catch (error) {
-    console.error("Stripe Connect error:", error);
-    return NextResponse.json(
-      { error: "Failed to create Stripe account" },
-      { status: 500 }
+    // Log the full Stripe error for server-side diagnosis
+    console.error("Stripe Connect error (full):", error);
+
+    // Extract a human-readable message from the Stripe error
+    let message = "Failed to create Stripe Connect account. Please try again.";
+    if (error && typeof error === "object") {
+      const stripeErr = error as {
+        message?: string;
+        code?: string;
+        type?: string;
+        raw?: { message?: string };
+      };
+      const detail = stripeErr.raw?.message || stripeErr.message;
+      if (detail) {
+        message = detail;
+      }
+    }
+
+    // Redirect back to settings with a descriptive error — never dump raw JSON
+    // to the browser. The settings page reads ?error= and shows it in the UI.
+    const encoded = encodeURIComponent(message);
+    return NextResponse.redirect(
+      `${APP_URL}/dashboard/settings?stripe=error&error=${encoded}`
     );
   }
 }
