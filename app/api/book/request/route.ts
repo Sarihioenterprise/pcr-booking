@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveOperatorEmail } from "@/lib/notify-email";
+import { upsertRenter } from "@/lib/upsert-renter";
 import type { AddonSnapshot } from "@/lib/types";
 
 // Public endpoint — uses service role to bypass RLS on the leads table
@@ -151,45 +152,20 @@ export async function POST(request: NextRequest) {
       ? `${start_date} to ${end_date}`
       : start_date || "";
 
-    // ── Upsert renter record with license URL ────────────────────────────────
-    if (license_file_path) {
-      try {
-        const orParts = [
-          email ? `email.eq.${email}` : null,
-          phone ? `phone.eq.${phone}` : null,
-        ].filter(Boolean);
-
-        let existingRenterId: string | null = null;
-
-        if (orParts.length > 0) {
-          const { data: existingRenter } = await supabase
-            .from("renters")
-            .select("id")
-            .eq("operator_id", operator_id)
-            .or(orParts.join(","))
-            .maybeSingle();
-
-          if (existingRenter) {
-            existingRenterId = existingRenter.id;
-            await supabase
-              .from("renters")
-              .update({ drivers_license_url: license_file_path })
-              .eq("id", existingRenterId);
-          }
-        }
-
-        if (!existingRenterId) {
-          await supabase.from("renters").insert({
-            operator_id,
-            name,
-            phone: phone || null,
-            email: email || null,
-            drivers_license_url: license_file_path,
-          });
-        }
-      } catch (renterErr) {
-        console.error("Renter upsert error (non-fatal):", renterErr);
-      }
+    // ── Upsert renter record ─────────────────────────────────────────────────
+    // Runs for EVERY public request, not just ones with a license upload, so a
+    // renter identity always exists and can be linked to the resulting booking.
+    let renterId: string | null = null;
+    try {
+      renterId = await upsertRenter(supabase, {
+        operatorId: operator_id,
+        name,
+        email,
+        phone,
+        driversLicenseUrl: license_file_path || null,
+      });
+    } catch (renterErr) {
+      console.error("Renter upsert error (non-fatal):", renterErr);
     }
 
     // ── Insert lead record ───────────────────────────────────────────────────
@@ -205,11 +181,16 @@ export async function POST(request: NextRequest) {
       source: resolvedSource, // 'pcr_leads' when tagged via ad campaign
     };
 
+    // Carry the renter identity onto the lead so conversion reuses the SAME
+    // renter row instead of inserting a duplicate.
+    const leadRenterLink = renterId ? { renter_id: renterId } : {};
+
     // Try inserting with all new columns (license_file_path, addons, addons_total)
     const { data: leadData, error } = await supabase
       .from("leads")
       .insert({
         ...baseLeadData,
+        ...leadRenterLink,
         ...(license_file_path ? { license_file_path } : {}),
         ...(addonsSnapshot.length > 0
           ? { addons: addonsSnapshot, addons_total: addonsTotal }
