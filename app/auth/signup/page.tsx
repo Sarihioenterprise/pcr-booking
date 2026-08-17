@@ -44,6 +44,13 @@ export default function SignupPage(props: {
   const [stripeEmail, setStripeEmail] = useState<string | null>(null);
   const [stripePlan, setStripePlan] = useState<string | null>(planParam || null);
 
+  // Gate: card required at signup. If no Stripe session_id, redirect to plan selection.
+  useEffect(() => {
+    if (!sessionId) {
+      router.replace("/onboarding/plan?require_checkout=1");
+    }
+  }, [sessionId, router]);
+
   // Fetch Stripe session data if session_id is present
   useEffect(() => {
     if (!sessionId) return;

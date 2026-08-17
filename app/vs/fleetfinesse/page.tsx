@@ -6,13 +6,13 @@ import { Check, X, AlertTriangle } from "lucide-react";
 export const metadata = {
   title: "FleetFinesse Alternative — PCR Booking vs FleetFinesse",
   description:
-    "Looking for a FleetFinesse alternative? PCR Booking starts free for up to 3 cars — with everything independent car rental operators need. No commission fees, no per-booking charges.",
+    "Looking for a FleetFinesse alternative? PCR Booking starts with a 14-day free trial — with everything independent car rental operators need. No commission fees, no per-booking charges.",
 };
 
 const tableRows = [
   {
-    feature: "Free tier",
-    pcr: { icon: "check", text: "Up to 3 cars free" },
+    feature: "14-day free trial",
+    pcr: { icon: "check", text: "14-day trial, card required" },
     competitor: { icon: "x", text: "No free tier" },
   },
   {
@@ -93,7 +93,7 @@ export default function FleetFinesseAlternativePage() {
               className="font-semibold px-5 py-2 rounded-lg text-sm"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free
+              Start Free Trial
             </Button>
           </Link>
         </div>
@@ -121,7 +121,7 @@ export default function FleetFinesseAlternativePage() {
             className="text-base font-bold px-8 py-5 rounded-xl shadow-lg"
             style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
           >
-            Try PCR Booking Free
+            Start Your Free Trial
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
@@ -265,7 +265,7 @@ export default function FleetFinesseAlternativePage() {
             More Features. Zero Commission. Starts Free.
           </h2>
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Free for up to 3 cars. Paid plans from $79/mo.
+            Plans from $79/mo. 14-day free trial, card required.
           </p>
           <Link href="/auth/signup">
             <Button

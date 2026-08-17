@@ -1338,7 +1338,7 @@ export const blogPosts: BlogPost[] = [
       <li><strong>Fleet Management Dashboard</strong> — See all vehicles, availability, and revenue at a glance</li>
       <li><strong>AI Lead Qualification</strong> — Automatically screen renters for driver's license, age, and eligibility</li>
       <li><strong>Mobile-First</strong> — Manage everything from your phone, even on the go</li>
-      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing starting at the free tier, scaling as you grow</li>
+      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing from $79/mo, plans for every fleet size</li>
       <li><strong>Payment Integration</strong> — Direct Stripe integration. Payments go straight to your account.</li>
     </ul>
 
@@ -1347,7 +1347,7 @@ export const blogPosts: BlogPost[] = [
     <p>Unlike complex enterprise software, PCR Booking is designed for speed:</p>
 
     <ol>
-      <li>Sign up at pcrbooking.com (free tier available)</li>
+      <li>Start your 14-day free trial at pcrbooking.com (card required)</li>
       <li>Add your vehicles and set your daily rates</li>
       <li>Copy-paste one line of code to embed the booking widget on your website</li>
       <li>Start receiving direct bookings from your own customers</li>
@@ -1409,7 +1409,7 @@ export const blogPosts: BlogPost[] = [
       <li><strong>Fleet Management Dashboard</strong> — See all vehicles, availability, and revenue at a glance</li>
       <li><strong>AI Lead Qualification</strong> — Automatically screen renters for driver's license, age, and eligibility</li>
       <li><strong>Mobile-First</strong> — Manage everything from your phone, even on the go</li>
-      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing starting at the free tier, scaling as you grow</li>
+      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing from $79/mo, plans for every fleet size</li>
       <li><strong>Payment Integration</strong> — Direct Stripe integration. Payments go straight to your account.</li>
     </ul>
 
@@ -1418,7 +1418,7 @@ export const blogPosts: BlogPost[] = [
     <p>Unlike complex enterprise software, PCR Booking is designed for speed:</p>
 
     <ol>
-      <li>Sign up at pcrbooking.com (free tier available)</li>
+      <li>Start your 14-day free trial at pcrbooking.com (card required)</li>
       <li>Add your vehicles and set your daily rates</li>
       <li>Copy-paste one line of code to embed the booking widget on your website</li>
       <li>Start receiving direct bookings from your own customers</li>
@@ -1480,7 +1480,7 @@ export const blogPosts: BlogPost[] = [
       <li><strong>Fleet Management Dashboard</strong> — See all vehicles, availability, and revenue at a glance</li>
       <li><strong>AI Lead Qualification</strong> — Automatically screen renters for driver's license, age, and eligibility</li>
       <li><strong>Mobile-First</strong> — Manage everything from your phone, even on the go</li>
-      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing starting at the free tier, scaling as you grow</li>
+      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing from $79/mo, plans for every fleet size</li>
       <li><strong>Payment Integration</strong> — Direct Stripe integration. Payments go straight to your account.</li>
     </ul>
 
@@ -1489,7 +1489,7 @@ export const blogPosts: BlogPost[] = [
     <p>Unlike complex enterprise software, PCR Booking is designed for speed:</p>
 
     <ol>
-      <li>Sign up at pcrbooking.com (free tier available)</li>
+      <li>Start your 14-day free trial at pcrbooking.com (card required)</li>
       <li>Add your vehicles and set your daily rates</li>
       <li>Copy-paste one line of code to embed the booking widget on your website</li>
       <li>Start receiving direct bookings from your own customers</li>
@@ -1551,7 +1551,7 @@ export const blogPosts: BlogPost[] = [
       <li><strong>Fleet Management Dashboard</strong> — See all vehicles, availability, and revenue at a glance</li>
       <li><strong>AI Lead Qualification</strong> — Automatically screen renters for driver's license, age, and eligibility</li>
       <li><strong>Mobile-First</strong> — Manage everything from your phone, even on the go</li>
-      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing starting at the free tier, scaling as you grow</li>
+      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing from $79/mo, plans for every fleet size</li>
       <li><strong>Payment Integration</strong> — Direct Stripe integration. Payments go straight to your account.</li>
     </ul>
 
@@ -1560,7 +1560,7 @@ export const blogPosts: BlogPost[] = [
     <p>Unlike complex enterprise software, PCR Booking is designed for speed:</p>
 
     <ol>
-      <li>Sign up at pcrbooking.com (free tier available)</li>
+      <li>Start your 14-day free trial at pcrbooking.com (card required)</li>
       <li>Add your vehicles and set your daily rates</li>
       <li>Copy-paste one line of code to embed the booking widget on your website</li>
       <li>Start receiving direct bookings from your own customers</li>
@@ -1622,7 +1622,7 @@ export const blogPosts: BlogPost[] = [
       <li><strong>Fleet Management Dashboard</strong> — See all vehicles, availability, and revenue at a glance</li>
       <li><strong>AI Lead Qualification</strong> — Automatically screen renters for driver's license, age, and eligibility</li>
       <li><strong>Mobile-First</strong> — Manage everything from your phone, even on the go</li>
-      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing starting at the free tier, scaling as you grow</li>
+      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing from $79/mo, plans for every fleet size</li>
       <li><strong>Payment Integration</strong> — Direct Stripe integration. Payments go straight to your account.</li>
     </ul>
 
@@ -1631,7 +1631,7 @@ export const blogPosts: BlogPost[] = [
     <p>Unlike complex enterprise software, PCR Booking is designed for speed:</p>
 
     <ol>
-      <li>Sign up at pcrbooking.com (free tier available)</li>
+      <li>Start your 14-day free trial at pcrbooking.com (card required)</li>
       <li>Add your vehicles and set your daily rates</li>
       <li>Copy-paste one line of code to embed the booking widget on your website</li>
       <li>Start receiving direct bookings from your own customers</li>
@@ -1693,7 +1693,7 @@ export const blogPosts: BlogPost[] = [
       <li><strong>Fleet Management Dashboard</strong> — See all vehicles, availability, and revenue at a glance</li>
       <li><strong>AI Lead Qualification</strong> — Automatically screen renters for driver's license, age, and eligibility</li>
       <li><strong>Mobile-First</strong> — Manage everything from your phone, even on the go</li>
-      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing starting at the free tier, scaling as you grow</li>
+      <li><strong>Pricing for Your Size</strong> — Flat monthly pricing from $79/mo, plans for every fleet size</li>
       <li><strong>Payment Integration</strong> — Direct Stripe integration. Payments go straight to your account.</li>
     </ul>
 
@@ -1702,7 +1702,7 @@ export const blogPosts: BlogPost[] = [
     <p>Unlike complex enterprise software, PCR Booking is designed for speed:</p>
 
     <ol>
-      <li>Sign up at pcrbooking.com (free tier available)</li>
+      <li>Start your 14-day free trial at pcrbooking.com (card required)</li>
       <li>Add your vehicles and set your daily rates</li>
       <li>Copy-paste one line of code to embed the booking widget on your website</li>
       <li>Start receiving direct bookings from your own customers</li>
@@ -1754,7 +1754,7 @@ export const blogPosts: BlogPost[] = [
       <p>PCR Booking is the opposite approach. It's built from the ground up for independent rental operators:</p>
 
       <ul>
-        <li><strong>Affordable</strong> — Starts at free, then $99-$499/month. You pay based on what you need, not enterprise pricing</li>
+        <li><strong>Affordable</strong> — Plans from $79-$499/month. Transparent flat pricing — no percentage fees, no hidden costs</li>
         <li><strong>Simple</strong> — Only the features that matter: bookings, fleet, payments, lead qualification</li>
         <li><strong>Fast setup</strong> — You're live the same day. No lengthy implementation process.</li>
         <li><strong>Flexible</strong> — Cancel anytime. No contracts, no penalties.</li>
@@ -1775,7 +1775,7 @@ export const blogPosts: BlogPost[] = [
           <tr style="border-bottom: 1px solid #eee;">
             <td style="padding: 10px;">Monthly Cost (10 cars)</td>
             <td style="text-align: center; padding: 10px;">$2,000+</td>
-            <td style="text-align: center; padding: 10px;">$99-$299</td>
+            <td style="text-align: center; padding: 10px;">$79-$249</td>
           </tr>
           <tr style="border-bottom: 1px solid #eee;">
             <td style="padding: 10px;">Booking Widget</td>
@@ -1830,7 +1830,7 @@ export const blogPosts: BlogPost[] = [
 
       <p><strong>PCR Booking for 10 vehicles:</strong></p>
       <ul>
-        <li>Monthly software cost: $99-$299</li>
+        <li>Monthly software cost: $79-$249</li>
         <li>Annual cost: $1,188-$3,588</li>
       </ul>
 
@@ -2003,18 +2003,18 @@ export const blogPosts: BlogPost[] = [
       <p>For 1-20 vehicles, here's what you should expect to pay:</p>
 
       <ul>
-        <li><strong>Free tier:</strong> Good for 1-3 vehicles, basic features only</li>
-        <li><strong>Starter ($50-150/month):</strong> Best for 4-10 vehicles, includes all core features</li>
-        <li><strong>Pro ($150-300/month):</strong> For 10-20 vehicles, adds advanced automation</li>
+        <li><strong>Growth ($79/month):</strong> Up to 15 vehicles, all core features included</li>
+        <li><strong>Pro ($149/month):</strong> Up to 40 vehicles, advanced analytics and automations</li>
+        <li><strong>Scale ($249/month):</strong> Up to 100 vehicles, white-label branding</li>
       </ul>
 
-      <p>If anyone is quoting you $500+ monthly, they're priced for mid-market companies, not small businesses.</p>
+      <p>If anyone is quoting you $500+ monthly for a small fleet, they're priced for mid-market companies, not small businesses.</p>
 
       <h2>Why PCR Booking Wins for Small Operators</h2>
 
       <ul>
-        <li><strong>Free tier available:</strong> Start with no cost commitment</li>
-        <li><strong>Starter-friendly pricing:</strong> $99-$499/month based on fleet size</li>
+        <li><strong>14-day free trial:</strong> Start with no upfront charge (card required, billed after trial)</li>
+        <li><strong>Transparent pricing:</strong> $79-$499/month based on fleet size</li>
         <li><strong>All core features included:</strong> No hidden per-booking fees</li>
         <li><strong>Direct customer relationships:</strong> Booking widget means customers book directly with you</li>
         <li><strong>Fast setup:</strong> Live in hours, not weeks</li>
@@ -2041,7 +2041,7 @@ export const blogPosts: BlogPost[] = [
       <p>Here's the fastest path:</p>
 
       <ol>
-        <li>Sign up for the free tier at pcrbooking.com</li>
+        <li>Start a 14-day free trial at pcrbooking.com</li>
         <li>Add 2-3 of your vehicles as a test</li>
         <li>Embed the booking widget on your website</li>
         <li>Take a test booking to see the full flow</li>
@@ -2141,7 +2141,7 @@ export const blogPosts: BlogPost[] = [
 
       <p>PCR Booking is built exactly for this use case. It handles direct bookings, has the embedded widget, and includes automatic renter qualification.</p>
 
-      <p>Cost: $99-299/month depending on fleet size. But you're keeping 100% of direct booking revenue.</p>
+      <p>Cost: $79-$249/month depending on fleet size. But you're keeping 100% of direct booking revenue.</p>
 
       <h2>Step 3: Encourage Direct Bookings from Turo Customers</h2>
 
@@ -2224,7 +2224,7 @@ export const blogPosts: BlogPost[] = [
 
       <ol>
         <li>Set up a simple website (Wix, Squarespace, Webflow) — this week</li>
-        <li>Sign up for PCR Booking (free tier) and add your vehicles — this week</li>
+        <li>Start a 14-day free trial at PCR Booking and add your vehicles — this week</li>
         <li>Embed the booking widget on your website — this week</li>
         <li>Test the booking flow with a friend — this week</li>
         <li>Mention direct bookings to your next Turo customer — next week</li>

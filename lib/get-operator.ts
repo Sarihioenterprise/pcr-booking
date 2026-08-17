@@ -23,17 +23,19 @@ export async function getOperator(): Promise<Operator> {
 
   if (!operator) redirect("/auth/onboarding");
 
-  // If no subscription, send to subscription issue page — but only for non-onboarding paths
-  // and only if the operator record exists (meaning they completed onboarding).
-  // If they JUST came through onboarding with a Stripe session, the webhook may
-  // not have fired yet — in that case, let them into the dashboard anyway.
-  // Also allow through if operator already has a plan set (manual/admin-provisioned accounts).
-  // All DB plans are paid tiers (free was retired); any plan value counts as active.
-  const hasActivePlan = !!operator.plan;
-  if (!operator.stripe_subscription_id && !hasActivePlan) {
+  // Subscription gate: operator must have an active Stripe subscription to access dashboard.
+  // stripe_subscription_id is nulled out by webhooks on: payment failure, subscription deletion,
+  // or status becoming past_due/unpaid. A brief referer grace period allows the Stripe webhook
+  // to fire after onboarding completes before we start blocking the new operator.
+  if (!operator.stripe_subscription_id) {
     const headersList = await headers();
     const referer = headersList.get("referer") || "";
-    const comingFromOnboarding = referer.includes("/auth/onboarding") || referer.includes("/auth/signup");
+    // Allow through briefly if they just came from the onboarding or checkout flow
+    // so the webhook has time to link the subscription. This is a narrow window only.
+    const comingFromOnboarding =
+      referer.includes("/auth/onboarding") ||
+      referer.includes("/thank-you") ||
+      referer.includes("/auth/signup");
     if (!comingFromOnboarding) {
       redirect("/dashboard/subscription-issue");
     }

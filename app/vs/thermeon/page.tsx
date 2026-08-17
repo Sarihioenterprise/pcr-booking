@@ -6,13 +6,13 @@ import { Check, X, AlertTriangle } from "lucide-react";
 export const metadata = {
   title: "Thermeon Alternative — PCR Booking vs Thermeon Car Rental Software",
   description:
-    "Looking for a Thermeon alternative? PCR Booking starts free for up to 3 cars — no enterprise contracts, no complex setup. Built for independent car rental operators.",
+    "Looking for a Thermeon alternative? PCR Booking starts with a 14-day free trial — no enterprise contracts, no complex setup. Built for independent car rental operators.",
 };
 
 const tableRows = [
   {
-    feature: "Free tier",
-    pcr: { icon: "check", text: "Up to 3 cars free" },
+    feature: "14-day free trial",
+    pcr: { icon: "check", text: "14-day trial, card required" },
     competitor: { icon: "x", text: "No free tier" },
   },
   {
@@ -93,7 +93,7 @@ export default function ThermeonAlternativePage() {
               className="font-semibold px-5 py-2 rounded-lg text-sm"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free
+              Start Free Trial
             </Button>
           </Link>
         </div>
@@ -113,7 +113,7 @@ export default function ThermeonAlternativePage() {
         </h1>
         <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
           Thermeon is built for enterprise car rental franchises. PCR Booking is built for
-          independent operators — start free in under 10 minutes, no sales call, no multi-year
+          independent operators — start your trial in under 10 minutes, no sales call, no multi-year
           contract.
         </p>
         <Link href="/auth/signup">
@@ -121,7 +121,7 @@ export default function ThermeonAlternativePage() {
             className="text-base font-bold px-8 py-5 rounded-xl shadow-lg"
             style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
           >
-            Try PCR Booking Free
+            Start Your Free Trial
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
@@ -266,7 +266,7 @@ export default function ThermeonAlternativePage() {
             Skip the Sales Call. Start Today.
           </h2>
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Free for up to 3 cars. Paid plans from $79/mo.
+            Plans from $79/mo. 14-day free trial, card required.
           </p>
           <Link href="/auth/signup">
             <Button

@@ -35,11 +35,25 @@ const PLAN_LIMITS = {
   fleet: Infinity,
 };
 
-const NEXT_PLAN = {
+const NEXT_PLAN: Record<string, string> = {
   growth: "pro",
   pro: "scale",
   scale: "fleet",
   fleet: "fleet",
+};
+
+const NEXT_PLAN_PRICE: Record<string, number> = {
+  growth: 149, // upgrade to pro
+  pro: 249,    // upgrade to scale
+  scale: 499,  // upgrade to fleet
+  fleet: 499,
+};
+
+const NEXT_PLAN_LIMIT: Record<string, number | string> = {
+  growth: 40,
+  pro: 100,
+  scale: "unlimited",
+  fleet: "unlimited",
 };
 
 export default function NewVehiclePage() {
@@ -54,6 +68,8 @@ export default function NewVehiclePage() {
   const [operator, setOperator] = useState<Operator | null>(null);
   const [vehicleCount, setVehicleCount] = useState(0);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState("");
 
   const [form, setForm] = useState({
     make: "",
@@ -219,7 +235,7 @@ export default function NewVehiclePage() {
         <h1 className="text-2xl font-bold">Add Vehicle</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="new-vehicle-form" onSubmit={handleSubmit} className="space-y-6">
         {/* Vehicle Information */}
         <Card className="border-0 bg-white shadow-sm ring-0">
           <CardHeader>
@@ -558,7 +574,7 @@ export default function NewVehiclePage() {
       </form>
 
       {/* Upgrade Modal */}
-      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+      <Dialog open={showUpgradeModal} onOpenChange={(open) => { setShowUpgradeModal(open); setUpgradeError(""); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -569,33 +585,72 @@ export default function NewVehiclePage() {
             </div>
             <DialogDescription className="text-base text-gray-600 mt-3">
               {operator?.plan === "growth" && (
-                "You're at 15 vehicles — upgrade to Pro to manage up to 40, plus unlock revenue analytics and collections automation."
+                `You're at your ${PLAN_LIMITS.growth}-vehicle limit on Growth ($79/mo). Upgrade to Pro ($149/mo) to manage up to ${NEXT_PLAN_LIMIT.growth} vehicles.`
               )}
               {operator?.plan === "pro" && (
-                "You're at 40 vehicles — upgrade to Scale for up to 100 vehicles, white-label branding, and API access."
+                `You're at your ${PLAN_LIMITS.pro}-vehicle limit on Pro ($149/mo). Upgrade to Scale ($249/mo) for up to ${NEXT_PLAN_LIMIT.pro} vehicles, white-label branding, and API access.`
               )}
               {operator?.plan === "scale" && (
-                "You're at 100 vehicles — upgrade to Fleet for unlimited vehicles and white-glove migration support."
+                `You're at your ${PLAN_LIMITS.scale}-vehicle limit on Scale ($249/mo). Upgrade to Fleet ($499/mo) for unlimited vehicles and white-glove support.`
               )}
               {!operator?.plan && (
-                "You've reached your plan limit. Upgrade to add more vehicles and unlock additional features."
+                "You've reached your plan's vehicle limit. Upgrade to add more vehicles."
               )}
             </DialogDescription>
           </DialogHeader>
+
+          {upgradeError && (
+            <p className="text-sm text-red-600 px-1">{upgradeError}</p>
+          )}
 
           <DialogFooter className="mt-6 gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowUpgradeModal(false)}
+              disabled={upgradeLoading}
             >
               Maybe Later
             </Button>
             <Button
               className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-              onClick={() => router.push("/onboarding/plan")}
+              disabled={upgradeLoading || operator?.plan === "fleet"}
+              onClick={async () => {
+                if (!operator) return;
+                const nextPlan = NEXT_PLAN[operator.plan] || "fleet";
+                if (nextPlan === operator.plan) return; // already at fleet
+                setUpgradeLoading(true);
+                setUpgradeError("");
+                try {
+                  const res = await fetch("/api/billing/upgrade", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ plan: nextPlan }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) {
+                    setUpgradeError(data.error || "Upgrade failed. Please try again.");
+                  } else {
+                    // Upgrade succeeded — update local operator state and retry vehicle creation
+                    setOperator((prev) => prev ? { ...prev, plan: nextPlan as Operator["plan"] } : prev);
+                    setShowUpgradeModal(false);
+                    setUpgradeError("");
+                    // Re-submit the vehicle form now that the plan is upgraded
+                    (document.getElementById("new-vehicle-form") as HTMLFormElement)?.requestSubmit();
+                  }
+                } catch {
+                  setUpgradeError("Network error. Please try again.");
+                } finally {
+                  setUpgradeLoading(false);
+                }
+              }}
             >
-              Upgrade Plan
+              {upgradeLoading
+                ? "Upgrading..."
+                : operator?.plan && NEXT_PLAN[operator.plan] !== operator.plan
+                  ? `Upgrade to ${NEXT_PLAN[operator.plan]?.charAt(0).toUpperCase()}${NEXT_PLAN[operator.plan]?.slice(1)} ($${NEXT_PLAN_PRICE[operator.plan]}/mo)`
+                  : "Upgrade Plan"
+              }
             </Button>
           </DialogFooter>
         </DialogContent>

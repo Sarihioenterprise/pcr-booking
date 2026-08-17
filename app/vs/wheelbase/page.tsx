@@ -6,13 +6,13 @@ import { Check, X, AlertTriangle } from "lucide-react";
 export const metadata = {
   title: "Wheelbase Alternative — PCR Booking vs Wheelbase Pro",
   description:
-    "Looking for a Wheelbase alternative? PCR Booking is built for independent car rental operators — not RV fleets. Flat pricing, no marketplace commissions, and a free tier to get started.",
+    "Looking for a Wheelbase alternative? PCR Booking is built for independent car rental operators — not RV fleets. Flat pricing, no marketplace commissions, and a 14-day free trial to get started (card required).",
 };
 
 const tableRows = [
   {
-    feature: "Free tier",
-    pcr: { icon: "check", text: "Up to 3 cars free" },
+    feature: "14-day free trial",
+    pcr: { icon: "check", text: "14-day trial, card required" },
     competitor: { icon: "x", text: "No free tier" },
   },
   {
@@ -83,7 +83,7 @@ export default function WheelbaseAlternativePage() {
               className="font-semibold px-5 py-2 rounded-lg text-sm"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free
+              Start Free Trial
             </Button>
           </Link>
         </div>
@@ -103,14 +103,14 @@ export default function WheelbaseAlternativePage() {
         </h1>
         <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
           PCR Booking is built for independent car rental operators — not RV fleets. Flat pricing,
-          no marketplace commissions, and a free tier to get started.
+          no marketplace commissions, and a 14-day free trial to get started (card required).
         </p>
         <Link href="/auth/signup">
           <Button
             className="text-base font-bold px-8 py-5 rounded-xl shadow-lg"
             style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
           >
-            Try PCR Booking Free
+            Start Your Free Trial
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
@@ -234,7 +234,7 @@ export default function WheelbaseAlternativePage() {
             <span style={{ color: "#2EBD6B" }}>Not RVs.</span>
           </h2>
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Free for up to 3 cars. Paid plans from $79/mo flat.
+            Plans from $79/mo. 14-day free trial, card required.
           </p>
           <Link href="/auth/signup">
             <Button

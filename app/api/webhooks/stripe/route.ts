@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { fireGHLEvent, addTag, createOrUpdateContact } from "@/lib/ghl";
+import { addBusinessDays } from "@/lib/business-days";
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
@@ -127,6 +128,11 @@ async function handleSubscriptionUpsert(
   const customerId = subscription.customer as string;
   const plan = getPlanFromSubscription(subscription);
 
+  // Statuses that should revoke dashboard access immediately.
+  // Owner requirement: "they should just not have access if their payment doesn't go through, immediately."
+  const ACCESS_REVOKED_STATUSES: string[] = ["past_due", "unpaid", "incomplete_expired", "canceled"];
+  const accessRevoked = ACCESS_REVOKED_STATUSES.includes(subscription.status);
+
   // Upsert into subscriptions table
   const { error: subError } = await supabase.from("subscriptions").upsert(
     {
@@ -142,14 +148,45 @@ async function handleSubscriptionUpsert(
     console.error("Failed to upsert subscription:", subError);
   }
 
-  // Update operator plan
+  // Update operator plan + access flag
+  // If status is revoking (past_due/unpaid/etc.), null out stripe_subscription_id to block dashboard access.
+  // If status is healthy (trialing/active), ensure stripe_subscription_id is set (restore if locked)
+  // AND clear any active public page grace deadline.
+  //
+  // For revoking statuses: set public_grace_deadline_at if not already set.
+  // We fetch existing to avoid resetting the clock on repeated subscription.updated events.
+  let existingGraceDeadline: string | null = null;
+  if (accessRevoked) {
+    const { data: existingOpSub } = await supabase
+      .from("operators")
+      .select("public_grace_deadline_at")
+      .eq("stripe_customer_id", customerId)
+      .single();
+    existingGraceDeadline = existingOpSub?.public_grace_deadline_at ?? null;
+  }
+
+  const gracePeriodDeadline = addBusinessDays(new Date(), 7).toISOString();
+
+  const operatorUpdate: Record<string, string | null> = {
+    plan,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: accessRevoked ? null : subscription.id,
+    // Revoking: set grace deadline (only if not already set)
+    // Restoring: clear grace deadline so public page comes back immediately
+    public_grace_deadline_at: accessRevoked
+      ? (existingGraceDeadline ?? gracePeriodDeadline)
+      : null,
+  };
+
+  if (accessRevoked) {
+    console.log(`[webhook] Revoking dashboard access for customer ${customerId} — subscription status: ${subscription.status}. Public page deadline: ${operatorUpdate.public_grace_deadline_at}`);
+  } else {
+    console.log(`[webhook] Restoring access for customer ${customerId} — subscription status: ${subscription.status}. Clearing grace deadline.`);
+  }
+
   const { error: opError, data: updatedOps } = await supabase
     .from("operators")
-    .update({
-      plan,
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscription.id,
-    })
+    .update(operatorUpdate)
     .eq("stripe_customer_id", customerId)
     .select();
 
@@ -214,10 +251,27 @@ async function handlePaymentFailed(
   // Lock the account — clear stripe_subscription_id so get-operator redirects to subscription-issue page.
   // We do NOT update plan here; the DB constraint forbids 'free' and we keep the previous plan value
   // so the operator still knows what tier they were on when they recover payment.
+  //
+  // Stage 2 (public page grace period): set public_grace_deadline_at = now + 7 business days.
+  // The public booking page will go dark once now() > that deadline.
+  // We use COALESCE logic in JS: only set the deadline if it's not already set
+  // (so repeated failed invoices don't reset the clock and extend the deadline).
+  const gracePeriodDeadline = addBusinessDays(new Date(), 7).toISOString();
+
+  // First fetch existing deadline so we don't reset the clock on repeat failures.
+  const { data: existingOp } = await supabase
+    .from("operators")
+    .select("public_grace_deadline_at")
+    .eq("stripe_customer_id", customerId)
+    .single();
+
   const { error, data: updatedOps } = await supabase
     .from("operators")
     .update({
       stripe_subscription_id: null,
+      // Only set the deadline if it hasn't been set yet — prevents repeated payment
+      // failures from pushing the deadline further out.
+      public_grace_deadline_at: existingOp?.public_grace_deadline_at ?? gracePeriodDeadline,
     })
     .eq("stripe_customer_id", customerId)
     .select();
@@ -225,7 +279,7 @@ async function handlePaymentFailed(
   if (error) {
     console.error("Failed to lock account after payment failure:", error);
   } else {
-    console.log(`Account locked for customer ${customerId} due to payment failure`);
+    console.log(`Account locked for customer ${customerId}. Public page deadline: ${updatedOps?.[0]?.public_grace_deadline_at ?? gracePeriodDeadline}`);
     // Fire GHL event for payment failure (fire and forget)
     const operator = updatedOps?.[0];
     if (operator) {
@@ -248,12 +302,17 @@ async function handlePaymentSucceeded(
   const subscriptionId = invoice.subscription as string;
   if (!customerId || !subscriptionId) return;
 
-  // Restore access — re-link subscription so get-operator lets them in
+  // Restore access — re-link subscription so get-operator lets them in.
+  // Also clear public_grace_deadline_at so the public booking page comes back up immediately.
+  // We update ALL matching operators (not just locked ones) to handle edge cases where
+  // the subscription_id was already set but the grace deadline was still ticking.
   const { error } = await supabase
     .from("operators")
-    .update({ stripe_subscription_id: subscriptionId })
-    .eq("stripe_customer_id", customerId)
-    .is("stripe_subscription_id", null); // only restore if it was locked
+    .update({
+      stripe_subscription_id: subscriptionId,
+      public_grace_deadline_at: null, // clear grace period — page comes back immediately
+    })
+    .eq("stripe_customer_id", customerId);
 
   if (error) {
     console.error("Failed to restore account after payment success:", error);
@@ -275,10 +334,28 @@ async function handleSubscriptionDeleted(
     console.error("Failed to mark subscription canceled:", subError);
   }
 
-  // Downgrade operator to growth plan
+  // Revoke dashboard access: null out stripe_subscription_id so the gate blocks them.
+  // Keep their plan value for reference (they can see what they had when they recover).
+  // Note: public booking pages (/book/[slug]) do NOT use getOperator() so renters are unaffected
+  // until the 7-business-day grace period expires.
+  //
+  // Also set public_grace_deadline_at if not already set (subscription.deleted fires after
+  // invoice.payment_failed in the dunning flow, but may also fire standalone for cancellations).
+  const gracePeriodDeadline = addBusinessDays(new Date(), 7).toISOString();
+
+  const { data: existingOpDel } = await supabase
+    .from("operators")
+    .select("public_grace_deadline_at")
+    .eq("stripe_customer_id", customerId)
+    .single();
+
   const { error: opError, data: updatedOps } = await supabase
     .from("operators")
-    .update({ plan: "growth" })
+    .update({
+      plan: "growth",
+      stripe_subscription_id: null,
+      public_grace_deadline_at: existingOpDel?.public_grace_deadline_at ?? gracePeriodDeadline,
+    })
     .eq("stripe_customer_id", customerId)
     .select();
 

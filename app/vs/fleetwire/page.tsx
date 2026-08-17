@@ -6,13 +6,13 @@ import { Check, X, AlertTriangle } from "lucide-react";
 export const metadata = {
   title: "FleetWire Alternative — PCR Booking vs FleetWire",
   description:
-    "Looking for a FleetWire alternative? PCR Booking gives you more features, a free tier, and no per-car pricing — built specifically for private car rental operators.",
+    "Looking for a FleetWire alternative? PCR Booking gives you more features, transparent flat pricing, and no per-car pricing — built specifically for private car rental operators.",
 };
 
 const tableRows = [
   {
-    feature: "Free tier",
-    pcr: { icon: "check", text: "Up to 3 cars free" },
+    feature: "14-day free trial",
+    pcr: { icon: "check", text: "14-day trial, card required" },
     competitor: { icon: "x", text: "No free tier" },
   },
   {
@@ -83,7 +83,7 @@ export default function FleetwireAlternativePage() {
               className="font-semibold px-5 py-2 rounded-lg text-sm"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free
+              Start Free Trial
             </Button>
           </Link>
         </div>
@@ -102,7 +102,7 @@ export default function FleetwireAlternativePage() {
           <span style={{ color: "#2EBD6B" }}>FleetWire Alternative?</span>
         </h1>
         <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
-          PCR Booking gives you more features, a free tier, and no per-car pricing — built
+          PCR Booking gives you more features, transparent flat pricing, and no per-car pricing — built
           specifically for private car rental operators.
         </p>
         <Link href="/auth/signup">
@@ -110,7 +110,7 @@ export default function FleetwireAlternativePage() {
             className="text-base font-bold px-8 py-5 rounded-xl shadow-lg"
             style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
           >
-            Try PCR Booking Free
+            Start Your Free Trial
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
@@ -206,7 +206,7 @@ export default function FleetwireAlternativePage() {
             {[
               "FleetWire was built for Turo hosts — not independent operators running their own business.",
               "Per-car pricing gets expensive fast. PCR Booking is flat rate no matter how big your fleet grows.",
-              "Free tier means zero risk to try it. Most operators are running in under 10 minutes.",
+              "14-day free trial means zero risk to try it. Most operators are running in under 10 minutes.",
             ].map((point, i) => (
               <div
                 key={i}
@@ -233,7 +233,7 @@ export default function FleetwireAlternativePage() {
             Make the Switch Today
           </h2>
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Free for up to 3 cars. Paid plans from $79/mo flat.
+            Plans from $79/mo. 14-day free trial, card required.
           </p>
           <Link href="/auth/signup">
             <Button

@@ -6,13 +6,13 @@ import { Check, X, AlertTriangle } from "lucide-react";
 export const metadata = {
   title: "1Now Alternative — PCR Booking vs 1Now Car Rental Software",
   description:
-    "Looking for a 1Now alternative? PCR Booking starts free for up to 3 cars — with fleet management, digital agreements, automated payments, and more. No demo required.",
+    "Looking for a 1Now alternative? PCR Booking starts with a 14-day free trial — with fleet management, digital agreements, automated payments, and more. No demo required.",
 };
 
 const tableRows = [
   {
-    feature: "Free tier",
-    pcr: { icon: "check", text: "Up to 3 cars free" },
+    feature: "14-day free trial",
+    pcr: { icon: "check", text: "14-day trial, card required" },
     competitor: { icon: "x", text: "No free tier" },
   },
   {
@@ -93,7 +93,7 @@ export default function OneNowAlternativePage() {
               className="font-semibold px-5 py-2 rounded-lg text-sm"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free
+              Start Free Trial
             </Button>
           </Link>
         </div>
@@ -120,7 +120,7 @@ export default function OneNowAlternativePage() {
             className="text-base font-bold px-8 py-5 rounded-xl shadow-lg"
             style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
           >
-            Try PCR Booking Free
+            Start Your Free Trial
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
@@ -221,7 +221,7 @@ export default function OneNowAlternativePage() {
             </p>
             <p className="mt-4 text-white/70 text-base sm:text-lg leading-relaxed">
               1Now hides their pricing behind a sales call. PCR Booking is transparent —
-              <strong className="text-white"> free up to 3 cars</strong>, then $79, $149, or $249/mo.
+              <strong className="text-white"> 14-day free trial</strong>, then $79, $149, $249, or $499/mo.
               Sign up in under 2 minutes and see the dashboard today.
             </p>
           </div>
@@ -238,7 +238,7 @@ export default function OneNowAlternativePage() {
             {[
               "Operators don't want to sit through a sales call before they can even try software. PCR Booking is self-serve — sign up, add your cars, and start taking bookings the same day.",
               "PCR Booking includes features 1Now doesn't — renter blacklists, automated dunning, AI support chat, and a 30% affiliate program to grow your business.",
-              "Start free with up to 3 cars. Upgrade only when you need to. No contracts, no pressure.",
+              "Start your 14-day free trial. No long-term contracts, no hidden fees.",
             ].map((point, i) => (
               <div
                 key={i}
@@ -265,7 +265,7 @@ export default function OneNowAlternativePage() {
             No Demo. No Gatekeeping. Just Software.
           </h2>
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Free for up to 3 cars. Paid plans from $79/mo.
+            Plans from $79/mo. 14-day free trial, card required.
           </p>
           <Link href="/auth/signup">
             <Button

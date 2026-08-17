@@ -11,8 +11,8 @@ export const metadata = {
 
 const tableRows = [
   {
-    feature: "Free tier",
-    pcr: { icon: "check", text: "Up to 3 cars free" },
+    feature: "14-day free trial",
+    pcr: { icon: "check", text: "14-day trial, card required" },
     competitor: { icon: "x", text: "No free tier" },
   },
   {
@@ -93,7 +93,7 @@ export default function RentCentricAlternativePage() {
               className="font-semibold px-5 py-2 rounded-lg text-sm"
               style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
             >
-              Start Free
+              Start Free Trial
             </Button>
           </Link>
         </div>
@@ -122,7 +122,7 @@ export default function RentCentricAlternativePage() {
             className="text-base font-bold px-8 py-5 rounded-xl shadow-lg"
             style={{ backgroundColor: "#2EBD6B", color: "#fff" }}
           >
-            Try PCR Booking Free
+            Start Your Free Trial
           </Button>
         </Link>
         <p className="mt-4 text-sm text-white/40">
@@ -270,11 +270,11 @@ export default function RentCentricAlternativePage() {
             {[
               {
                 q: "Is PCR Booking a good Rent Centric alternative?",
-                a: "Yes. PCR Booking offers the same core features as Rent Centric — fleet management, booking, payments, digital agreements — at up to 70% less. Unlike Rent Centric, PCR Booking has a free tier for operators with up to 3 cars and no annual contracts.",
+                a: "Yes. PCR Booking offers the same core features as Rent Centric — fleet management, booking, payments, digital agreements — at up to 70% less. Unlike Rent Centric, PCR Booking offers a 14-day free trial with no annual contracts.",
               },
               {
                 q: "How does PCR Booking pricing compare to Rent Centric?",
-                a: "Rent Centric starts at $300+/month and typically requires an annual contract. PCR Booking is free for up to 3 cars and paid plans start at $79/month with no long-term commitment.",
+                a: "Rent Centric starts at $300+/month and typically requires an annual contract. PCR Booking plans start at $79/month with a 14-day free trial and no long-term commitment.",
               },
               {
                 q: "Can I switch from Rent Centric to PCR Booking easily?",
@@ -305,7 +305,7 @@ export default function RentCentricAlternativePage() {
             Same Features. A Fraction of the Price.
           </h2>
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Free for up to 3 cars. Paid plans from $79/mo.
+            Plans from $79/mo. 14-day free trial, card required.
           </p>
           <Link href="/auth/signup">
             <Button
