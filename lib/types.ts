@@ -163,6 +163,13 @@ export interface Booking {
   mileage_in: number | null;
   fuel_out: string | null;
   fuel_in: string | null;
+  // 4-zone photo inspection flags (migration 026)
+  pickup_inspected: boolean | null;
+  return_inspected: boolean | null;
+  pickup_inspected_at: string | null;
+  return_inspected_at: string | null;
+  pickup_photos: Record<string, string> | null;
+  return_photos: Record<string, string> | null;
   created_at: string;
   updated_at: string;
   vehicle?: Vehicle;

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
-import { fireGHLEvent, addTag, createOrUpdateContact } from "@/lib/ghl";
+import { fireGHLEvent, syncTrialActivated, syncConverted, syncPaymentFailed, syncChurned } from "@/lib/ghl";
 import { addBusinessDays } from "@/lib/business-days";
+import { capiStartTrial, capiSubscribe, capiPurchase, generateEventId } from "@/lib/meta-capi";
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
@@ -38,10 +39,14 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
-      case "customer.subscription.created":
+      case "customer.subscription.created": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionUpsert(supabase, subscription, stripe, true);
+        break;
+      }
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpsert(supabase, subscription, stripe);
+        await handleSubscriptionUpsert(supabase, subscription, stripe, false);
         break;
       }
       case "customer.subscription.deleted": {
@@ -123,7 +128,8 @@ function getPlanFromSubscription(subscription: Stripe.Subscription): string {
 async function handleSubscriptionUpsert(
   supabase: ReturnType<typeof createAdminClient>,
   subscription: Stripe.Subscription,
-  stripe: Stripe
+  stripe: Stripe,
+  isNewSubscription = false
 ) {
   const customerId = subscription.customer as string;
   const plan = getPlanFromSubscription(subscription);
@@ -223,21 +229,97 @@ async function handleSubscriptionUpsert(
     }
   }
 
-  // Fire GHL event if subscription is active or trialing (fire and forget)
-  if (
-    operator &&
-    (subscription.status === "active" || subscription.status === "trialing")
-  ) {
-    const amount = subscription.items.data[0]?.price?.unit_amount
-      ? (subscription.items.data[0].price.unit_amount / 100).toFixed(2)
-      : "0.00";
-    const note = `Subscribed to ${plan} plan at $${amount}/month on ${new Date().toLocaleDateString()}`;
-    fireGHLEvent(
-      operator,
-      "pcr-booking-paid",
-      note,
-      [`plan-${plan}`]
-    ).catch((err) => console.error("[GHL] subscription event failed:", err));
+  // ── Meta CAPI: StartTrial + Purchase (deduplicated) ───────────────────────
+  // Fire on subscription.created (new trial) only — not on subsequent updates.
+  // The capi_event_id from subscription metadata is shared with the browser pixel
+  // Purchase event so Meta can deduplicate both into one conversion.
+  // We fire BOTH StartTrial (trial-specific signal) AND Purchase (main conversion
+  // event, deduplicated with browser /thank-you page if eid was in the success URL).
+  if (isNewSubscription && subscription.status === "trialing") {
+    const capiEventId = (subscription.metadata?.capi_event_id as string | undefined) || generateEventId("trial");
+    const planTier = getPlanFromSubscription(subscription);
+    const planValue = subscription.items.data[0]?.price?.unit_amount
+      ? subscription.items.data[0].price.unit_amount / 100
+      : 0;
+    const billingInterval = subscription.items.data[0]?.price?.recurring?.interval;
+    const annualSuffix = billingInterval === "year" ? " Annual" : " Monthly";
+    const planName = `${planTier.charAt(0).toUpperCase() + planTier.slice(1)}${annualSuffix}`;
+
+    // Fetch customer email for user matching
+    let customerEmail: string | null = null;
+    try {
+      const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+      customerEmail = customer.email ?? null;
+    } catch { /* non-fatal */ }
+
+    // Fire StartTrial (trial-specific signal — use a fresh ID, not deduplicated)
+    capiStartTrial({
+      eventId: generateEventId("starttrial"),
+      email: customerEmail,
+      value: planValue,
+      planName,
+    }).catch((err) => console.error("[CAPI] StartTrial failed:", err));
+
+    // Fire Purchase (main conversion — deduplicated with browser thank-you event)
+    // For new users (checkout-public → auth/signup), the browser does NOT fire a
+    // Purchase event, so CAPI Purchase fires standalone.
+    // For existing users (checkout → /thank-you), the browser fires Purchase with
+    // the same eid, and Meta deduplicates them into one conversion.
+    capiPurchase({
+      eventId: capiEventId,
+      email: customerEmail,
+      value: planValue,
+      planName,
+      orderId: subscription.id,
+    }).catch((err) => console.error("[CAPI] Purchase (trial) failed:", err));
+  }
+
+  // ── GHL CRM: lifecycle sync ─────────────────────────────────────────────
+  // Only act on new subscriptions here; payment events are handled in invoice handlers.
+  if (isNewSubscription && (subscription.status === "trialing" || subscription.status === "active")) {
+    try {
+      // Fetch customer email (best-effort; may already have been fetched for CAPI above)
+      let ghlEmail: string | null = null;
+      try {
+        const ghlCustomer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+        ghlEmail = ghlCustomer.email ?? null;
+      } catch { /* non-fatal */ }
+
+      if (operator && ghlEmail) {
+        const billingInterval = subscription.items.data[0]?.price?.recurring?.interval;
+        const unitAmount = subscription.items.data[0]?.price?.unit_amount ?? 0;
+        // MRR in USD: monthly = price/100, annual = price/100/12
+        const mrr = billingInterval === "year"
+          ? Math.round((unitAmount / 100 / 12) * 100) / 100
+          : unitAmount / 100;
+        const interval: "monthly" | "annual" = billingInterval === "year" ? "annual" : "monthly";
+        const trialEndTs = subscription.trial_end;
+        const trialEndDate = trialEndTs ? new Date(trialEndTs * 1000).toISOString().slice(0, 10) : undefined;
+
+        const opContact = {
+          id: operator.id as string | undefined,
+          email: ghlEmail,
+          owner_name: operator.owner_name as string | undefined,
+          business_name: operator.business_name as string | undefined,
+          phone: operator.phone as string | null | undefined,
+          booking_slug: operator.booking_slug as string | null | undefined,
+          created_at: operator.created_at as string | undefined,
+        };
+
+        if (subscription.status === "trialing") {
+          // Card captured, free trial activated
+          syncTrialActivated(opContact, { planTier: plan, interval, mrr, trialEndDate })
+            .catch((err) => console.error("[GHL] syncTrialActivated failed:", err));
+        } else if (subscription.status === "active") {
+          // Direct activation (no trial) — immediate paying customer
+          syncConverted(opContact, { planTier: plan, interval, mrr })
+            .catch((err) => console.error("[GHL] syncConverted (direct) failed:", err));
+        }
+      }
+    } catch (err) {
+      // Never let GHL errors surface to the webhook response
+      console.error("[GHL] subscription upsert GHL block failed (non-fatal):", err);
+    }
   }
 }
 
@@ -280,16 +362,30 @@ async function handlePaymentFailed(
     console.error("Failed to lock account after payment failure:", error);
   } else {
     console.log(`Account locked for customer ${customerId}. Public page deadline: ${updatedOps?.[0]?.public_grace_deadline_at ?? gracePeriodDeadline}`);
-    // Fire GHL event for payment failure (fire and forget)
+    // ── GHL CRM: payment failed lifecycle event ──────────────────────────
     const operator = updatedOps?.[0];
     if (operator) {
-      const amount = invoice.amount_due
-        ? (invoice.amount_due / 100).toFixed(2)
-        : "unknown";
-      const note = `Payment failed for ${amount}. Subscription paused.`;
-      fireGHLEvent(operator, "payment-failed", note).catch((err) =>
-        console.error("[GHL] payment failed event failed:", err)
-      );
+      try {
+        let ghlEmail: string | null = null;
+        try {
+          const ghlStripe = getStripe();
+          const ghlCustomer = await ghlStripe.customers.retrieve(customerId) as Stripe.Customer;
+          ghlEmail = ghlCustomer.email ?? null;
+        } catch { /* non-fatal */ }
+
+        if (ghlEmail) {
+          syncPaymentFailed({
+            id: operator.id as string | undefined,
+            email: ghlEmail,
+            owner_name: operator.owner_name as string | undefined,
+            business_name: operator.business_name as string | undefined,
+            phone: operator.phone as string | null | undefined,
+            booking_slug: operator.booking_slug as string | null | undefined,
+          }).catch((err) => console.error("[GHL] syncPaymentFailed failed:", err));
+        }
+      } catch (err) {
+        console.error("[GHL] payment failed GHL block (non-fatal):", err);
+      }
     }
   }
 }
@@ -306,16 +402,146 @@ async function handlePaymentSucceeded(
   // Also clear public_grace_deadline_at so the public booking page comes back up immediately.
   // We update ALL matching operators (not just locked ones) to handle edge cases where
   // the subscription_id was already set but the grace deadline was still ticking.
-  const { error } = await supabase
+  const { error, data: restoredOps } = await supabase
     .from("operators")
     .update({
       stripe_subscription_id: subscriptionId,
       public_grace_deadline_at: null, // clear grace period — page comes back immediately
     })
-    .eq("stripe_customer_id", customerId);
+    .eq("stripe_customer_id", customerId)
+    .select();
 
   if (error) {
     console.error("Failed to restore account after payment success:", error);
+  }
+
+  // ── Meta CAPI: Subscribe (first real payment) or Purchase (recurring) ─────
+  // Skip $0 invoices (trial start invoices). Only track real money events.
+  // billing_reason values:
+  //   subscription_create → first invoice when subscription created (often $0 trial)
+  //   subscription_cycle  → recurring invoice (trial conversion OR subsequent)
+  // For Subscribe: fire when trial converts (subscription_cycle, first paid)
+  // For Purchase: fire on subsequent subscription_cycle invoices
+  // We detect "first paid" by listing paid invoices for this subscription.
+  const amountPaid = invoice.amount_paid ?? 0;
+  const billingReason = invoice.billing_reason;
+
+  if (amountPaid > 0 && (billingReason === "subscription_cycle" || billingReason === "subscription_create")) {
+    try {
+      const stripe = getStripe();
+
+      // Fetch customer email
+      let customerEmail: string | null = null;
+      try {
+        const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+        customerEmail = customer.email ?? null;
+      } catch { /* non-fatal */ }
+
+      // Get plan name from subscription
+      let planName = "PCR Booking";
+      let planTier = "growth";
+      try {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        planTier = (() => {
+          // Reuse price ID -> plan mapping via env vars
+          const priceId = sub.items.data[0]?.price?.id;
+          const map: Record<string, string> = {
+            [process.env.STRIPE_PRICE_GROWTH ?? ""]: "growth",
+            [process.env.STRIPE_PRICE_PRO ?? ""]: "pro",
+            [process.env.STRIPE_PRICE_SCALE ?? ""]: "scale",
+            [process.env.STRIPE_PRICE_FLEET ?? ""]: "fleet",
+            [process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID ?? ""]: "growth",
+            [process.env.STRIPE_PRO_ANNUAL_PRICE_ID ?? ""]: "pro",
+            [process.env.STRIPE_SCALE_ANNUAL_PRICE_ID ?? ""]: "scale",
+            [process.env.STRIPE_FLEET_ANNUAL_PRICE_ID ?? ""]: "fleet",
+          };
+          delete map[""];
+          return map[priceId ?? ""] ?? "growth";
+        })();
+        const billingInterval = sub.items.data[0]?.price?.recurring?.interval;
+        const annualSuffix = billingInterval === "year" ? " Annual" : " Monthly";
+        planName = `${planTier.charAt(0).toUpperCase() + planTier.slice(1)}${annualSuffix}`;
+      } catch { /* non-fatal */ }
+
+      const valueUsd = amountPaid / 100;
+      const orderId = invoice.id;
+      const eventId = generateEventId("invoice");
+      const operator = restoredOps?.[0];
+
+      if (billingReason === "subscription_create") {
+        // First-ever invoice (immediate paid subscription, no trial) → Subscribe
+        capiSubscribe({
+          eventId,
+          email: customerEmail,
+          value: valueUsd,
+          planName,
+          orderId,
+        }).catch((err) => console.error("[CAPI] Subscribe failed:", err));
+      } else {
+        // subscription_cycle: detect first payment after trial vs recurring
+        // If this subscription had a trial, the first cycle payment is the Subscribe event.
+        // Subsequent cycle payments are Purchase events.
+        // We check by counting paid invoices for this subscription.
+        let isFirstPayment = false;
+        try {
+          const paidInvoices = await stripe.invoices.list({
+            subscription: subscriptionId,
+            status: "paid" as "paid",
+            limit: 2,
+          });
+          isFirstPayment = paidInvoices.data.length === 1;
+        } catch { /* non-fatal, default to Purchase */ }
+
+        if (isFirstPayment) {
+          // Trial converted to paid — fire Subscribe (CAPI)
+          capiSubscribe({
+            eventId,
+            email: customerEmail,
+            value: valueUsd,
+            planName,
+            orderId,
+          }).catch((err) => console.error("[CAPI] Subscribe (trial conversion) failed:", err));
+
+          // GHL CRM: mark as converted customer
+          if (operator && customerEmail) {
+            // Determine billing interval from the subscription
+            let ghlInterval: "monthly" | "annual" = "monthly";
+            let ghlMrr = valueUsd;
+            try {
+              const ghlSub = await stripe.subscriptions.retrieve(subscriptionId);
+              const ghlBillingInterval = ghlSub.items.data[0]?.price?.recurring?.interval;
+              ghlInterval = ghlBillingInterval === "year" ? "annual" : "monthly";
+              const ghlUnitAmount = ghlSub.items.data[0]?.price?.unit_amount ?? 0;
+              ghlMrr = ghlInterval === "annual"
+                ? Math.round((ghlUnitAmount / 100 / 12) * 100) / 100
+                : ghlUnitAmount / 100;
+            } catch { /* non-fatal, use invoice amount as fallback */ }
+
+            syncConverted({
+              id: operator.id as string | undefined,
+              email: customerEmail,
+              owner_name: operator.owner_name as string | undefined,
+              business_name: operator.business_name as string | undefined,
+              phone: operator.phone as string | null | undefined,
+              booking_slug: operator.booking_slug as string | null | undefined,
+            }, { planTier: planTier, interval: ghlInterval, mrr: ghlMrr })
+              .catch((err) => console.error("[GHL] syncConverted (trial) failed:", err));
+          }
+        } else {
+          // Recurring payment — fire Purchase
+          capiPurchase({
+            eventId,
+            email: customerEmail,
+            value: valueUsd,
+            planName,
+            orderId,
+          }).catch((err) => console.error("[CAPI] Purchase (recurring) failed:", err));
+        }
+      }
+    } catch (err) {
+      // NEVER let tracking errors break the webhook response
+      console.error("[CAPI] handlePaymentSucceeded CAPI block failed:", err);
+    }
   }
 }
 
@@ -362,13 +588,33 @@ async function handleSubscriptionDeleted(
   if (opError) {
     console.error("Failed to downgrade operator plan:", opError);
   } else {
-    // Fire GHL event for subscription cancellation (fire and forget)
+    // ── GHL CRM: churned lifecycle event ─────────────────────────────────
     const operator = updatedOps?.[0];
     if (operator) {
-      const note = `Cancelled PCR Booking subscription on ${new Date().toLocaleDateString()}`;
-      fireGHLEvent(operator, "pcr-booking-churned", note).catch((err) =>
-        console.error("[GHL] subscription cancelled event failed:", err)
-      );
+      try {
+        let ghlEmail: string | null = null;
+        try {
+          const ghlStripe = getStripe();
+          const ghlCust = await ghlStripe.customers.retrieve(customerId) as Stripe.Customer;
+          ghlEmail = ghlCust.email ?? null;
+        } catch { /* non-fatal */ }
+
+        if (ghlEmail) {
+          // `plan` comes from getPlanFromSubscription above but subscription is already deleted;
+          // use updatedOps plan field as fallback for the plan tag removal.
+          const churnedPlan = (operator.plan as string | undefined) ?? undefined;
+          syncChurned({
+            id: operator.id as string | undefined,
+            email: ghlEmail,
+            owner_name: operator.owner_name as string | undefined,
+            business_name: operator.business_name as string | undefined,
+            phone: operator.phone as string | null | undefined,
+            booking_slug: operator.booking_slug as string | null | undefined,
+          }, { planTier: churnedPlan }).catch((err) => console.error("[GHL] syncChurned failed:", err));
+        }
+      } catch (err) {
+        console.error("[GHL] churn GHL block (non-fatal):", err);
+      }
     }
   }
 }

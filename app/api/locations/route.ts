@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getOperator } from "@/lib/get-operator";
 
+export async function GET(_request: NextRequest) {
+  try {
+    const operator = await getOperator();
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("locations")
+      .select("id, name, address, city, state, zip, phone, is_default")
+      .eq("operator_id", operator.id)
+      .order("is_default", { ascending: false })
+      .order("name", { ascending: true });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data ?? []);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Internal server error";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const operator = await getOperator();

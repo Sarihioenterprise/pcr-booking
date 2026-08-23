@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
       notes,
       pickup_instructions,
       selected_addon_ids = [],
+      // Wizard extra fields (new in 026_booking_wizard_fields.sql)
+      pickup_location,
+      pickup_time,
+      return_time,
+      renter_dob,
+      renter_license_state,
+      renter_license_expiry,
+      renter_license_photo_path,
+      renter_id: body_renter_id,
     } = body;
 
     if (!renter_name || !start_date || !end_date) {
@@ -74,8 +83,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert renter record
-    let renter_id: string | null = null;
-    if (renter_name) {
+    // If caller (wizard) already has a renter_id, use it directly
+    let renter_id: string | null = body_renter_id || null;
+    if (renter_name && !renter_id) {
       const orParts = [
         renter_email ? `email.eq.${renter_email}` : null,
         renter_phone ? `phone.eq.${renter_phone}` : null,
@@ -158,32 +168,63 @@ export async function POST(request: NextRequest) {
 
     const total_with_addons = total_price + addonsTotal;
 
-    // Create the booking
-    const { data: booking, error } = await supabase
+    // ── Core booking fields (always safe to insert) ──────────────────────────
+    const coreInsert = {
+      operator_id: operator.id,
+      vehicle_id: vehicle_id || null,
+      renter_id,
+      renter_name,
+      renter_phone: renter_phone || null,
+      renter_email: renter_email || null,
+      start_date,
+      end_date,
+      duration_days,
+      daily_rate,
+      total_price: total_with_addons,
+      tax_amount: 0,
+      discount_amount: 0,
+      deposit_amount: operator.deposit_amount || 0,
+      deposit_status: "none",
+      status,
+      notes: notes || null,
+      pickup_instructions: pickup_instructions || operator.default_pickup_instructions || null,
+      ...(addonsSnapshot.length > 0 ? { addons: addonsSnapshot, addons_total: addonsTotal } : {}),
+    };
+
+    // ── Optional wizard fields (026 migration) — included only if present ────
+    // If the migration hasn't been applied, these columns don't exist and their
+    // inclusion would cause a 42703 (undefined column) error. We use a two-pass
+    // insert: try with wizard fields, fall back to core-only if columns missing.
+    const wizardExtras = {
+      ...(pickup_location ? { pickup_location } : {}),
+      ...(pickup_time ? { pickup_time } : {}),
+      ...(return_time ? { return_time } : {}),
+      ...(renter_dob ? { renter_dob } : {}),
+      ...(renter_license_state ? { renter_license_state } : {}),
+      ...(renter_license_expiry ? { renter_license_expiry } : {}),
+      ...(renter_license_photo_path ? { renter_license_photo_path } : {}),
+    };
+
+    const hasWizardExtras = Object.keys(wizardExtras).length > 0;
+
+    // First attempt: with wizard extras
+    let { data: booking, error } = await supabase
       .from("bookings")
-      .insert({
-        operator_id: operator.id,
-        vehicle_id: vehicle_id || null,
-        renter_id,
-        renter_name,
-        renter_phone: renter_phone || null,
-        renter_email: renter_email || null,
-        start_date,
-        end_date,
-        duration_days,
-        daily_rate,
-        total_price: total_with_addons,
-        tax_amount: 0,
-        discount_amount: 0,
-        deposit_amount: operator.deposit_amount || 0,
-        deposit_status: "none",
-        status,
-        notes: notes || null,
-        pickup_instructions: pickup_instructions || operator.default_pickup_instructions || null,
-        ...(addonsSnapshot.length > 0 ? { addons: addonsSnapshot, addons_total: addonsTotal } : {}),
-      })
+      .insert(hasWizardExtras ? { ...coreInsert, ...wizardExtras } : coreInsert)
       .select()
       .single();
+
+    // Retry without wizard extras if column-not-found (migration 026 not applied)
+    if (error && hasWizardExtras && (error.code === "42703" || error.message?.includes("column"))) {
+      console.warn("[bookings] Wizard columns missing — retrying without them. Apply migration 026.");
+      const retry = await supabase
+        .from("bookings")
+        .insert(coreInsert)
+        .select()
+        .single();
+      booking = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error("Booking insert error:", error);

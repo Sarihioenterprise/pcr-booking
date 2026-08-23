@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
       category,
       required,
       sort_order,
+      image_url,
+      highlight_text,
     } = body;
 
     if (!name || price === undefined || price === null) {
@@ -84,6 +86,8 @@ export async function POST(request: NextRequest) {
         required: Boolean(required),
         active: true,
         sort_order: sort_order ?? 0,
+        image_url: image_url || null,
+        highlight_text: highlight_text || null,
       })
       .select()
       .single();

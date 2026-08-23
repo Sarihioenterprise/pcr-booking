@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import PixelRouteTracker from "@/components/pixel-route-tracker";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -83,6 +84,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans overflow-x-hidden">
+        {/* Route-change PageView tracker: fires fbq PageView on every client-side navigation */}
+        {/* Next.js App Router does NOT auto-fire PageView on route changes — this fills the gap */}
+        <PixelRouteTracker />
         {children}
         <script
           dangerouslySetInnerHTML={{

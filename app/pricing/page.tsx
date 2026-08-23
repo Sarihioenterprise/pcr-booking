@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Car,
@@ -145,9 +145,37 @@ export default function PricingPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [billing, setBilling] = useState<Billing>("monthly");
 
+  // Fire ViewContent on pricing page mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as Window & { fbq?: (...args: unknown[]) => void }).fbq) {
+      const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq!;
+      fbq("track", "ViewContent", {
+        content_name: "Pricing Page",
+        content_category: "pricing",
+        content_ids: ["pricing"],
+        content_type: "product_group",
+      });
+    }
+  }, []);
+
   async function handleStartTrial(plan: PlanId) {
     setCheckoutError(null);
     setLoadingPlan(plan);
+
+    // Fire InitiateCheckout before redirecting to Stripe
+    if (typeof window !== "undefined" && (window as Window & { fbq?: (...args: unknown[]) => void }).fbq) {
+      const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq!;
+      const price = billing === "annual" ? ANNUAL_PRICES[plan] : MONTHLY_PRICES[plan];
+      fbq("track", "InitiateCheckout", {
+        value: price,
+        currency: "USD",
+        content_name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} ${billing === "annual" ? "Annual" : "Monthly"}`,
+        content_ids: [plan],
+        content_type: "product",
+        num_items: 1,
+      });
+    }
+
     try {
       const res = await fetch("/api/billing/checkout-public", {
         method: "POST",

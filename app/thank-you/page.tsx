@@ -17,12 +17,14 @@ const PLAN_LABELS: Record<string, string> = {
   growth: "Growth",
   pro: "Pro",
   scale: "Scale",
+  fleet: "Fleet",
 };
 
 const PLAN_VALUES: Record<string, Record<string, number>> = {
   growth: { monthly: 79, annual: 790 },
   pro: { monthly: 149, annual: 1490 },
   scale: { monthly: 249, annual: 2490 },
+  fleet: { monthly: 499, annual: 4990 },
 };
 
 function ThankYouContent() {
@@ -30,6 +32,10 @@ function ThankYouContent() {
   const plan = searchParams.get("plan") || "growth";
   const billing = searchParams.get("billing") || "monthly";
   const valueParam = searchParams.get("value");
+  // eid = CAPI deduplication event_id generated at checkout time.
+  // The server fires a CAPI Purchase event with this same event_id so Meta
+  // deduplicates both into one conversion (browser + server = 1 event).
+  const eid = searchParams.get("eid");
 
   const planLabel = PLAN_LABELS[plan] || plan;
   const billingLabel = billing === "annual" ? "Annual" : "Monthly";
@@ -38,13 +44,25 @@ function ThankYouContent() {
     : (PLAN_VALUES[plan]?.[billing] ?? 79);
 
   useEffect(() => {
-    // Fire Meta Pixel Purchase event
+    // Fire Meta Pixel Purchase event with deduplication event_id.
+    // The CAPI Purchase event (fired from Stripe webhook on subscription.created)
+    // uses the same eid so Meta deduplicates both into one conversion.
+    // Without eid (legacy sessions before this deploy), it fires without deduplication.
     if (typeof window !== "undefined" && window.fbq) {
-      window.fbq("track", "Purchase", {
-        value,
-        currency: "USD",
-        content_name: `${planLabel} ${billingLabel}`,
-      });
+      const eventOptions = eid ? { eventID: eid } : undefined;
+      if (eventOptions) {
+        window.fbq("track", "Purchase", {
+          value,
+          currency: "USD",
+          content_name: `${planLabel} ${billingLabel}`,
+        }, eventOptions);
+      } else {
+        window.fbq("track", "Purchase", {
+          value,
+          currency: "USD",
+          content_name: `${planLabel} ${billingLabel}`,
+        });
+      }
     }
 
     // Fire Google Ads conversion event

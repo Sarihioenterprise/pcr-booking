@@ -22,6 +22,7 @@ import {
   CalendarPlus,
   Eye,
   ExternalLink,
+  Ban,
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -62,6 +63,7 @@ export default async function DashboardPage() {
     upcomingReturnsRes,
     recentBookingsRes,
     vehiclesRes,
+    noShowsRes,
   ] = await Promise.all([
     // Total bookings this month
     supabase
@@ -108,6 +110,14 @@ export default async function DashboardPage() {
       .from("vehicles")
       .select("id", { count: "exact" })
       .eq("operator_id", operator.id),
+
+    // No-shows this month
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact" })
+      .eq("operator_id", operator.id)
+      .eq("is_no_show", true)
+      .gte("no_show_at", `${monthStart}T00:00:00`),
   ]);
 
   const monthBookings = monthBookingsRes.data || [];
@@ -132,32 +142,56 @@ export default async function DashboardPage() {
   const recentBookings = recentBookingsRes.data || [];
   const vehicleCount = vehiclesRes.count || 0;
   const hasVehicles = vehicleCount > 0;
+  const noShowCount = noShowsRes.count || 0;
 
   const stats = [
     {
       title: "Bookings This Month",
       value: String(totalBookingsThisMonth),
       icon: CalendarDays,
+      href: "/dashboard/bookings",
+      iconBg: "bg-[#2EBD6B]/10",
+      iconColor: "text-[#2EBD6B]",
     },
     {
       title: "Revenue This Month",
       value: `$${revenueThisMonth.toLocaleString()}`,
       icon: DollarSign,
+      href: undefined,
+      iconBg: "bg-[#2EBD6B]/10",
+      iconColor: "text-[#2EBD6B]",
     },
     {
       title: "Active Rentals",
       value: String(activeRentalsCount),
       icon: Car,
+      href: "/dashboard/bookings?filter=active",
+      iconBg: "bg-[#2EBD6B]/10",
+      iconColor: "text-[#2EBD6B]",
     },
     {
       title: "Leads Today",
       value: String(leadsToday),
       icon: Users,
+      href: undefined,
+      iconBg: "bg-[#2EBD6B]/10",
+      iconColor: "text-[#2EBD6B]",
     },
     {
       title: "Upcoming Returns",
       value: String(upcomingReturns.length),
       icon: Clock,
+      href: undefined,
+      iconBg: "bg-[#2EBD6B]/10",
+      iconColor: "text-[#2EBD6B]",
+    },
+    {
+      title: "No Shows",
+      value: String(noShowCount),
+      icon: Ban,
+      href: "/dashboard/bookings?filter=no_show",
+      iconBg: "bg-red-100",
+      iconColor: "text-red-500",
     },
   ];
 
@@ -192,27 +226,34 @@ export default async function DashboardPage() {
       <OnboardingChecklist hasVehicles={hasVehicles} bookingSlug={operator.booking_slug} />
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {stats.map((stat) => (
-          <Card
-            key={stat.title}
-            className="border-0 bg-white shadow-sm ring-0"
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-1">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                {stat.title}
-              </CardTitle>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
-                <stat.icon className="h-[18px] w-[18px] text-[#2EBD6B]" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold tracking-tight text-gray-900">
-                {stat.value}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {stats.map((stat) => {
+          const card = (
+            <Card
+              key={stat.title}
+              className="border-0 bg-white shadow-sm ring-0 hover:shadow-md transition-shadow"
+            >
+              <CardHeader className="flex flex-row items-center justify-between pb-1">
+                <CardTitle className="text-sm font-medium text-gray-500">
+                  {stat.title}
+                </CardTitle>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.iconBg}`}>
+                  <stat.icon className={`h-[18px] w-[18px] ${stat.iconColor}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tracking-tight text-gray-900">
+                  {stat.value}
+                </div>
+              </CardContent>
+            </Card>
+          );
+          return stat.href ? (
+            <Link key={stat.title} href={stat.href}>{card}</Link>
+          ) : (
+            <div key={stat.title}>{card}</div>
+          );
+        })}
       </div>
 
       {/* Quick Actions */}

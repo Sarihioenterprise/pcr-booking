@@ -38,6 +38,28 @@ export async function PATCH(
       // store in notes with prefix — graceful if cancel_reason column absent
       updates.notes = `[Cancelled] ${body.cancel_reason.trim()}`;
     }
+    // 4-zone inspection flags
+    if (body.pickup_inspected === true) {
+      updates.pickup_inspected = true;
+      updates.pickup_inspected_at = new Date().toISOString();
+    }
+    if (body.return_inspected === true) {
+      updates.return_inspected = true;
+      updates.return_inspected_at = new Date().toISOString();
+    }
+    // Wizard-linkage fields (set after wizard steps complete)
+    if (typeof body.agreement_id === "string" && body.agreement_id) {
+      updates.agreement_id = body.agreement_id;
+    }
+    if (typeof body.pickup_inspection_id === "string" && body.pickup_inspection_id) {
+      updates.pickup_inspection_id = body.pickup_inspection_id;
+    }
+    if (typeof body.stripe_payment_intent_id === "string" && body.stripe_payment_intent_id) {
+      updates.stripe_payment_intent_id = body.stripe_payment_intent_id;
+    }
+    if (typeof body.renter_license_photo_path === "string") {
+      updates.renter_license_photo_path = body.renter_license_photo_path;
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });

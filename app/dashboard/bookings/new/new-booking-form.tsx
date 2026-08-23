@@ -613,7 +613,7 @@ export function NewBookingForm() {
                       value={form.start_date}
                       onChange={handleChange}
                       required
-                      className="border-gray-200 bg-[#F8F9FC] focus-visible:ring-[#2EBD6B]"
+                      className="h-10 border-gray-200 bg-white text-gray-900 focus-visible:ring-[#2EBD6B]"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -627,7 +627,7 @@ export function NewBookingForm() {
                       value={form.end_date}
                       onChange={handleChange}
                       required
-                      className="border-gray-200 bg-[#F8F9FC] focus-visible:ring-[#2EBD6B]"
+                      className="h-10 border-gray-200 bg-white text-gray-900 focus-visible:ring-[#2EBD6B]"
                     />
                   </div>
                 </div>

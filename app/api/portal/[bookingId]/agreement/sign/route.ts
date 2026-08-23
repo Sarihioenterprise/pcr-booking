@@ -15,7 +15,7 @@ export async function POST(
     if (authError) return authError;
 
     const body = await request.json();
-    const { renter_signature } = body;
+    const { renter_signature, signature_png_b64 } = body;
 
     if (!renter_signature) {
       return NextResponse.json(
@@ -39,14 +39,19 @@ export async function POST(
       );
     }
 
+    const updatePayload: Record<string, unknown> = {
+      renter_signature,
+      signed_at: new Date().toISOString(),
+      status: "signed",
+      updated_at: new Date().toISOString(),
+    };
+    if (signature_png_b64) {
+      updatePayload.signature_png_b64 = signature_png_b64;
+    }
+
     const { data, error } = await supabase
       .from("rental_agreements")
-      .update({
-        renter_signature,
-        signed_at: new Date().toISOString(),
-        status: "signed",
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", agreement.id)
       .select()
       .single();

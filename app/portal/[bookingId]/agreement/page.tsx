@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import SignatureCanvas from "react-signature-canvas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, CheckCircle2, FileText } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
 interface AgreementData {
@@ -33,6 +34,9 @@ export default function AgreementSignPage() {
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [signed, setSigned] = useState(false);
+  const [canvasEmpty, setCanvasEmpty] = useState(true);
+
+  const sigPadRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
     async function load() {
@@ -55,15 +59,35 @@ export default function AgreementSignPage() {
     load();
   }, [bookingId]);
 
+  function clearCanvas() {
+    sigPadRef.current?.clear();
+    setCanvasEmpty(true);
+  }
+
+  function handleCanvasEnd() {
+    setCanvasEmpty(sigPadRef.current?.isEmpty() ?? true);
+  }
+
   async function handleSign(e: React.FormEvent) {
     e.preventDefault();
     if (!signature.trim() || !agreed) return;
     setSubmitting(true);
 
+    // Capture canvas PNG as base64 (empty string if pad unused)
+    let signaturePng = "";
+    if (sigPadRef.current && !sigPadRef.current.isEmpty()) {
+      signaturePng = sigPadRef.current
+        .getTrimmedCanvas()
+        .toDataURL("image/png");
+    }
+
     const res = await fetch(`/api/portal/${bookingId}/agreement/sign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ renter_signature: signature.trim() }),
+      body: JSON.stringify({
+        renter_signature: signature.trim(),
+        signature_png_b64: signaturePng || undefined,
+      }),
     });
 
     if (res.ok) {
@@ -153,7 +177,8 @@ export default function AgreementSignPage() {
           <CardTitle>Sign Agreement</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSign} className="space-y-4">
+          <form onSubmit={handleSign} className="space-y-6">
+            {/* Typed name */}
             <div className="space-y-2">
               <Label htmlFor="signature">
                 Type your full name as your signature
@@ -169,7 +194,7 @@ export default function AgreementSignPage() {
               {signature && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 mt-2">
                   <p className="text-xs text-muted-foreground mb-1">
-                    Signature Preview
+                    Typed Signature Preview
                   </p>
                   <p
                     className="text-2xl text-slate-700 italic"
@@ -179,6 +204,43 @@ export default function AgreementSignPage() {
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Canvas signature pad */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Draw Your Signature (Optional)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearCanvas}
+                  className="text-slate-500 hover:text-slate-700 gap-1"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              </div>
+              <div className="relative rounded-xl border-2 border-dashed border-slate-300 bg-white overflow-hidden touch-none">
+                {canvasEmpty && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                    <p className="text-slate-400 text-sm">Sign here ✍️</p>
+                  </div>
+                )}
+                <SignatureCanvas
+                  ref={sigPadRef}
+                  penColor="#1e293b"
+                  canvasProps={{
+                    className: "w-full",
+                    style: { height: 160, touchAction: "none" },
+                  }}
+                  onEnd={handleCanvasEnd}
+                  backgroundColor="rgb(255,255,255)"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Use your finger or stylus to draw your signature above.
+              </p>
             </div>
 
             <div className="flex items-start gap-3">

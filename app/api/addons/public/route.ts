@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("addons")
-    .select("id, name, description, pricing_type, price, category, required, sort_order")
+    .select("id, name, description, pricing_type, price, category, required, sort_order, image_url, highlight_text")
     .eq("operator_id", operator_id)
     .eq("active", true)
     .order("sort_order", { ascending: true })

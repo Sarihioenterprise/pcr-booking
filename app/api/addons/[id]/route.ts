@@ -22,6 +22,8 @@ export async function PATCH(
       required,
       active,
       sort_order,
+      image_url,
+      highlight_text,
     } = body;
 
     // Build update object with only provided fields
@@ -35,6 +37,8 @@ export async function PATCH(
     if (required !== undefined) updates.required = Boolean(required);
     if (active !== undefined) updates.active = Boolean(active);
     if (sort_order !== undefined) updates.sort_order = sort_order;
+    if (image_url !== undefined) updates.image_url = image_url || null;
+    if (highlight_text !== undefined) updates.highlight_text = highlight_text || null;
 
     const { data, error } = await supabase
       .from("addons")

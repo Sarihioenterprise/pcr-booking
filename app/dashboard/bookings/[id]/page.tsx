@@ -6,6 +6,7 @@ import Link from "next/link";
 import { SMSButton } from "@/components/dashboard/sms-button";
 import { AddonsBreakdown } from "@/components/dashboard/addons-breakdown";
 import { DepositCard } from "@/components/dashboard/deposit-card";
+import { RequestPaymentModal } from "@/components/dashboard/request-payment-modal";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -483,6 +484,12 @@ export default function BookingDetailPage({
   const [cancelDialog, setCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [paymentDialog, setPaymentDialog] = useState(false);
+
+  // No-show dialog state
+  const [noShowDialog, setNoShowDialog] = useState(false);
+  const [noShowReason, setNoShowReason] = useState("");
+  const [noShowSendSms, setNoShowSendSms] = useState(false);
+  const [noShowLoading, setNoShowLoading] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentNote, setPaymentNote] = useState("");
@@ -927,6 +934,12 @@ export default function BookingDetailPage({
               >
                 {STATUS_LABELS[booking.status]}
               </Badge>
+              {(booking as typeof booking & { is_no_show?: boolean }).is_no_show && (
+                <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200 font-semibold text-xs uppercase tracking-wide">
+                  <Ban className="h-3 w-3 mr-1" />
+                  No Show
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-slate-500 mt-0.5">
               Booking #{id.slice(0, 8)} &middot; Created{" "}
@@ -1722,6 +1735,97 @@ export default function BookingDetailPage({
 
               {/* Inspections Tab */}
               <TabsContent value="inspections" className="space-y-4">
+                {/* 4-Zone Photo Inspections */}
+                <Card className="border-0 bg-white shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-[#2EBD6B]" />
+                      4-Zone Photo Inspections
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Pickup Inspection */}
+                      <Link href={`/dashboard/bookings/${id}/pickup-inspection`}>
+                        <div className={`rounded-xl border-2 p-4 flex items-center gap-3 transition-all hover:shadow-md cursor-pointer ${
+                          (booking as unknown as Record<string, boolean>).pickup_inspected
+                            ? "border-emerald-200 bg-emerald-50"
+                            : "border-dashed border-slate-200 bg-slate-50 hover:border-[#2EBD6B] hover:bg-[#2EBD6B]/5"
+                        }`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            (booking as unknown as Record<string, boolean>).pickup_inspected
+                              ? "bg-emerald-100"
+                              : "bg-slate-100"
+                          }`}>
+                            {(booking as unknown as Record<string, boolean>).pickup_inspected ? (
+                              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            ) : (
+                              <Camera className="h-5 w-5 text-slate-500" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`text-sm font-semibold ${
+                              (booking as unknown as Record<string, boolean>).pickup_inspected
+                                ? "text-emerald-800"
+                                : "text-slate-800"
+                            }`}>
+                              📷 Pickup Inspection
+                            </p>
+                            <p className={`text-xs ${
+                              (booking as unknown as Record<string, boolean>).pickup_inspected
+                                ? "text-emerald-600"
+                                : "text-slate-400"
+                            }`}>
+                              {(booking as unknown as Record<string, boolean>).pickup_inspected
+                                ? "✓ Completed"
+                                : "Tap to capture 4 zones"}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* Return Inspection */}
+                      <Link href={`/dashboard/bookings/${id}/return-inspection`}>
+                        <div className={`rounded-xl border-2 p-4 flex items-center gap-3 transition-all hover:shadow-md cursor-pointer ${
+                          (booking as unknown as Record<string, boolean>).return_inspected
+                            ? "border-emerald-200 bg-emerald-50"
+                            : "border-dashed border-slate-200 bg-slate-50 hover:border-[#2EBD6B] hover:bg-[#2EBD6B]/5"
+                        }`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            (booking as unknown as Record<string, boolean>).return_inspected
+                              ? "bg-emerald-100"
+                              : "bg-slate-100"
+                          }`}>
+                            {(booking as unknown as Record<string, boolean>).return_inspected ? (
+                              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            ) : (
+                              <Camera className="h-5 w-5 text-slate-500" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`text-sm font-semibold ${
+                              (booking as unknown as Record<string, boolean>).return_inspected
+                                ? "text-emerald-800"
+                                : "text-slate-800"
+                            }`}>
+                              📷 Return Inspection
+                            </p>
+                            <p className={`text-xs ${
+                              (booking as unknown as Record<string, boolean>).return_inspected
+                                ? "text-emerald-600"
+                                : "text-slate-400"
+                            }`}>
+                              {(booking as unknown as Record<string, boolean>).return_inspected
+                                ? "✓ Completed"
+                                : "Tap to capture 4 zones"}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <BookingInspectionsPanel
                   bookingId={id as string}
                   vehicleId={booking?.vehicle_id || ""}
@@ -1761,6 +1865,26 @@ export default function BookingDetailPage({
                   </Button>
                 )}
 
+                {/* Photo Inspection Shortcuts */}
+                <Link href={`/dashboard/bookings/${id}/pickup-inspection`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Camera className="h-4 w-4 mr-2 text-slate-500" />
+                    📷 Pickup Inspection
+                    {(booking as unknown as Record<string, boolean>).pickup_inspected && (
+                      <span className="ml-auto text-emerald-600 text-xs font-medium">✓</span>
+                    )}
+                  </Button>
+                </Link>
+                <Link href={`/dashboard/bookings/${id}/return-inspection`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Camera className="h-4 w-4 mr-2 text-slate-500" />
+                    📷 Return Inspection
+                    {(booking as unknown as Record<string, boolean>).return_inspected && (
+                      <span className="ml-auto text-emerald-600 text-xs font-medium">✓</span>
+                    )}
+                  </Button>
+                </Link>
+
                 <Button
                   variant="outline"
                   className="w-full justify-start"
@@ -1795,6 +1919,22 @@ export default function BookingDetailPage({
 
                 <Separator className="my-2" />
 
+                {/* Mark as No Show — only when booking is not yet cancelled/completed AND start_date <= today */}
+                {!isCancelled &&
+                  booking.status !== "completed" &&
+                  booking.status !== "active" &&
+                  !(booking as typeof booking & { is_no_show?: boolean }).is_no_show &&
+                  booking.start_date <= new Date().toISOString().slice(0, 10) && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => setNoShowDialog(true)}
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Mark as No Show
+                  </Button>
+                )}
+
                 {!isCancelled && booking.status !== "completed" && (
                   <Button
                     variant="outline"
@@ -1822,6 +1962,30 @@ export default function BookingDetailPage({
                   }
                 }}
               />
+            )}
+
+            {/* Request Payment Card */}
+            {booking && operator && (
+              <Card className="border-0 bg-white shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <span className="h-4 w-4 text-[#2EBD6B]">💳</span>
+                    Request Payment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Generate a secure payment link to send to your customer via text or email.
+                  </p>
+                  <RequestPaymentModal
+                    bookingId={booking.id}
+                    operatorId={operator.id}
+                    defaultAmountDollars={booking.total_price}
+                    renterEmail={booking.renter_email}
+                    renterName={booking.renter_name}
+                  />
+                </CardContent>
+              </Card>
             )}
 
             {/* Booking Snapshot */}
@@ -1964,6 +2128,102 @@ export default function BookingDetailPage({
             >
               <Ban className="h-4 w-4 mr-1" />
               Cancel Booking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── No Show Dialog ─────────────────────────────────────────── */}
+      <Dialog open={noShowDialog} onOpenChange={setNoShowDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <Ban className="h-5 w-5" />
+              Mark as No Show
+            </DialogTitle>
+            <DialogDescription>
+              The renter did not show up for their scheduled pickup. This will cancel the booking and flag it as a no-show.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* SMS reminder toggle */}
+            {booking.renter_phone && (
+              <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <input
+                  type="checkbox"
+                  id="no-show-sms"
+                  checked={noShowSendSms}
+                  onChange={(e) => setNoShowSendSms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                />
+                <label htmlFor="no-show-sms" className="text-sm cursor-pointer">
+                  <span className="font-medium">Send SMS reminder to {booking.renter_phone} first</span>
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    &ldquo;Your rental is scheduled for today. Please contact us if you still need the vehicle.&rdquo;
+                  </span>
+                </label>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="no-show-reason">Reason (optional)</Label>
+              <Textarea
+                id="no-show-reason"
+                value={noShowReason}
+                onChange={(e) => setNoShowReason(e.target.value)}
+                placeholder="e.g. Customer did not arrive, no communication"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setNoShowDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={noShowLoading}
+              onClick={async () => {
+                setNoShowLoading(true);
+                try {
+                  const res = await fetch(`/api/bookings/${booking.id}/no-show`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      reason: noShowReason.trim() || undefined,
+                      send_sms_first: noShowSendSms,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) {
+                    showToast(data.error || "Failed to mark as no-show");
+                  } else {
+                    setNoShowDialog(false);
+                    setNoShowReason("");
+                    setNoShowSendSms(false);
+                    // Refresh booking data
+                    const refreshed = await fetch(`/api/bookings/${id}`);
+                    if (refreshed.ok) {
+                      const updated = await refreshed.json();
+                      setBooking(updated);
+                    } else {
+                      // Optimistic update
+                      setBooking((prev) => prev ? { ...prev, status: "cancelled" as BookingStatus } : prev);
+                    }
+                    showToast(data.sms_sent ? "Booking marked as no-show. SMS sent." : "Booking marked as no-show");
+                  }
+                } catch {
+                  showToast("Network error — please try again");
+                } finally {
+                  setNoShowLoading(false);
+                }
+              }}
+            >
+              {noShowLoading ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Ban className="h-4 w-4 mr-1" />
+              )}
+              Mark as No Show
             </Button>
           </DialogFooter>
         </DialogContent>

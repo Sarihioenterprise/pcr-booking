@@ -1,9 +1,14 @@
-import { NewBookingForm } from "./new-booking-form";
+import { getOperator } from "@/lib/get-operator";
+import { BookingWizard } from "@/app/components/booking-wizard/BookingWizard";
 
 /**
- * New Booking page — server wrapper around the interactive client form.
- * The client component fetches vehicles via /api/vehicles on mount.
+ * New Booking — 9-step guided wizard.
+ *
+ * Server component: fetches operator from session, passes operatorId
+ * to the client-side wizard so it can make operator-scoped API calls.
  */
-export default function NewBookingPage() {
-  return <NewBookingForm />;
+export default async function NewBookingPage() {
+  const operator = await getOperator();
+
+  return <BookingWizard operatorId={operator.id} />;
 }

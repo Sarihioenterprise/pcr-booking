@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { generateEventId } from "@/lib/meta-capi";
 
 const PRICE_IDS: Record<string, string> = {
   growth: process.env.STRIPE_PRICE_GROWTH!,
@@ -43,6 +44,12 @@ export async function POST(req: NextRequest) {
     const stripeKey = process.env.STRIPE_SECRET_KEY!;
     const planValue = PLAN_VALUES[planKey] ?? 79;
 
+    // Generate a unique event_id for Meta CAPI deduplication.
+    // This ID is shared between the browser pixel Purchase event (fired on /thank-you)
+    // and the server-side CAPI Purchase event (fired from the Stripe webhook on
+    // customer.subscription.created). Meta deduplicates both into one conversion.
+    const capiEventId = generateEventId("trial");
+
     // Use native fetch instead of Stripe SDK to avoid connection issues in Vercel serverless
     const body = new URLSearchParams({
       mode: "subscription",
@@ -51,10 +58,16 @@ export async function POST(req: NextRequest) {
       "line_items[0][price]": PRICE_IDS[planKey],
       "line_items[0][quantity]": "1",
       "subscription_data[trial_period_days]": "14",
-      success_url: `${appUrl}/auth/signup?session_id={CHECKOUT_SESSION_ID}&plan=${plan}&billing=${billingPeriod}&value=${planValue}`,
+      // Pass capi_event_id in subscription metadata so the webhook can retrieve it
+      // for server-side CAPI deduplication.
+      "subscription_data[metadata][capi_event_id]": capiEventId,
+      "subscription_data[metadata][plan]": plan,
+      "subscription_data[metadata][billing]": billingPeriod,
+      success_url: `${appUrl}/auth/signup?session_id={CHECKOUT_SESSION_ID}&plan=${plan}&billing=${billingPeriod}&value=${planValue}&eid=${capiEventId}`,
       cancel_url: `${appUrl}/pricing`,
       "metadata[plan]": plan,
       "metadata[billing]": billingPeriod,
+      "metadata[capi_event_id]": capiEventId,
     });
 
     const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {

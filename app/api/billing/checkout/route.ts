@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { generateEventId } from "@/lib/meta-capi";
 
 const PRICE_IDS: Record<string, string> = {
   growth: process.env.STRIPE_PRICE_GROWTH!,
@@ -52,7 +53,13 @@ export async function POST(req: NextRequest) {
     const stripeKey = process.env.STRIPE_SECRET_KEY!;
 
     const planValue = PLAN_VALUES[planKey] ?? 79;
-    const thankYouUrl = `${appUrl}/thank-you?plan=${plan}&billing=${billingPeriod}&value=${planValue}`;
+
+    // Generate CAPI event_id for deduplication: shared between the browser pixel
+    // Purchase event (fired on /thank-you) and server-side CAPI event (fired from
+    // Stripe webhook on subscription.created). Meta deduplicates into one conversion.
+    const capiEventId = generateEventId("trial");
+
+    const thankYouUrl = `${appUrl}/thank-you?plan=${plan}&billing=${billingPeriod}&value=${planValue}&eid=${capiEventId}`;
 
     // Use native fetch instead of Stripe SDK to avoid connection issues in Vercel serverless
     const bodyParams: Record<string, string> = {
@@ -62,11 +69,15 @@ export async function POST(req: NextRequest) {
       "line_items[0][price]": PRICE_IDS[planKey],
       "line_items[0][quantity]": "1",
       "subscription_data[trial_period_days]": "14",
+      "subscription_data[metadata][capi_event_id]": capiEventId,
+      "subscription_data[metadata][plan]": plan,
+      "subscription_data[metadata][billing]": billingPeriod,
       success_url: thankYouUrl,
       cancel_url: `${appUrl}/onboarding/plan`,
       "metadata[user_id]": user.id,
       "metadata[plan]": plan,
       "metadata[billing]": billingPeriod,
+      "metadata[capi_event_id]": capiEventId,
     };
 
     // Attach Rewardful referral for affiliate tracking

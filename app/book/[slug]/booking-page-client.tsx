@@ -552,7 +552,7 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
                     value={form.start_date}
                     min={today()}
                     onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                    className={dateConflict ? "border-red-400" : ""}
+                    className={`h-10 bg-white text-gray-900 border border-gray-300 ${dateConflict ? "border-red-400" : ""}`}
                   />
                 </div>
                 <div className="space-y-1">
@@ -562,7 +562,7 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
                     value={form.end_date}
                     min={form.start_date || today()}
                     onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                    className={dateConflict ? "border-red-400" : ""}
+                    className={`h-10 bg-white text-gray-900 border border-gray-300 ${dateConflict ? "border-red-400" : ""}`}
                   />
                 </div>
               </div>

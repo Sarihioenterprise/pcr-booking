@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { SMSButton } from "@/components/dashboard/sms-button";
+import { SavedCards } from "@/components/renters/SavedCards";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -332,6 +333,7 @@ export default function RenterDetailPage() {
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="history">Rental History</TabsTrigger>
+          <TabsTrigger value="payments">Payment Methods</TabsTrigger>
           <TabsTrigger value="communications">Communication Log</TabsTrigger>
           <TabsTrigger value="sms-log">SMS Log</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -455,6 +457,11 @@ export default function RenterDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* PAYMENT METHODS TAB */}
+        <TabsContent value="payments">
+          <SavedCards renterId={renter.id} />
         </TabsContent>
 
         {/* RENTAL HISTORY TAB */}

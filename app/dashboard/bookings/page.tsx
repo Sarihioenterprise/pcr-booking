@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarDays, ShieldCheck } from "lucide-react";
+import { Plus, CalendarDays, ShieldCheck, Ban } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   inquiry: "bg-purple-500/10 text-purple-500 border-purple-500/20",
@@ -15,20 +15,42 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
-export default async function BookingsPage() {
+const FILTER_TABS = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "confirmed", label: "Confirmed" },
+  { key: "active", label: "Active" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "no_show", label: "No Show" },
+] as const;
+
+type FilterKey = (typeof FILTER_TABS)[number]["key"];
+
+export default async function BookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   const operator = await getOperator();
   const supabase = createAdminClient();
+  const { filter: rawFilter } = await searchParams;
+  const activeFilter: FilterKey = (FILTER_TABS.find((t) => t.key === rawFilter)?.key ?? "all") as FilterKey;
 
-  // Use !left to prevent PostgREST inner-join from silently dropping bookings
-  // whose vehicle_id is NULL. Omit renters(...) embed entirely — there is no FK
-  // from bookings.renter_id to renters.id so PostgREST returns null for the whole
-  // query when that embed is present. drivers_license_url is already a column on
-  // the bookings table (migration 002) so we don't need the renter join.
-  const { data: bookings, error: bookingsError } = await supabase
+  // Build query depending on active filter
+  let query = supabase
     .from("bookings")
-    .select("*, vehicles!left(make, model, year)")
+    .select("*, vehicles!left(make, model, year), is_no_show")
     .eq("operator_id", operator.id)
     .order("created_at", { ascending: false });
+
+  if (activeFilter === "no_show") {
+    query = query.eq("is_no_show", true);
+  } else if (activeFilter !== "all") {
+    query = query.eq("status", activeFilter);
+  }
+
+  const { data: bookings, error: bookingsError } = await query;
 
   if (bookingsError) {
     console.error("Bookings query error:", bookingsError);
@@ -40,7 +62,7 @@ export default async function BookingsPage() {
         <div>
           <h1 className="text-2xl font-bold">Bookings</h1>
           <p className="text-muted-foreground">
-            {bookings?.length ?? 0} total bookings
+            {bookings?.length ?? 0} {activeFilter === "no_show" ? "no-show" : activeFilter === "all" ? "total" : activeFilter} bookings
           </p>
         </div>
         <Link href="/dashboard/bookings/new">
@@ -51,25 +73,56 @@ export default async function BookingsPage() {
         </Link>
       </div>
 
+      {/* Filter tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {FILTER_TABS.map((tab) => (
+          <Link
+            key={tab.key}
+            href={tab.key === "all" ? "/dashboard/bookings" : `/dashboard/bookings?filter=${tab.key}`}
+          >
+            <button
+              className={[
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                activeFilter === tab.key
+                  ? tab.key === "no_show"
+                    ? "bg-red-600 text-white"
+                    : "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+              ].join(" ")}
+            >
+              {tab.label}
+            </button>
+          </Link>
+        ))}
+      </div>
+
       {!bookings || bookings.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CalendarDays className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="font-semibold mb-1">No bookings yet</h3>
+            <h3 className="font-semibold mb-1">
+              {activeFilter === "no_show" ? "No no-show bookings" : "No bookings found"}
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Create your first booking or share your booking page
+              {activeFilter === "all"
+                ? "Create your first booking or share your booking page"
+                : activeFilter === "no_show"
+                ? "No bookings have been marked as no-show"
+                : `No ${activeFilter} bookings`}
             </p>
-            <Link href="/dashboard/bookings/new">
-              <Button>Create Booking</Button>
-            </Link>
+            {activeFilter === "all" && (
+              <Link href="/dashboard/bookings/new">
+                <Button>Create Booking</Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {bookings.map((booking) => {
             // License on file: check booking-level drivers_license_url
-            // (renter join removed — no FK; booking col added in migration 002)
             const licenseOnFile = !!booking.drivers_license_url;
+            const isNoShow = !!(booking as typeof booking & { is_no_show?: boolean }).is_no_show;
 
             return (
               <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
@@ -86,6 +139,15 @@ export default async function BookingsPage() {
                             >
                               <ShieldCheck className="h-3 w-3 mr-1" />
                               License on file
+                            </Badge>
+                          )}
+                          {isNoShow && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0"
+                            >
+                              <Ban className="h-3 w-3 mr-1" />
+                              No Show
                             </Badge>
                           )}
                         </div>

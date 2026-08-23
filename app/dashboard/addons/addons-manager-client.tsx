@@ -51,6 +51,8 @@ const emptyForm = {
   category: "extra" as "insurance" | "extra",
   required: false,
   sort_order: 0,
+  image_url: "",
+  highlight_text: "",
 };
 
 function AddonCard({
@@ -228,6 +230,8 @@ export function AddonsManagerClient() {
       category: addon.category,
       required: addon.required,
       sort_order: addon.sort_order,
+      image_url: (addon as Addon & { image_url?: string }).image_url ?? "",
+      highlight_text: (addon as Addon & { highlight_text?: string }).highlight_text ?? "",
     });
     setError("");
     setDialogOpen(true);
@@ -256,6 +260,8 @@ export function AddonsManagerClient() {
         category: form.category,
         required: form.required,
         sort_order: form.sort_order,
+        image_url: form.image_url.trim() || null,
+        highlight_text: form.highlight_text.trim() || null,
       };
 
       let res: Response;
@@ -573,6 +579,29 @@ export function AddonsManagerClient() {
                   placeholder="0"
                 />
               </div>
+            </div>
+
+            {/* Image URL */}
+            <div className="space-y-1.5">
+              <Label htmlFor="ao-image">Image URL (optional)</Label>
+              <Input
+                id="ao-image"
+                value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                placeholder="https://example.com/cdw-image.jpg"
+              />
+            </div>
+
+            {/* Badge / highlight text */}
+            <div className="space-y-1.5">
+              <Label htmlFor="ao-badge">Badge text (optional)</Label>
+              <Input
+                id="ao-badge"
+                value={form.highlight_text}
+                onChange={(e) => setForm({ ...form, highlight_text: e.target.value })}
+                placeholder="Most Popular"
+              />
+              <p className="text-xs text-gray-400">Shown as a colored badge on the card (e.g. "Recommended", "Most Popular")</p>
             </div>
 
             {/* Required toggle */}
