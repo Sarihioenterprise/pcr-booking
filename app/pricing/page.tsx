@@ -30,6 +30,7 @@ interface PricingTier {
   description: string;
   features: string[];
   highlighted: boolean;
+  badge?: string;
 }
 
 const pricingTiers: PricingTier[] = [
@@ -54,7 +55,6 @@ const pricingTiers: PricingTier[] = [
       "Up to 40 vehicles",
       "Everything in Growth",
       "Multi-location support",
-      "AI qualification bot",
       "Priority support",
       "Advanced analytics",
     ],
@@ -77,16 +77,17 @@ const pricingTiers: PricingTier[] = [
   {
     id: "fleet",
     name: "Fleet",
-    description: "Unlimited growth, white-glove service",
+    description: "For large fleet operators — 50+ vehicles",
     features: [
       "Unlimited vehicles",
       "Everything in Scale",
-      "White-glove migration included",
-      "Dedicated account manager",
+      "Priority support",
+      "Dedicated onboarding",
       "Custom integrations",
-      "Priority onboarding",
+      "White-label branding",
     ],
     highlighted: false,
+    badge: "50+ Vehicles",
   },
 ];
 
@@ -305,11 +306,18 @@ export default function PricingPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl text-[#080812]">{tier.name}</CardTitle>
-                    {annualNote && (
-                      <Badge className="bg-[#2EBD6B]/10 text-[#2EBD6B] border border-[#2EBD6B]/20">
-                        {annualNote}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {tier.badge && (
+                        <Badge className="bg-[#080812]/10 text-[#080812] border border-[#080812]/20 text-[10px] font-semibold">
+                          {tier.badge}
+                        </Badge>
+                      )}
+                      {annualNote && (
+                        <Badge className="bg-[#2EBD6B]/10 text-[#2EBD6B] border border-[#2EBD6B]/20">
+                          {annualNote}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <CardDescription className="text-[#6B7280]">{tier.description}</CardDescription>
                 </CardHeader>

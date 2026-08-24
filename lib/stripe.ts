@@ -17,9 +17,11 @@ export const PRICE_IDS = {
   growth: process.env.STRIPE_PRICE_GROWTH || "",
   pro: process.env.STRIPE_PRICE_PRO || "",
   scale: process.env.STRIPE_PRICE_SCALE || "",
+  fleet: process.env.STRIPE_PRICE_FLEET || "",
   growth_annual: process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID || "price_annual_growth_placeholder",
   pro_annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || "price_annual_pro_placeholder",
   scale_annual: process.env.STRIPE_SCALE_ANNUAL_PRICE_ID || "price_annual_scale_placeholder",
+  fleet_annual: process.env.STRIPE_FLEET_ANNUAL_PRICE_ID || "price_annual_fleet_placeholder",
 };
 
 export const PLANS = {
@@ -50,13 +52,26 @@ export const PLANS = {
   scale: {
     name: "Scale",
     price: 249,
-    vehicles: Infinity,
+    vehicles: 100,
     features: [
-      "Unlimited vehicles",
+      "Up to 100 vehicles",
       "White-label solution",
       "Custom booking page branding",
       "API access",
       "Priority support",
+    ],
+  },
+  fleet: {
+    name: "Fleet",
+    price: 499,
+    vehicles: Infinity,
+    features: [
+      "Unlimited vehicles",
+      "Everything in Scale",
+      "White-glove migration included",
+      "Dedicated account manager",
+      "Custom integrations",
+      "Priority onboarding",
     ],
   },
 } as const;

@@ -12,6 +12,9 @@ export interface Operator {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   stripe_account_id: string | null;
+  stripe_connect_status: string | null;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
   referral_code: string | null;
   widget_enabled: boolean;
   brand_color: string;
