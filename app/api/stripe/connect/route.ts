@@ -50,7 +50,7 @@ export async function GET() {
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${APP_URL}/api/stripe/connect`,
-      return_url: `${APP_URL}/dashboard/settings?stripe=connected`,
+      return_url: `${APP_URL}/api/stripe/connect/verify`,
       type: "account_onboarding",
     });
 
