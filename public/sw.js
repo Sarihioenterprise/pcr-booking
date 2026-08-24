@@ -1,4 +1,4 @@
-const CACHE_NAME = "pcr-v1";
+const CACHE_NAME = "pcr-v2";
 const STATIC_ASSETS = [
   "/offline.html",
   "/manifest.json",
@@ -27,6 +27,11 @@ self.addEventListener("activate", (event) => {
 // Fetch — network-first for API, cache-first for static
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+
+  // Skip navigation requests — let browser handle page loads directly
+  // This prevents caching redirect responses which break auth flows in Safari
+  if (request.mode === 'navigate') return;
+
   const url = new URL(request.url);
 
   // Skip non-GET requests

@@ -215,6 +215,23 @@ export default function PlanPage() {
         ))}
       </div>
 
+      {/* Free Plan Option */}
+      <div className="mt-10 w-full max-w-2xl">
+        <div className="rounded-xl border border-gray-200 bg-white px-8 py-6 shadow-sm text-center">
+          <h2 className="text-lg font-bold text-[#080812] mb-1">Not ready to commit?</h2>
+          <p className="text-sm text-gray-500 mb-4">Start on the free plan — no subscription required.</p>
+          <a
+            href="/api/billing/checkout-free"
+            className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors"
+          >
+            Start Free &mdash; Add Payment Method &rarr;
+          </a>
+          <p className="mt-3 text-xs text-gray-400">
+            We collect a card to activate your account. Free plan users are never charged unless they upgrade.
+          </p>
+        </div>
+      </div>
+
       {error && (
         <p className="mt-6 text-sm text-red-500">{error}</p>
       )}

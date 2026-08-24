@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import {
   Car, CheckCircle2, Calendar, Phone, Mail, User, Upload,
   AlertCircle, Shield, FileText, X, Loader2, Package, Lock,
@@ -389,6 +390,14 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
           <div>
             <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
             <p className="text-sm text-gray-500">Available Vehicles</p>
+          </div>
+          <div className="ml-auto">
+            <Link
+              href="/renter-portal/login"
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Already a renter? Access your account →
+            </Link>
           </div>
         </div>
       </header>
