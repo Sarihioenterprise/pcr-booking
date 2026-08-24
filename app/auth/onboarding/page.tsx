@@ -129,6 +129,36 @@ function OnboardingPageInner() {
       }).catch((err) => console.error("[onboarding] GHL sync failed:", err));
     }
 
+    // Send welcome email asynchronously (fire and forget — never block onboarding)
+    const welcomeRecipient = notificationEmail;
+    if (welcomeRecipient) {
+      const dashboardUrl = `${window.location.origin}/dashboard`;
+      const welcomeBody = `
+<p>Hey ${ownerName || "there"},</p>
+<p>Welcome to PCR Booking — you're officially set up and ready to go. 🎉</p>
+<p>Here's what to do first:</p>
+<ol style="padding-left:20px;">
+  <li style="margin-bottom:8px;"><strong>Add your first vehicle</strong> — head to Fleet in your dashboard and click "Add Vehicle". Add your rates, photos, and availability.</li>
+  <li style="margin-bottom:8px;"><strong>Share your booking page</strong> — your public booking page is live at <a href="https://pcrbooking.com/book/${bookingSlug}" style="color:#2EBD6B;">pcrbooking.com/book/${bookingSlug}</a>. Share it with renters or embed it on your site.</li>
+  <li style="margin-bottom:8px;"><strong>Create your first booking</strong> — once your fleet is set up, bookings flow in automatically. You can also create manual bookings from the dashboard.</li>
+</ol>
+<p>Your 14-day free trial is active — explore everything with zero pressure.</p>
+<p><a href="${dashboardUrl}" style="display:inline-block;background:#2EBD6B;color:#fff;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin:8px 0;">Go to My Dashboard →</a></p>
+<p style="color:#6b7280;font-size:14px;">Questions? Reply to this email or reach us at <a href="mailto:support@pcrbooking.com" style="color:#2EBD6B;">support@pcrbooking.com</a>.</p>
+<p>— The PCR Booking Team</p>
+      `;
+      fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: welcomeRecipient,
+          subject: "Welcome to PCR Booking — you're all set",
+          body: welcomeBody.trim(),
+          templateType: "welcome",
+        }),
+      }).catch((err) => console.error("[onboarding] Welcome email failed:", err));
+    }
+
     // Check if there's a Stripe session to link — URL param takes priority over sessionStorage
     const stripeSessionId = urlSessionId || sessionStorage.getItem("stripe_session_id");
 
