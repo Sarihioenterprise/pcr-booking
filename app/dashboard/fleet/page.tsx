@@ -4,9 +4,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Car, Gauge, Fuel, BarChart3 } from "lucide-react";
+import { Plus, Car, Gauge, Fuel, BarChart3, AlertTriangle } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
+import { getVehicleLimit, getUpgradePlan, planDisplayName, PLAN_MONTHLY_PRICES } from "@/lib/plan-tier";
 import type { Vehicle } from "@/lib/types";
 
 const statusStyles: Record<string, string> = {
@@ -27,6 +28,15 @@ export default async function FleetPage() {
 
   const typedVehicles = (vehicles ?? []) as Vehicle[];
 
+  // Vehicle limit gating
+  const vehicleLimit = getVehicleLimit(operator.plan);
+  const vehicleCount = typedVehicles.length;
+  const atLimit = isFinite(vehicleLimit) && vehicleCount >= vehicleLimit;
+  const nearLimit = isFinite(vehicleLimit) && vehicleCount >= vehicleLimit * 0.8 && !atLimit;
+  const upgradePlan = getUpgradePlan(operator.plan);
+  const upgradePlanName = planDisplayName(upgradePlan);
+  const upgradePlanPrice = PLAN_MONTHLY_PRICES[upgradePlan];
+
   const activeCount = typedVehicles.filter((v) => v.status === "active").length;
   const maintenanceCount = typedVehicles.filter(
     (v) => v.status === "maintenance"
@@ -37,6 +47,44 @@ export default async function FleetPage() {
 
   return (
     <div className="space-y-6">
+      {/* Vehicle limit banner */}
+      {atLimit && operator.plan !== "fleet" && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-900">
+              You've reached your {vehicleLimit}-vehicle limit on {planDisplayName(operator.plan)}.
+            </p>
+            <p className="mt-0.5 text-sm text-amber-700">
+              Upgrade to {upgradePlanName} (${upgradePlanPrice}/mo) to add more vehicles.
+            </p>
+          </div>
+          <Link href="/pricing">
+            <Button size="sm" className="shrink-0 bg-amber-500 text-white hover:bg-amber-600">
+              Upgrade to {upgradePlanName}
+            </Button>
+          </Link>
+        </div>
+      )}
+      {nearLimit && operator.plan !== "fleet" && (
+        <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-blue-400" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-blue-900">
+              Approaching your vehicle limit — {vehicleCount}/{vehicleLimit} vehicles used.
+            </p>
+            <p className="mt-0.5 text-sm text-blue-700">
+              Upgrade to {upgradePlanName} before you hit the cap.
+            </p>
+          </div>
+          <Link href="/pricing">
+            <Button size="sm" variant="outline" className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100">
+              View Plans
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

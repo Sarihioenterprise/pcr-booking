@@ -582,15 +582,22 @@ export function VehicleDetailTabs({
                   <Wrench className="h-5 w-5" />
                   Maintenance Records
                 </CardTitle>
-                <Link href="/dashboard/maintenance/new">
-                  <Button
-                    size="sm"
-                    className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add Record
-                  </Button>
-                </Link>
+                <div className="flex gap-2">
+                  <Link href={`/dashboard/fleet/${vehicle.id}/maintenance`}>
+                    <Button variant="outline" size="sm">
+                      View All
+                    </Button>
+                  </Link>
+                  <Link href={`/dashboard/fleet/${vehicle.id}/maintenance`}>
+                    <Button
+                      size="sm"
+                      className="bg-[#2EBD6B] text-white hover:bg-[#1a9952]"
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add Record
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
