@@ -176,7 +176,7 @@ export const blogPosts: BlogPost[] = [
 
 <p>PCR Booking is the car rental management app built for operators who are serious about running a real business — not just a side hustle. Whether you have 3 vehicles or 50, you'll get professional-grade tools without the enterprise price tag or the platform commission.</p>
 
-<p><strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a></strong> — no credit card required, same-day setup, and your first 14 days are on us. See why independent operators across the country are switching to PCR Booking to scale their fleet rental businesses.</p>`,
+<p><strong><a href="https://pcrbooking.com">Start your free trial at pcrbooking.com</a></strong> — card required at signup, but you won't be charged until your 14-day trial ends. Same-day setup, and your first 14 days are on us. See why independent operators across the country are switching to PCR Booking to scale their fleet rental businesses.</p>`,
   },
   {
     slug: "best-car-rental-agreement-template-in-2025",
