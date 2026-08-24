@@ -6,6 +6,7 @@ import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { getOperator } from "@/lib/get-operator";
+import { IdleTimer } from "@/components/dashboard/idle-timer";
 
 
 
@@ -42,6 +43,9 @@ export default async function DashboardLayout({
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
+
+      {/* Idle session timeout */}
+      <IdleTimer />
 
       {/* Support Chat intentionally removed from global layout — it only belongs on /dashboard/support */}
     </div>

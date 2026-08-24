@@ -26,6 +26,8 @@ import {
   Package,
   BookUser,
   ReceiptText,
+  Truck,
+  PieChart,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
@@ -46,6 +48,8 @@ const navItems = [
   { href: "/dashboard/quotes", label: "Quotes", icon: ReceiptText },
   { href: "/dashboard/leads", label: "Lead Pipeline", icon: Target },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/deliveries", label: "Deliveries", icon: Truck },
+  { href: "/dashboard/reports", label: "Reports", icon: PieChart },
   { href: "/dashboard/addons", label: "Add-ons", icon: Package },
   { href: "/dashboard/locations", label: "Locations", icon: MapPin },
   { href: "/dashboard/importer", label: "Import Tool", icon: Upload },
