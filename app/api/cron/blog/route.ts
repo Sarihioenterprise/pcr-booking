@@ -470,9 +470,9 @@ const seedKeywords = [
   "rental car software branding",
 ];
 
-// Fetch existing slugs from GitHub (source of truth, not the compiled bundle)
-async function getExistingSlugsFromGitHub(): Promise<string[]> {
-  if (!GITHUB_TOKEN) return [];
+// Fetch existing slugs AND titles from GitHub (source of truth, not the compiled bundle)
+async function getExistingPostsFromGitHub(): Promise<{ slugs: string[]; titles: string[] }> {
+  if (!GITHUB_TOKEN) return { slugs: [], titles: [] };
   const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${BLOG_POSTS_PATH}`;
   const res = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}`, {
     headers: {
@@ -481,13 +481,58 @@ async function getExistingSlugsFromGitHub(): Promise<string[]> {
       Accept: "application/vnd.github+json",
     },
   });
-  if (!res.ok) return [];
+  if (!res.ok) return { slugs: [], titles: [] };
   const json = await res.json();
   const content = Buffer.from(json.content, "base64").toString("utf-8");
-  const matches = content.match(/slug:\s*"([^"]+)"/g) || [];
-  return matches
+  const slugMatches = content.match(/slug:\s*"([^"]+)"/g) || [];
+  const titleMatches = content.match(/title:\s*"([^"]+)"/g) || [];
+  const slugs = slugMatches
     .map((m) => m.replace(/slug:\s*"/, "").replace(/"$/, ""))
-    .filter((s) => s !== "string"); // exclude interface definition
+    .filter((s) => s !== "string");
+  const titles = titleMatches
+    .map((m) => m.replace(/title:\s*"/, "").replace(/"$/, ""))
+    .filter((t) => t !== "string");
+  return { slugs, titles };
+}
+
+/**
+ * Use Firecrawl to research what competitors are writing about the target keyword.
+ * Returns a string of insights (up to ~2500 chars) or empty string if unavailable.
+ */
+async function fetchCompetitorInsights(keyword: string): Promise<string> {
+  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+  if (!firecrawlKey) return "";
+  try {
+    const searchRes = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${firecrawlKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: `${keyword} car rental fleet management`,
+        limit: 5,
+        scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+      }),
+    });
+    if (!searchRes.ok) {
+      console.warn("[blog-cron] Firecrawl search failed:", searchRes.status);
+      return "";
+    }
+    const data = await searchRes.json();
+    const insights =
+      data.data
+        ?.map((r: { markdown?: string }) => r.markdown?.slice(0, 500))
+        .filter(Boolean)
+        .join("\n\n") || "";
+    console.log(
+      `[blog-cron] Firecrawl: ${data.data?.length ?? 0} results for "${keyword}"`
+    );
+    return insights;
+  } catch (err) {
+    console.warn("[blog-cron] Firecrawl error (non-fatal):", err);
+    return "";
+  }
 }
 
 function generateSlug(title: string): string {
@@ -515,7 +560,8 @@ function countWords(html: string): number {
  */
 async function generateBlogPostContent(
   keyword: string,
-  title: string
+  title: string,
+  competitorInsights: string = ""
 ): Promise<string> {
   const openaiKey = process.env.OPENAI_API_KEY;
 
@@ -523,26 +569,37 @@ async function generateBlogPostContent(
     try {
       const client = new OpenAI({ apiKey: openaiKey });
 
+      const insightsSection = competitorInsights
+        ? `\n\nContext from recent competitor content (use to identify gaps and add angles they miss):\n${competitorInsights.slice(0, 2000)}`
+        : "";
+
       const completion = await client.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 1800,
+        max_tokens: 3200,
         messages: [
           {
             role: "system",
             content:
-              "You are an SEO content writer for PCR Booking (pcrbooking.com), " +
-              "a SaaS platform for independent car rental operators. " +
-              "Write practical, helpful blog posts that rank for car rental / fleet management keywords. " +
-              "Tone: professional but approachable. Always include a CTA to try PCR Booking. " +
-              "Output ONLY the HTML body content (no <html>/<head>/<body> tags). " +
-              "Use <h2>, <p>, <ul>/<li>, <ol>/<li> elements. Keep it ~800-1000 words.",
+              "You are an expert SEO content writer for PCR Booking (pcrbooking.com), " +
+              "a SaaS platform for independent car rental operators and Turo hosts. " +
+              "Write comprehensive, practical blog posts that rank for competitive keywords. " +
+              "Tone: professional but approachable. Output ONLY the HTML body content (no <html>/<head>/<body> tags). " +
+              "Use <h2>, <p>, <ul>/<li>, <ol>/<li> elements. Target 1,000–1,400 words minimum.",
           },
           {
             role: "user",
             content:
-              `Write a blog post titled "${title}" targeting the keyword "${keyword}". ` +
-              "Cover: what the problem is for independent car rental operators, what to look for in a solution, " +
-              "how PCR Booking solves it, and a clear call-to-action to sign up at pcrbooking.com.",
+              `Write a comprehensive, SEO-optimized blog post titled "${title}" targeting the keyword "${keyword}".\n\n` +
+              `Requirements:\n` +
+              `- Minimum 1,000 words of practical, specific content (not generic filler)\n` +
+              `- Include the exact keyword in the title (already set) and in the first paragraph\n` +
+              `- 3–4 H2 sections covering different angles: the problem, the solution approach, key features/considerations, and implementation tips\n` +
+              `- Mention the keyword naturally 5–8 times across the post\n` +
+              `- Include a FAQ section (<h2>Frequently Asked Questions</h2>) with 3 relevant Q&A pairs using <h3> for questions and <p> for answers\n` +
+              `- End with a CTA paragraph: "PCR Booking is purpose-built software for independent car rental operators and rideshare fleet owners. Manage bookings, payments, fleet tracking, and customer agreements — all in one place. <a href='https://pcrbooking.com'>Start your free trial at pcrbooking.com</a> — no per-booking fees, cancel anytime."\n` +
+              `- Write for private car rental fleet operators, Turo hosts, and rideshare rental businesses\n` +
+              `- Do NOT mention competing software by name unless discussing category alternatives\n` +
+              `- Practical, specific advice that provides real value${insightsSection}`,
           },
         ],
       });
@@ -679,8 +736,8 @@ export async function GET(request: NextRequest) {
       }));
     }
 
-    // Fetch existing slugs from GitHub (live source of truth)
-    const existingSlugs = await getExistingSlugsFromGitHub();
+    // Fetch existing slugs AND titles from GitHub (live source of truth)
+    const { slugs: existingSlugs, titles: existingTitles } = await getExistingPostsFromGitHub();
 
     // Find first keyword that doesn't have a blog post
     let selectedKeyword = null;
@@ -694,7 +751,16 @@ export async function GET(request: NextRequest) {
           .join(" ")} in 2025`
       );
 
-      if (!existingSlugs.includes(proposedSlug)) {
+      // Keyword-based slug fragment check (catches variants even if title format changed)
+      const kwSlugFragment = opp.keyword.toLowerCase().replace(/\s+/g, "-");
+      const kwLower = opp.keyword.toLowerCase();
+
+      const alreadyCovered =
+        existingSlugs.includes(proposedSlug) ||
+        existingSlugs.some((s) => s.includes(kwSlugFragment)) ||
+        existingTitles.some((t) => t.toLowerCase().includes(kwLower));
+
+      if (!alreadyCovered) {
         selectedKeyword = opp.keyword;
         selectedOpportunity = opp;
         break;
@@ -716,8 +782,11 @@ export async function GET(request: NextRequest) {
 
     const slug = generateSlug(title);
 
-    // Generate content using OpenAI (async)
-    const content = await generateBlogPostContent(selectedKeyword, title);
+    // Research competitor content via Firecrawl before generating
+    const competitorInsights = await fetchCompetitorInsights(selectedKeyword);
+
+    // Generate content using OpenAI with competitor insights
+    const content = await generateBlogPostContent(selectedKeyword, title, competitorInsights);
     const wordCount = countWords(content);
     const readTime = calculateReadTime(wordCount);
 

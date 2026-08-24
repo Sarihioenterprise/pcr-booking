@@ -9,6 +9,14 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/blog-2",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/blog-3",
+      "schedule": "0 18 * * *"
+    },
+    {
       "path": "/api/cron/competitor-research",
       "schedule": "0 9 * * 1"
     },
