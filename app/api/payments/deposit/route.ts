@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
+import { PLATFORM_FEE_RATE } from "@/lib/constants";
 
 // ── GET: public booking info for deposit page ────────────────────────────────
 
@@ -180,8 +181,11 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
 
+    const depositAmountCents = Math.round(Number(depositAmount) * 100);
+    const platformFee = Math.round(depositAmountCents * PLATFORM_FEE_RATE);
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(Number(depositAmount) * 100),
+      amount: depositAmountCents,
       currency: "usd",
       capture_method: "manual",
       metadata: {
@@ -191,6 +195,7 @@ export async function POST(request: NextRequest) {
       },
       ...(operator?.stripe_account_id
         ? {
+            application_fee_amount: platformFee,
             transfer_data: {
               destination: operator.stripe_account_id,
             },

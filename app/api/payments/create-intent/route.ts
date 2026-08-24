@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
+import { PLATFORM_FEE_RATE } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,9 +83,13 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
 
+    const amountCents = Math.round(amount * 100);
+    const platformFee = Math.round(amountCents * PLATFORM_FEE_RATE);
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
+      amount: amountCents,
       currency: "usd",
+      application_fee_amount: platformFee,
       metadata: {
         booking_id: booking.id,
         operator_id: booking.operator_id,

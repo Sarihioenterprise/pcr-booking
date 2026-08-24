@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import { getStripe } from "@/lib/stripe";
+import { PLATFORM_FEE_RATE } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   let operator;
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
 
     // Create Stripe PaymentIntent on operator's connected account
     const stripe = getStripe();
+    const platformFee = Math.round(amount_cents * PLATFORM_FEE_RATE);
+
     let intent;
     try {
       intent = await stripe.paymentIntents.create(
@@ -70,6 +73,7 @@ export async function POST(request: NextRequest) {
           amount: amount_cents,
           currency: "usd",
           capture_method: "automatic",
+          application_fee_amount: platformFee,
           metadata: {
             booking_id: booking_id,
             operator_id: operator.id,
