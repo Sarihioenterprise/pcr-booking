@@ -113,10 +113,10 @@ export function LeadSourcesWidget({
         {pcrLeadsCount === 0 ? (
           <div className="rounded-lg bg-[#0a1f14] border border-[#2EBD6B]/30 p-3">
             <p className="text-xs text-gray-300 leading-relaxed">
-              <span className="font-semibold text-white">PCR Leads</span> fills the top of the
-              funnel with managed Facebook ads — new renters sent straight to your booking page.
-              Clients typically see{" "}
-              <span className="text-[#2EBD6B] font-semibold">20–50+ leads/month</span>.
+              <span className="font-semibold text-white">PCR Leads</span> fills your fleet with
+              qualified renters. Clients usually get{" "}
+              <span className="text-[#2EBD6B] font-semibold">6–10 new bookings/month</span>,
+              adding <span className="text-[#2EBD6B] font-semibold">$9,600–$16,000 in monthly revenue</span>.
             </p>
             <a
               href="https://join.pcrleads.com?ref=pcrbooking"
@@ -124,7 +124,7 @@ export function LeadSourcesWidget({
               rel="noopener noreferrer"
               className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#2EBD6B] hover:underline"
             >
-              Get More Leads →
+              Get More Bookings →
             </a>
           </div>
         ) : (

@@ -23,6 +23,8 @@ import {
   Eye,
   ExternalLink,
   Ban,
+  Wrench,
+  AlertTriangle,
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -64,6 +66,7 @@ export default async function DashboardPage() {
     recentBookingsRes,
     vehiclesRes,
     noShowsRes,
+    overdueMaintenanceRes,
   ] = await Promise.all([
     // Total bookings this month
     supabase
@@ -118,7 +121,36 @@ export default async function DashboardPage() {
       .eq("operator_id", operator.id)
       .eq("is_no_show", true)
       .gte("no_show_at", `${monthStart}T00:00:00`),
+
+    // Vehicles needing service (overdue maintenance)
+    supabase
+      .from("maintenance_records")
+      .select("vehicle_id, type, date_due, vehicles(id, make, model, year, plate)")
+      .eq("operator_id", operator.id)
+      .neq("status", "completed")
+      .not("date_due", "is", null)
+      .lt("date_due", todayStr),
   ]);
+
+  // Vehicles needing service - deduplicate by vehicle
+  type OverdueMaintRow = {
+    vehicle_id: string;
+    type: string;
+    date_due: string;
+    vehicles: { id: string; make: string; model: string; year: number; plate: string | null } | null;
+  };
+  const overdueMaintenanceRaw = (overdueMaintenanceRes.data ?? []) as unknown as OverdueMaintRow[];
+  const vehiclesNeedingServiceMap = new Map<string, { vehicle: OverdueMaintRow["vehicles"]; services: string[] }>();
+  for (const row of overdueMaintenanceRaw) {
+    if (!row.vehicle_id || !row.vehicles) continue;
+    const existing = vehiclesNeedingServiceMap.get(row.vehicle_id);
+    if (existing) {
+      existing.services.push(row.type);
+    } else {
+      vehiclesNeedingServiceMap.set(row.vehicle_id, { vehicle: row.vehicles, services: [row.type] });
+    }
+  }
+  const vehiclesNeedingService = Array.from(vehiclesNeedingServiceMap.values());
 
   const monthBookings = monthBookingsRes.data || [];
   const totalBookingsThisMonth = monthBookings.length;
@@ -197,27 +229,29 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Stripe not connected — payments are hard-blocked until this is done */}
-      {!operator.stripe_account_id && (
+      {/* Stripe not connected OR setup incomplete — payments are hard-blocked until charges_enabled */}
+      {!operator.charges_enabled && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
             <DollarSign className="h-5 w-5 text-amber-600" />
           </div>
           <div className="flex-1">
             <p className="font-semibold text-amber-900">
-              Connect Stripe to accept payments
+              {operator.stripe_account_id
+                ? '⚠️ Stripe setup incomplete'
+                : 'Connect Stripe to accept payments'}
             </p>
             <p className="text-sm text-amber-800">
-              Renters can&apos;t pay you or authorize deposits until your Stripe
-              account is connected. Payments go directly to your bank — we never
-              hold your money.
+              {operator.stripe_account_id
+                ? "Pick up where you left off — renters can't pay or authorize deposits until setup is complete."
+                : "Renters can't pay you or authorize deposits until your Stripe account is connected. Payments go directly to your bank — we never hold your money."}
             </p>
           </div>
           <Link
-            href="/dashboard/settings?tab=payment"
+            href="/api/stripe/connect"
             className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
           >
-            Connect Stripe
+            {operator.stripe_account_id ? 'Resume Setup' : 'Connect Stripe'}
           </Link>
         </div>
       )}
@@ -297,6 +331,63 @@ export default async function DashboardPage() {
         otherCount={otherLeads}
         pcrConversions={0}
       />
+
+      {/* Vehicles Needing Service */}
+      {vehiclesNeedingService.length > 0 && (
+        <Card className="border-0 bg-white shadow-sm ring-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Vehicles Needing Service ({vehiclesNeedingService.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {vehiclesNeedingService.map(({ vehicle, services }) => (
+                <Link
+                  key={vehicle?.id}
+                  href={`/dashboard/fleet/${vehicle?.id}/maintenance`}
+                >
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-red-100 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
+                        <Wrench className="h-4 w-4 text-red-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm text-gray-900">
+                          {vehicle?.year} {vehicle?.make} {vehicle?.model}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {vehicle?.plate || "No plate"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {services.slice(0, 2).map((svc) => (
+                        <Badge
+                          key={svc}
+                          variant="outline"
+                          className="ml-1 bg-red-50 text-red-600 border-red-200 text-[10px]"
+                        >
+                          {svc}
+                        </Badge>
+                      ))}
+                      {services.length > 2 && (
+                        <Badge
+                          variant="outline"
+                          className="ml-1 bg-red-50 text-red-600 border-red-200 text-[10px]"
+                        >
+                          +{services.length - 2} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Bookings */}

@@ -114,8 +114,8 @@ export default async function PaymentsPage() {
         </p>
       </div>
 
-      {/* Stripe Connection Banner */}
-      {!operator.stripe_account_id && (
+      {/* Stripe Connection Banner — visible until charges_enabled = true */}
+      {!operator.charges_enabled && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4 flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 flex-shrink-0 mt-0.5">
@@ -123,18 +123,33 @@ export default async function PaymentsPage() {
             </div>
             <div className="flex-1">
               <p className="font-medium text-amber-900">
-                Connect Stripe to accept payments
+                {operator.stripe_account_id
+                  ? '⚠️ Stripe setup incomplete'
+                  : 'Connect Stripe to accept payments'}
               </p>
               <p className="text-sm text-amber-800 mt-1">
-                You need to connect your Stripe account to receive payments from
-                renters. Go to{" "}
-                <Link
-                  href="/dashboard/settings?tab=payment"
-                  className="font-semibold underline hover:no-underline"
-                >
-                  Settings → Payment
-                </Link>{" "}
-                to connect now.
+                {operator.stripe_account_id ? (
+                  <>
+                    Your Stripe account setup isn&apos;t finished. Renters can&apos;t pay until this is complete.{" "}
+                    <a
+                      href="/api/stripe/connect"
+                      className="font-semibold underline hover:no-underline"
+                    >
+                      Resume setup →
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    You need to connect your Stripe account to receive payments from renters. Go to{" "}
+                    <Link
+                      href="/dashboard/settings?tab=payment"
+                      className="font-semibold underline hover:no-underline"
+                    >
+                      Settings → Payment
+                    </Link>{" "}
+                    to connect now.
+                  </>
+                )}
               </p>
             </div>
           </CardContent>

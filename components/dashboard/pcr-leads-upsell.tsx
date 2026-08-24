@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, TrendingUp, Zap } from "lucide-react";
+import { TrendingUp, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PCRLeadsUpsellProps {
@@ -13,42 +12,11 @@ interface PCRLeadsUpsellProps {
   pcrConversions?: number;
 }
 
-const DISMISS_KEY = "pcr-leads-upsell-dismissed-v2";
-const DISMISS_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
 export function PCRLeadsUpsell({
   pcrLeadsCount = 0,
   organicCount = 0,
   pcrConversions = 0,
 }: PCRLeadsUpsellProps) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DISMISS_KEY);
-      if (raw) {
-        const ts = parseInt(raw, 10);
-        if (Date.now() - ts < DISMISS_DURATION_MS) {
-          return; // Still within dismiss window
-        }
-      }
-    } catch {
-      // localStorage unavailable — just show it
-    }
-    setVisible(true);
-  }, []);
-
-  function handleDismiss() {
-    try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    } catch {
-      /* noop */
-    }
-    setVisible(false);
-  }
-
-  if (!visible) return null;
-
   const hasPcrLeads = pcrLeadsCount > 0;
 
   if (hasPcrLeads) {
@@ -73,9 +41,9 @@ export function PCRLeadsUpsell({
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="shrink-0">
             <a
-              href="https://join.pcrleads.com?ref=pcrbooking"
+              href="https://pcr-leads-fasttrack.vercel.app"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -86,13 +54,6 @@ export function PCRLeadsUpsell({
                 View Campaign
               </Button>
             </a>
-            <button
-              onClick={handleDismiss}
-              className="p-1.5 hover:bg-white/10 rounded transition-colors flex-shrink-0"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4 text-gray-400" />
-            </button>
           </div>
         </div>
       </div>
@@ -109,20 +70,20 @@ export function PCRLeadsUpsell({
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-bold text-white leading-snug">
-            Fill the Top of the Funnel with PCR Leads
+            Add $9,600–$16,000/Month With PCR Leads
           </h3>
           <p className="mt-1 text-sm text-gray-300 leading-relaxed">
-            Your booking page converts renters you already have.{" "}
-            <span className="font-semibold text-white">PCR Leads</span> fills the top of the funnel:
-            managed Facebook ads that send{" "}
-            <span className="font-semibold text-[#2EBD6B]">new renters</span> to this exact page.
-            Clients typically see{" "}
-            <span className="font-semibold text-[#2EBD6B]">20–50+ leads/month</span>.
+            Your booking page is ready.{" "}
+            <span className="font-semibold text-white">PCR Leads</span> fills it — managed Facebook ads
+            that send qualified renters straight to your fleet. Clients usually get{" "}
+            <span className="font-semibold text-[#2EBD6B]">6–10 new bookings per month</span>,
+            adding{" "}
+            <span className="font-semibold text-[#2EBD6B]">$9,600–$16,000 in monthly revenue</span>.
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="shrink-0">
           <a
-            href="https://join.pcrleads.com?ref=pcrbooking"
+            href="https://pcr-leads-fasttrack.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -130,16 +91,9 @@ export function PCRLeadsUpsell({
               size="sm"
               className="bg-[#2EBD6B] hover:bg-[#1a9952] text-white font-semibold px-5"
             >
-              Get More Leads
+              Get More Bookings
             </Button>
           </a>
-          <button
-            onClick={handleDismiss}
-            className="p-1.5 hover:bg-white/10 rounded transition-colors flex-shrink-0"
-            aria-label="Dismiss"
-          >
-            <X className="h-4 w-4 text-gray-400" />
-          </button>
         </div>
       </div>
     </div>

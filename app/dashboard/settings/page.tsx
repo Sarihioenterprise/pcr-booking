@@ -200,6 +200,7 @@ export default function SettingsPage() {
   // Stripe Connect state
   const [stripeConnecting, setStripeConnecting] = useState(false);
   const [stripeError, setStripeError] = useState("");
+  const [stripeIncompleteWarning, setStripeIncompleteWarning] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<{
     connected: boolean;
     charges_enabled: boolean;
@@ -262,12 +263,12 @@ export default function SettingsPage() {
 
   // Handle Stripe Connect query params
   useEffect(() => {
-    const stripeConnected = searchParams.get("stripe");
+    const stripeParam = searchParams.get("stripe");
     const error = searchParams.get("error");
 
-    if (stripeConnected === "connected") {
-      showSuccess("Stripe onboarding complete! Checking status...");
-      // Reload operator data
+    if (stripeParam === "connected") {
+      showSuccess("✅ Stripe setup complete — loading your account status...");
+      // Reload operator data then do a live status check
       async function reload() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -280,8 +281,13 @@ export default function SettingsPage() {
         }
       }
       reload();
-      // Check status after a short delay
-      setTimeout(() => checkStripeStatus(), 1000);
+      // Live status check after a short delay to let DB write settle
+      setTimeout(() => checkStripeStatus(), 800);
+    } else if (stripeParam === "incomplete") {
+      // Operator hit "Back" or abandoned onboarding — show persistent warning
+      setStripeIncompleteWarning(true);
+      // Also do a live status check so the UI reflects current Stripe state
+      setTimeout(() => checkStripeStatus(), 800);
     } else if (error) {
       setStripeError(`Connection failed: ${error}`);
     }
@@ -1229,19 +1235,39 @@ export default function SettingsPage() {
               <Separator />
               <div className="space-y-4">
                 <Label>Stripe Account</Label>
+
+                {/* Incomplete-onboarding warning banner (shown when ?stripe=incomplete) */}
+                {stripeIncompleteWarning && (
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900 flex items-start gap-2">
+                    <span className="text-base leading-none mt-0.5">⚠️</span>
+                    <span>
+                      Setup not complete — please finish connecting your Stripe account to accept payments.
+                    </span>
+                  </div>
+                )}
+
                 {stripeError && (
                   <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800">
                     {stripeError}
                   </div>
                 )}
+
+                {/* Loading state while doing live Stripe check */}
+                {checkingStripeStatus && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Verifying Stripe account...
+                  </div>
+                )}
+
                 {operator?.stripe_account_id && stripeStatus?.charges_enabled ? (
-                  // Connected state
+                  // ✅ Fully connected — can accept payments
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
                       <Check className="h-5 w-5 text-emerald-600 flex-shrink-0" />
                       <div>
                         <p className="font-semibold text-emerald-900">
-                          Stripe Connected — Payouts Active
+                          ✅ Connected — accepting payments
                         </p>
                         <p className="text-sm text-emerald-800 mt-0.5">
                           Funds are being sent to your bank account
@@ -1271,56 +1297,109 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   </div>
-                ) : (
-                  // Not connected or setup in progress
-                  <div className="space-y-4">
-                    {operator?.stripe_account_id ? (
-                      <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
-                        <p className="text-sm font-medium text-amber-900 mb-3">
-                          ⚠️ Setup in progress
-                        </p>
-                        <p className="text-sm text-amber-800 mb-4">
-                          Complete your Stripe account setup to start accepting payments. This usually takes 1-2 business days.
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleReconnectStripe}
-                            disabled={stripeConnecting}
-                            className="bg-[#635BFF] hover:bg-[#5850DB] text-white gap-2"
-                            size="sm"
-                          >
-                            <CreditCard className="h-4 w-4" />
-                            {stripeConnecting ? "Connecting..." : "Complete Setup"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              window.open("https://dashboard.stripe.com/", "_blank");
-                            }}
-                            className="gap-2"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Dashboard
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-sm text-muted-foreground">
-                          Connect your Stripe account to accept payments from renters. Funds go directly to your bank account.
-                        </p>
-                        <Button
-                          onClick={handleConnectStripe}
-                          disabled={stripeConnecting}
-                          className="bg-[#635BFF] hover:bg-[#5850DB] text-white gap-2 w-full"
-                        >
-                          <CreditCard className="h-4 w-4" />
-                          {stripeConnecting ? "Connecting..." : "Connect with Stripe"}
-                        </Button>
-                      </>
-                    )}
+
+                ) : operator?.stripe_account_id && stripeStatus?.details_submitted && !stripeStatus?.charges_enabled ? (
+                  // 🔄 Details submitted but Stripe is still reviewing
+                  <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                    <p className="text-sm font-medium text-blue-900 mb-2">
+                      🔄 Under review by Stripe
+                    </p>
+                    <p className="text-sm text-blue-800 mb-3">
+                      You completed setup — Stripe is verifying your information. This usually takes 1–2 business days.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        window.open("https://dashboard.stripe.com/", "_blank");
+                      }}
+                      className="gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Check Stripe Dashboard
+                    </Button>
                   </div>
+
+                ) : operator?.stripe_account_id && stripeStatus && !stripeStatus.details_submitted ? (
+                  // ⚠️ Has account ID but onboarding wasn't completed
+                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                    <p className="text-sm font-medium text-amber-900 mb-2">
+                      ⚠️ Setup incomplete
+                    </p>
+                    <p className="text-sm text-amber-800 mb-4">
+                      You started Stripe Connect but didn&apos;t finish. Resume to start accepting payments.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleReconnectStripe}
+                        disabled={stripeConnecting}
+                        className="bg-[#635BFF] hover:bg-[#5850DB] text-white gap-2"
+                        size="sm"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        {stripeConnecting ? "Connecting..." : "Resume Stripe Setup"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          window.open("https://dashboard.stripe.com/", "_blank");
+                        }}
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Dashboard
+                      </Button>
+                    </div>
+                  </div>
+
+                ) : operator?.stripe_account_id && !stripeStatus ? (
+                  // Has account ID but we haven't loaded live status yet — show pending state with check button
+                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                    <p className="text-sm font-medium text-amber-900 mb-2">
+                      ⚠️ Setup in progress
+                    </p>
+                    <p className="text-sm text-amber-800 mb-4">
+                      Complete your Stripe account setup to start accepting payments.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleReconnectStripe}
+                        disabled={stripeConnecting}
+                        className="bg-[#635BFF] hover:bg-[#5850DB] text-white gap-2"
+                        size="sm"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        {stripeConnecting ? "Connecting..." : "Complete Setup"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={checkStripeStatus}
+                        disabled={checkingStripeStatus}
+                        className="gap-2"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${checkingStripeStatus ? "animate-spin" : ""}`} />
+                        Check Status
+                      </Button>
+                    </div>
+                  </div>
+
+                ) : (
+                  // Not connected at all
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Connect your Stripe account to accept payments from renters. Funds go directly to your bank account.
+                    </p>
+                    <Button
+                      onClick={handleConnectStripe}
+                      disabled={stripeConnecting}
+                      className="bg-[#635BFF] hover:bg-[#5850DB] text-white gap-2 w-full"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      {stripeConnecting ? "Connecting..." : "Connect with Stripe"}
+                    </Button>
+                  </>
                 )}
               </div>
               <div className="flex justify-end">
