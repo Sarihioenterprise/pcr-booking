@@ -8,8 +8,8 @@ import {
   Check,
   Users,
   DollarSign,
-  Menu,
 } from "lucide-react";
+import { HomeNav } from "./_components/HomeNav";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,28 +26,52 @@ import { ChatWidget } from "@/components/chat-widget";
 
 const features = [
   {
-    icon: CalendarCheck,
-    title: "Booking Widget",
-    description:
-      "Embeddable booking form for your website. Renters pick dates, choose a vehicle, and submit — you get notified instantly.",
+    title: "Online Booking Portal",
+    description: "Renters pick dates, choose a vehicle, and submit a request — you get notified instantly via SMS and email.",
   },
   {
-    icon: Car,
     title: "Fleet Management",
-    description:
-      "Track every vehicle in your fleet. Set daily rates, toggle availability, and view booking history at a glance.",
+    description: "Track every vehicle, set daily/weekly/monthly rates, toggle availability, and view full booking history at a glance.",
   },
   {
-    icon: Bell,
-    title: "Instant Notifications",
-    description:
-      "Get notified the moment a renter submits a booking request — via SMS and email. Never miss a booking again.",
+    title: "License Upload & Verification",
+    description: "Renters upload their driver's license during booking. Stored securely — viewable anytime from your dashboard.",
   },
   {
-    icon: Smartphone,
-    title: "Mobile Dashboard",
-    description:
-      "Manage bookings, fleet, and leads from your phone. Built mobile-first for operators on the go.",
+    title: "Zone Photo Inspections",
+    description: "Capture front, back, left, right photos at pickup and return. Before/after documentation protects you from every dispute.",
+  },
+  {
+    title: "Damage Claims Management",
+    description: "Log damage with photos, descriptions, and repair estimates. Full audit trail for every claim.",
+  },
+  {
+    title: "Payment Request Links",
+    description: "Send a payment link to any renter from the dashboard. They pay via Stripe — funds hit your account directly.",
+  },
+  {
+    title: "Deposit Capture & Release",
+    description: "Collect and hold security deposits at booking. Auto-release after return, or capture for damages — one click.",
+  },
+  {
+    title: "Add-Ons & Insurance Waivers",
+    description: "Offer CDW, GPS, additional drivers, and custom add-ons. Required or optional — your rules, applied automatically.",
+  },
+  {
+    title: "CSV Fleet Importer",
+    description: "Already on Turo or Getaround? Export your fleet and import it here in under 2 minutes. No manual entry.",
+  },
+  {
+    title: "SMS Notifications",
+    description: "Automated SMS to renters at booking confirmation, 24h before pickup, and 24h before return.",
+  },
+  {
+    title: "Affiliate Program",
+    description: "Earn 30% recurring commission for 12 months on every operator you refer. Share your link — get paid every month.",
+  },
+  {
+    title: "Analytics Dashboard",
+    description: "Revenue, bookings, utilization rate, and KPIs on one screen. Know your numbers without opening a spreadsheet.",
   },
 ];
 
@@ -76,69 +100,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#080812] text-white">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#080812]/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/icon.png" alt="PCR Logo" className="h-8 w-8" />
-            <span className="text-lg font-bold tracking-tight">
-              PCR Booking
-            </span>
-          </Link>
-
-          <div className="hidden items-center gap-8 md:flex">
-            <Link
-              href="/tour"
-              className="text-sm text-gray-400 transition-colors hover:text-white"
-            >
-              Product Tour
-            </Link>
-            <Link
-              href="/features"
-              className="text-sm text-gray-400 transition-colors hover:text-white"
-            >
-              Features
-            </Link>
-            <Link
-              href="#pricing"
-              className="text-sm text-gray-400 transition-colors hover:text-white"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/about"
-              className="text-sm text-gray-400 transition-colors hover:text-white"
-            >
-              About
-            </Link>
-            <Link
-              href="/blog"
-              className="text-sm text-gray-400 transition-colors hover:text-white"
-            >
-              Blog
-            </Link>
-            <Link
-              href="#affiliates"
-              className="text-sm text-gray-400 transition-colors hover:text-white"
-            >
-              Affiliates
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/auth/login"
-              className="text-sm text-gray-400 transition-colors hover:text-white"
-            >
-              Login
-            </Link>
-            <Link href="/auth/signup">
-              <Button className="h-9 bg-[#2EBD6B] px-4 text-sm font-semibold text-white hover:bg-[#1a9952]">
-                Sign Up
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <HomeNav />
 
       {/* Hero */}
       <section className="relative overflow-hidden px-4 pb-20 pt-24 sm:px-6 sm:pt-32 lg:px-8">
@@ -257,9 +219,6 @@ export default function HomePage() {
                 className="border-white/10 bg-white/5 text-white"
               >
                 <CardHeader>
-                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
-                    <feature.icon className="h-5 w-5 text-[#2EBD6B]" />
-                  </div>
                   <CardTitle className="text-white">
                     {feature.title}
                   </CardTitle>
@@ -272,6 +231,8 @@ export default function HomePage() {
               </Card>
             ))}
           </div>
+          {/* TODO: Add 2-3 dashboard screenshots here — bookings list, fleet management, booking wizard */}
+          {/* Screenshots go in /public/screenshots/ — use next/image with rounded-xl shadow-lg */}
         </div>
       </section>
 
@@ -330,9 +291,12 @@ export default function HomePage() {
                 </p>
               </CardContent>
               <CardFooter className="border-t border-white/10 pt-4">
-                <div>
-                  <p className="font-semibold">Marcus T.</p>
-                  <p className="text-sm text-gray-400">Atlanta, GA</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#2EBD6B] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">M</div>
+                  <div>
+                    <p className="font-semibold">Marcus T.</p>
+                    <p className="text-sm text-gray-400">Atlanta, GA</p>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
@@ -352,9 +316,12 @@ export default function HomePage() {
                 </p>
               </CardContent>
               <CardFooter className="border-t border-white/10 pt-4">
-                <div>
-                  <p className="font-semibold">Darius W.</p>
-                  <p className="text-sm text-gray-400">Houston, TX</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#1a6b3a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">D</div>
+                  <div>
+                    <p className="font-semibold">Darius W.</p>
+                    <p className="text-sm text-gray-400">Houston, TX</p>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
@@ -374,9 +341,12 @@ export default function HomePage() {
                 </p>
               </CardContent>
               <CardFooter className="border-t border-white/10 pt-4">
-                <div>
-                  <p className="font-semibold">Keisha M.</p>
-                  <p className="text-sm text-gray-400">Miami, FL</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#0f4a28] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">K</div>
+                  <div>
+                    <p className="font-semibold">Keisha M.</p>
+                    <p className="text-sm text-gray-400">Miami, FL</p>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
