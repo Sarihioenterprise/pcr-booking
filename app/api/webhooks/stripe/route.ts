@@ -64,6 +64,39 @@ export async function POST(request: NextRequest) {
         await handlePaymentSucceeded(supabase, invoice);
         break;
       }
+      // NOTE: Alton must enable `customer.subscription.trial_will_end` in the Stripe
+      // dashboard under Webhooks → your endpoint → Events to receive this event.
+      case "customer.subscription.trial_will_end": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleTrialWillEnd(supabase, subscription, stripe);
+        break;
+      }
+      case "account.updated": {
+        const account = event.data.object as Stripe.Account;
+        const accountId = account.id;
+
+        // Find the operator with this stripe_account_id (Connect onboarding)
+        const { data: operator } = await supabase
+          .from("operators")
+          .select("id")
+          .eq("stripe_account_id", accountId)
+          .single();
+
+        if (operator) {
+          await supabase.from("operators").update({
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            stripe_connect_status: account.details_submitted
+              ? (account.charges_enabled ? "active" : "pending_review")
+              : "incomplete",
+            updated_at: new Date().toISOString(),
+          }).eq("id", operator.id);
+          console.log(`[webhook] account.updated synced for stripe_account_id=${accountId}: charges_enabled=${account.charges_enabled}, details_submitted=${account.details_submitted}`);
+        } else {
+          console.log(`[webhook] account.updated: no operator found for stripe_account_id=${accountId}`);
+        }
+        break;
+      }
       default:
         console.log(`Unhandled Stripe event type: ${event.type}`);
     }
@@ -330,7 +363,7 @@ async function handlePaymentFailed(
   const customerId = invoice.customer as string;
   if (!customerId) return;
 
-  // Lock the account — clear stripe_subscription_id so get-operator redirects to subscription-issue page.
+  // Lock the account — clear stripe_subscription_id so get-operator redirects to /subscription-issue page.
   // We do NOT update plan here; the DB constraint forbids 'free' and we keep the previous plan value
   // so the operator still knows what tier they were on when they recover payment.
   //
@@ -542,6 +575,71 @@ async function handlePaymentSucceeded(
       // NEVER let tracking errors break the webhook response
       console.error("[CAPI] handlePaymentSucceeded CAPI block failed:", err);
     }
+  }
+}
+
+async function handleTrialWillEnd(
+  supabase: ReturnType<typeof createAdminClient>,
+  subscription: Stripe.Subscription,
+  stripe: Stripe
+) {
+  const customerId = subscription.customer as string;
+  const trialEnd = subscription.trial_end;
+  const trialEndDate = trialEnd
+    ? new Date(trialEnd * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : "in 3 days";
+
+  // Fetch customer email
+  let customerEmail: string | null = null;
+  try {
+    const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+    customerEmail = customer.email ?? null;
+  } catch (e) {
+    console.error("[webhook] trial_will_end: failed to retrieve customer:", e);
+  }
+
+  if (!customerEmail) {
+    console.warn(`[webhook] trial_will_end: no email found for customer ${customerId}`);
+    return;
+  }
+
+  // Look up operator for context
+  const { data: operator } = await supabase
+    .from("operators")
+    .select("owner_name, business_name, booking_slug")
+    .eq("stripe_customer_id", customerId)
+    .single();
+
+  const ownerName = (operator?.owner_name as string | undefined) ?? "there";
+  const dashboardUrl = "https://pcrbooking.com/dashboard";
+
+  const emailBody = `
+<p>Hey ${ownerName},</p>
+<p>Your PCR Booking free trial ends on <strong>${trialEndDate}</strong> — 3 days from now.</p>
+<p>When your trial ends, your card on file will be charged automatically and you'll continue to have full access to your dashboard, fleet, and booking page with no interruption.</p>
+<p><strong>No action needed</strong> — everything is already set up. Just keep using it.</p>
+<p>If you have any questions about billing or your plan, reply to this email and we'll sort it out right away.</p>
+<p><a href="${dashboardUrl}" style="display:inline-block;background:#2EBD6B;color:#fff;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin:8px 0;">Go to My Dashboard →</a></p>
+<p style="color:#6b7280;font-size:14px;">Questions? Email us at <a href="mailto:support@pcrbooking.com" style="color:#2EBD6B;">support@pcrbooking.com</a> — we're happy to help.</p>
+<p>— The PCR Booking Team</p>
+  `.trim();
+
+  // Send trial warning email via internal API
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://pcrbooking.com";
+    await fetch(`${baseUrl}/api/email/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: customerEmail,
+        subject: "Your PCR Booking trial ends in 3 days",
+        body: emailBody,
+        templateType: "trial_will_end",
+      }),
+    });
+    console.log(`[webhook] trial_will_end: warning email sent to ${customerEmail}`);
+  } catch (err) {
+    console.error("[webhook] trial_will_end: email send failed:", err);
   }
 }
 
