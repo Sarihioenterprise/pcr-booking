@@ -445,6 +445,45 @@ export async function syncChurned(
   }
 }
 
+// ─── Email sending ────────────────────────────────────────────────────────
+
+/**
+ * Send an email to a GHL contact via the Conversations API.
+ * Fire-and-forget safe — never throws.
+ */
+export async function sendEmail(
+  contactId: string,
+  opts: {
+    subject: string;
+    body: string;
+    fromName?: string;
+    fromEmail?: string;
+  }
+): Promise<boolean> {
+  const locationId = getLocationId();
+  if (!locationId) return false;
+
+  try {
+    const result = await ghlRequest("POST", "/conversations/messages", {
+      type: "Email",
+      contactId,
+      locationId,
+      subject: opts.subject,
+      body: opts.body,
+      fromName: opts.fromName ?? "Alton",
+      fromEmail: opts.fromEmail ?? "alton@pcrbooking.com",
+    }) as Record<string, unknown> | null;
+
+    const ok = !!result?.id || !!result?.conversationId || !!result?.messageId;
+    if (ok) console.log(`[GHL] sendEmail "${opts.subject}" → contact ${contactId}`);
+    else console.warn(`[GHL] sendEmail may have failed for contact ${contactId}:`, result);
+    return ok;
+  } catch (err) {
+    console.error(`[GHL] sendEmail failed for contact ${contactId}:`, err);
+    return false;
+  }
+}
+
 // ─── Legacy fireGHLEvent (backward compat shim) ───────────────────────────
 // The webhook file calls this; keep the signature intact.
 // New code should call the specific sync* functions instead.

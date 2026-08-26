@@ -343,6 +343,31 @@ async function handleSubscriptionUpsert(
           // Card captured, free trial activated
           syncTrialActivated(opContact, { planTier: plan, interval, mrr, trialEndDate })
             .catch((err) => console.error("[GHL] syncTrialActivated failed:", err));
+
+          // Kick off nurture sequence: upsert GHL contact then insert nurture row
+          void (async () => {
+            try {
+              const { upsertContact } = await import("@/lib/ghl");
+              const ghlContact = await upsertContact({
+                email: ghlEmail,
+                firstName: opContact.owner_name?.split(" ")[0],
+                lastName: opContact.owner_name?.split(" ").slice(1).join(" ") || undefined,
+                phone: opContact.phone ?? undefined,
+                companyName: opContact.business_name ?? undefined,
+              });
+              const nameParts = (opContact.owner_name ?? "").trim().split(" ");
+              await supabase.from("pcr_booking_nurture").upsert({
+                email: ghlEmail,
+                first_name: nameParts[0] || null,
+                ghl_contact_id: ghlContact?.id ?? null,
+                trial_started_at: new Date().toISOString(),
+                emails_sent: [],
+              }, { onConflict: "email" });
+              console.log(`[nurture] Nurture row created for ${ghlEmail}`);
+            } catch (err) {
+              console.error("[nurture] Failed to create nurture row (non-fatal):", err);
+            }
+          })();
         } else if (subscription.status === "active") {
           // Direct activation (no trial) — immediate paying customer
           syncConverted(opContact, { planTier: plan, interval, mrr })
@@ -559,6 +584,13 @@ async function handlePaymentSucceeded(
               booking_slug: operator.booking_slug as string | null | undefined,
             }, { planTier: planTier, interval: ghlInterval, mrr: ghlMrr })
               .catch((err) => console.error("[GHL] syncConverted (trial) failed:", err));
+
+            // Stop nurture sequence now that they've converted to paid
+            void supabase.from("pcr_booking_nurture")
+              .update({ stopped_at: new Date().toISOString() })
+              .eq("email", customerEmail)
+              .is("stopped_at", null)
+              .then(() => console.log(`[nurture] Stopped nurture for converted customer ${customerEmail}`));
           }
         } else {
           // Recurring payment — fire Purchase
