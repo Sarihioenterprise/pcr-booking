@@ -7,8 +7,8 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Only allow with service role key for diagnostics
-  if (!authHeader || !authHeader.includes(serviceKey || "")) {
+  // Fail closed: reject if env var is missing or header doesn't match
+  if (!serviceKey || !authHeader || !authHeader.includes(serviceKey)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -59,9 +59,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const {
+      make, model, year, color, plate, vin,
+      daily_rate, weekly_rate, monthly_rate,
+      mileage, fuel_level, category,
+      purchase_price, monthly_cost,
+      minimum_rental_days, location_id,
+      photo_url, status, notes,
+    } = body;
+
     const { data, error } = await supabase
       .from("vehicles")
-      .insert({ ...body, operator_id: operator.id })
+      .insert({
+        make, model, year, color, plate, vin,
+        daily_rate, weekly_rate, monthly_rate,
+        mileage, fuel_level, category,
+        purchase_price, monthly_cost,
+        minimum_rental_days, location_id,
+        photo_url, status, notes,
+        operator_id: operator.id,
+      })
       .select()
       .single();
 

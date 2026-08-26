@@ -39,21 +39,19 @@ export async function verifyPortalToken(
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
-  // If the booking has an access_token set, require a matching token in the request
-  // If access_token column doesn't exist yet (returns null/undefined), allow through
-  // with a console warning (backward-compatible during migration)
-  if (booking.access_token !== undefined && booking.access_token !== null) {
-    if (!token || token !== booking.access_token) {
-      return NextResponse.json(
-        { error: "Unauthorized: invalid or missing portal access token" },
-        { status: 401 }
-      );
-    }
-  } else {
-    // TODO: Remove this fallback once access_token column is added to all bookings
-    console.warn(
-      `[portal-auth] Booking ${bookingId} has no access_token set. ` +
-        "Add access_token column and regenerate tokens to enforce portal security."
+  // Require a valid matching access token. A booking without an access_token
+  // is not publicly accessible — reject all requests to prevent enumeration.
+  if (!booking.access_token) {
+    return NextResponse.json(
+      { error: "Unauthorized: portal access is not enabled for this booking" },
+      { status: 401 }
+    );
+  }
+
+  if (!token || token !== booking.access_token) {
+    return NextResponse.json(
+      { error: "Unauthorized: invalid or missing portal access token" },
+      { status: 401 }
     );
   }
 
