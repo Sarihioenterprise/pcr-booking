@@ -5,6 +5,37 @@ import { getStripe } from "@/lib/stripe";
 import { fireGHLEvent, syncTrialActivated, syncConverted, syncPaymentFailed, syncChurned } from "@/lib/ghl";
 import { addBusinessDays } from "@/lib/business-days";
 import { capiStartTrial, capiSubscribe, capiPurchase, generateEventId } from "@/lib/meta-capi";
+import { notifyAlton } from "@/lib/telegram";
+
+const WEBHOOK_FAILURE_KEY = "stripe_webhook_failures";
+const FAILURE_ALERT_THRESHOLD = 3;
+
+async function trackWebhookSuccess(supabase: ReturnType<typeof createAdminClient>) {
+  await supabase
+    .from("system_config")
+    .upsert({ key: WEBHOOK_FAILURE_KEY, value: "0", updated_at: new Date().toISOString() })
+    .select();
+}
+
+async function trackWebhookFailure(supabase: ReturnType<typeof createAdminClient>, reason: string) {
+  const { data } = await supabase
+    .from("system_config")
+    .select("value")
+    .eq("key", WEBHOOK_FAILURE_KEY)
+    .single();
+
+  const count = parseInt(data?.value ?? "0", 10) + 1;
+
+  await supabase
+    .from("system_config")
+    .upsert({ key: WEBHOOK_FAILURE_KEY, value: String(count), updated_at: new Date().toISOString() });
+
+  if (count >= FAILURE_ALERT_THRESHOLD) {
+    await notifyAlton(
+      `⚠️ <b>Stripe Webhook Alert</b>\n\n${count} consecutive failures.\nLast reason: ${reason}\n\nCheck Vercel logs + Stripe dashboard.`
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
@@ -29,6 +60,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Stripe signature verification failed:", message);
+    const supabase = createAdminClient();
+    await trackWebhookFailure(supabase, `Signature verification: ${message}`).catch(() => {});
     return NextResponse.json(
       { error: `Webhook signature verification failed: ${message}` },
       { status: 400 }
@@ -101,9 +134,11 @@ export async function POST(request: NextRequest) {
         console.log(`Unhandled Stripe event type: ${event.type}`);
     }
 
+    await trackWebhookSuccess(supabase).catch(() => {});
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Stripe webhook processing error:", err);
+    await trackWebhookFailure(supabase, err instanceof Error ? err.message : "Unknown error").catch(() => {});
     return NextResponse.json(
       { error: "Webhook processing failed" },
       { status: 500 }
