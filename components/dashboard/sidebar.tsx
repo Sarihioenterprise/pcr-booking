@@ -28,33 +28,54 @@ import {
   ReceiptText,
   Truck,
   PieChart,
+  Globe,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/bookings", label: "Bookings", icon: CalendarDays },
-  { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
-  { href: "/dashboard/fleet", label: "Fleet", icon: Car },
-  { href: "/dashboard/renters", label: "Renters", icon: UserCircle },
-  { href: "/dashboard/customers", label: "Customers", icon: BookUser },
-  { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
-  { href: "/dashboard/collections", label: "Collections", icon: AlertCircle },
-  { href: "/dashboard/agreements", label: "Agreements", icon: FileText },
-  { href: "/dashboard/inspections", label: "Inspections", icon: ClipboardCheck },
-  { href: "/dashboard/maintenance", label: "Maintenance", icon: Wrench },
-  { href: "/dashboard/support", label: "Support", icon: HeadphonesIcon },
-  { href: "/dashboard/quotes", label: "Quotes", icon: ReceiptText },
-  { href: "/dashboard/leads", label: "Lead Pipeline", icon: Target },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/deliveries", label: "Deliveries", icon: Truck },
-  { href: "/dashboard/reports", label: "Reports", icon: PieChart },
-  { href: "/dashboard/addons", label: "Add-ons", icon: Package },
-  { href: "/dashboard/locations", label: "Locations", icon: MapPin },
-  { href: "/dashboard/importer", label: "Import Tool", icon: Upload },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-  { href: "/dashboard/affiliates", label: "Affiliates", icon: Share2 },
+const navSections = [
+  {
+    label: null,
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard/bookings", label: "Bookings", icon: CalendarDays },
+      { href: "/dashboard/fleet", label: "Fleet", icon: Car },
+      { href: "/dashboard/renters", label: "Renters", icon: UserCircle },
+      { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
+      { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
+      { href: "/dashboard/quotes", label: "Quotes", icon: ReceiptText },
+      { href: "/dashboard/agreements", label: "Agreements", icon: FileText },
+      { href: "/dashboard/inspections", label: "Inspections", icon: ClipboardCheck },
+      { href: "/dashboard/maintenance", label: "Maintenance", icon: Wrench },
+      { href: "/dashboard/deliveries", label: "Deliveries", icon: Truck },
+      { href: "/dashboard/collections", label: "Collections", icon: AlertCircle },
+    ],
+  },
+  {
+    label: "Growth",
+    items: [
+      { href: "/dashboard/leads", label: "Lead Pipeline", icon: Target },
+      { href: "/dashboard/website", label: "Get a Website", icon: Globe },
+      { href: "/dashboard/addons", label: "Add-ons", icon: Package },
+      { href: "/dashboard/reports", label: "Reports", icon: PieChart },
+      { href: "/dashboard/affiliates", label: "Affiliates", icon: Share2 },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { href: "/dashboard/settings", label: "Settings", icon: Settings },
+      { href: "/dashboard/support", label: "Support", icon: HeadphonesIcon },
+      { href: "/dashboard/locations", label: "Locations", icon: MapPin },
+      { href: "/dashboard/importer", label: "Import Tool", icon: Upload },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -80,30 +101,41 @@ export function Sidebar() {
       <Separator className="bg-white/10" />
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "text-[#2EBD6B] bg-white/5"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
-              )}
-            >
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-[#2EBD6B]" />
-              )}
-              <item.icon className="h-[18px] w-[18px] shrink-0" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-4">
+        {navSections.map((section, si) => (
+          <div key={si}>
+            {section.label && (
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-white/30">
+                {section.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "text-[#2EBD6B] bg-white/5"
+                        : "text-white/60 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-[#2EBD6B]" />
+                    )}
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Sign Out */}

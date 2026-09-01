@@ -88,9 +88,10 @@ export function AnalyticsClient({
         variant="outline"
         onClick={handleExport}
         disabled={exporting}
+        className="shrink-0"
       >
-        <Download className="h-4 w-4 mr-2" />
-        {exporting ? "Exporting..." : "Export CSV"}
+        <Download className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export CSV"}</span>
       </Button>
     </div>
   );

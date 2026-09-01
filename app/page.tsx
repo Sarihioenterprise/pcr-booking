@@ -8,6 +8,11 @@ import {
   Check,
   Users,
   DollarSign,
+  ShieldCheck,
+  XCircle,
+  Download,
+  Upload,
+  Zap,
 } from "lucide-react";
 import { HomeNav } from "./_components/HomeNav";
 import { Button } from "@/components/ui/button";
@@ -259,6 +264,140 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* License Verification */}
+      <section id="license-verification" className="bg-[#080812] px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
+            {/* Left: copy */}
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Know Who You're Handing the Keys To — Before You Hand Them Over
+              </h2>
+              <p className="mt-4 text-lg text-gray-400 leading-relaxed">
+                Built-in license verification lets you run a full DMV background check on any renter in 60 seconds. No more guessing. No more hoping.
+              </p>
+
+              <ul className="mt-8 space-y-3">
+                {[
+                  { ok: true, text: "License status (Active, Suspended, Revoked, Expired)" },
+                  { ok: true, text: "Number of moving violations" },
+                  { ok: true, text: "At-fault accidents on record" },
+                  { ok: true, text: "License class and restrictions" },
+                  { ok: false, text: "Auto-disapproves suspended, revoked, or expired licenses" },
+                  { ok: false, text: "Flags anyone with 5+ violations or 3+ accidents for manual review" },
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    {item.ok ? (
+                      <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#2EBD6B]" />
+                    ) : (
+                      <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" />
+                    )}
+                    <span className="text-gray-300">{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link href="/auth/signup">
+                <Button className="mt-10 h-12 px-8 text-base font-semibold bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Right: mock result card */}
+            <div className="flex justify-center lg:justify-end">
+              <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 overflow-hidden shadow-2xl">
+                <div className="flex items-center gap-3 bg-[#2EBD6B] px-6 py-4">
+                  <ShieldCheck className="h-8 w-8 text-white" />
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-white/80">Driver Check Result</p>
+                    <p className="text-2xl font-extrabold text-white">APPROVED</p>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { label: "License Status", value: "Active" },
+                      { label: "License Class", value: "D" },
+                      { label: "Moving Violations", value: "0" },
+                      { label: "At-Fault Accidents", value: "0" },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                        <p className="text-xs text-gray-500">{item.label}</p>
+                        <p className="mt-1 text-lg font-bold text-white">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-center text-xs text-gray-500">
+                    Auto-verified · PCR Booking Driver Check
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Easy Migration */}
+      <section id="switch-over" className="border-y border-white/10 bg-[#0c0c1c] px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Already Using Another System? Switch in Under 30 Minutes.
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-gray-400 leading-relaxed">
+            We know switching software feels like a headache. It's not. Here's exactly what it takes:
+          </p>
+
+          <div className="mt-14 grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                icon: <Download className="h-7 w-7 text-[#2EBD6B]" />,
+                num: "1",
+                title: "Export",
+                desc: "Download your fleet data from Turo, Getaround, or your current system as a CSV. Takes 2 minutes.",
+              },
+              {
+                icon: <Upload className="h-7 w-7 text-[#2EBD6B]" />,
+                num: "2",
+                title: "Import",
+                desc: "Upload your CSV to PCR Booking. Your full fleet is live instantly. No manual entry, no re-typing.",
+              },
+              {
+                icon: <Zap className="h-7 w-7 text-[#2EBD6B]" />,
+                num: "3",
+                title: "Go Live",
+                desc: "Embed your booking widget on your website with one line of code. You're taking bookings the same day.",
+              },
+            ].map((step) => (
+              <div key={step.num} className="rounded-xl border border-white/10 bg-white/5 p-6 text-left">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2EBD6B]/10">
+                    {step.icon}
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#2EBD6B]">Step {step.num}</span>
+                </div>
+                <h3 className="text-xl font-bold text-white">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-400">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 rounded-xl border border-white/10 bg-white/5 px-6 py-5">
+            <p className="text-gray-300 leading-relaxed">
+              Most operators are fully switched over in under 30 minutes. Your data, your renters, your revenue — just in a better system.
+            </p>
+          </div>
+
+          <Link href="/auth/signup">
+            <Button className="mt-8 h-12 px-8 text-base font-semibold bg-[#2EBD6B] text-white hover:bg-[#1a9952]">
+              Start Free Trial
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </section>
 

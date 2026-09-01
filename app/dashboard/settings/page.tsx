@@ -63,6 +63,8 @@ import {
   Link,
   Unlink,
   RefreshCw,
+  Shield,
+  ShieldCheck,
 } from "lucide-react";
 import { canUseCustomDomain } from "@/lib/plan-tier";
 import type {
@@ -196,6 +198,15 @@ export default function SettingsPage() {
   // Saving state
   const [saving, setSaving] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Background check (Checkr Hosted Flow)
+  const [bgCheckStatus, setBgCheckStatus] = useState<string>('not_started');
+  const [bgCheckInvitationUrl, setBgCheckInvitationUrl] = useState<string | null>(null);
+  const [bgCheckLoading, setBgCheckLoading] = useState(false);
+  const [bgFirstName, setBgFirstName] = useState('');
+  const [bgLastName, setBgLastName] = useState('');
+  const [bgEmail, setBgEmail] = useState('');
+  const [bgZipcode, setBgZipcode] = useState('');
 
   // Stripe Connect state
   const [stripeConnecting, setStripeConnecting] = useState(false);
@@ -343,6 +354,12 @@ export default function SettingsPage() {
           setCustomDomainInput(cd);
           setCustomDomainStatus(cds);
         }
+
+        // Background check
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setBgCheckStatus((op as any).background_check_status || 'not_started');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setBgCheckInvitationUrl((op as any).checkr_invitation_url || null);
 
         // Notification preferences (stored in JSON field or separate columns)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -569,6 +586,37 @@ export default function SettingsPage() {
     setSaving("");
     if (!error) showSuccess("Payment settings saved");
     else showSuccess("Saved (late fee columns need migration 020 for persistence)");
+  }
+
+  // Start Checkr background check (Hosted Flow)
+  async function handleStartBackgroundCheck() {
+    if (!bgFirstName || !bgLastName || !bgEmail || !bgZipcode) return;
+    setBgCheckLoading(true);
+    try {
+      const res = await fetch('/api/checkr/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: bgFirstName,
+          lastName: bgLastName,
+          email: bgEmail,
+          zipcode: bgZipcode,
+        }),
+      });
+      const data = await res.json();
+      if (data.invitationUrl) {
+        setBgCheckStatus('invited');
+        setBgCheckInvitationUrl(data.invitationUrl);
+        window.open(data.invitationUrl, '_blank');
+        showSuccess('Background check started — complete the form in the new tab');
+      } else {
+        alert(data.error || 'Failed to start background check');
+      }
+    } catch {
+      alert('Failed to start background check');
+    } finally {
+      setBgCheckLoading(false);
+    }
   }
 
   // Connect Stripe
@@ -904,6 +952,7 @@ export default function SettingsPage() {
           <TabsTrigger value="email"><Mail className="h-3.5 w-3.5 mr-1.5" />Email</TabsTrigger>
           <TabsTrigger value="webhooks"><Webhook className="h-3.5 w-3.5 mr-1.5" />Webhooks</TabsTrigger>
           <TabsTrigger value="widget"><Code className="h-3.5 w-3.5 mr-1.5" />Widget</TabsTrigger>
+          <TabsTrigger value="compliance"><Shield className="h-3.5 w-3.5 mr-1.5" />Compliance</TabsTrigger>
           <TabsTrigger value="subscription"><Crown className="h-3.5 w-3.5 mr-1.5" />Plan</TabsTrigger>
         </TabsList>
         </div>
@@ -2174,6 +2223,116 @@ export default function SettingsPage() {
             </Card>
           </div>
         </TabsContent>
+        {/* ── Compliance / Background Check ── */}
+        <TabsContent value="compliance">
+          <Card className="border-0 bg-white shadow-sm ring-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-[#2EBD6B]" />
+                Background Check
+              </CardTitle>
+              <CardDescription>
+                Complete a Checkr background check to verify your driving record and eligibility.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {bgCheckStatus === 'not_started' && (
+                <div className="space-y-5">
+                  <p className="text-sm text-muted-foreground">
+                    Enter your information below to start your background check. You&apos;ll be redirected to a secure Checkr-hosted page to complete the process.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="bgFirstName" className="text-xs">First Name</Label>
+                      <Input id="bgFirstName" value={bgFirstName} onChange={(e) => setBgFirstName(e.target.value)} placeholder="Jane" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="bgLastName" className="text-xs">Last Name</Label>
+                      <Input id="bgLastName" value={bgLastName} onChange={(e) => setBgLastName(e.target.value)} placeholder="Smith" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="bgEmail" className="text-xs">Email</Label>
+                      <Input id="bgEmail" type="email" value={bgEmail} onChange={(e) => setBgEmail(e.target.value)} placeholder="jane@example.com" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="bgZipcode" className="text-xs">ZIP Code</Label>
+                      <Input id="bgZipcode" value={bgZipcode} onChange={(e) => setBgZipcode(e.target.value)} placeholder="37201" maxLength={10} />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleStartBackgroundCheck}
+                      disabled={bgCheckLoading || !bgFirstName || !bgLastName || !bgEmail || !bgZipcode}
+                      className="bg-[#2EBD6B] hover:bg-[#26a85d] text-white gap-2"
+                    >
+                      <Shield className="h-4 w-4" />
+                      {bgCheckLoading ? 'Starting...' : 'Start Background Check'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {bgCheckStatus === 'invited' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                    <p className="text-sm font-medium text-amber-900 mb-1">Background check invited</p>
+                    <p className="text-sm text-amber-800">
+                      Complete your background check by clicking the link below. Results typically take 1–3 business days.
+                    </p>
+                  </div>
+                  {bgCheckInvitationUrl && (
+                    <a href={bgCheckInvitationUrl} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" className="gap-2">
+                        <ExternalLink className="h-4 w-4" />
+                        Continue Background Check
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {bgCheckStatus === 'pending' && (
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-900 mb-1">Background check in progress</p>
+                  <p className="text-sm text-blue-800">
+                    Your information has been submitted. Results typically arrive within 1–3 business days.
+                  </p>
+                </div>
+              )}
+
+              {bgCheckStatus === 'clear' && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <ShieldCheck className="h-6 w-6 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-emerald-900">Background Check: Clear ✓</p>
+                    <p className="text-sm text-emerald-800 mt-0.5">Your background check has passed. You&apos;re verified to operate.</p>
+                  </div>
+                </div>
+              )}
+
+              {bgCheckStatus === 'consider' && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
+                  <Shield className="h-6 w-6 text-amber-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-amber-900">Background Check: Under Review</p>
+                    <p className="text-sm text-amber-800 mt-0.5">Your results require manual review. Our team will reach out within 2–3 business days.</p>
+                  </div>
+                </div>
+              )}
+
+              {bgCheckStatus === 'suspended' && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-red-50 border border-red-200">
+                  <Shield className="h-6 w-6 text-red-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-red-900">Background Check: Suspended</p>
+                    <p className="text-sm text-red-800 mt-0.5">Your background check has been suspended. Please contact support for more information.</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
     </div>
   );

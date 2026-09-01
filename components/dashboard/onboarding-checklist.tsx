@@ -14,7 +14,7 @@ export default function OnboardingChecklist({
   hasVehicles,
   bookingSlug: bookingSlugProp,
 }: OnboardingChecklistProps) {
-  const [dismissed, setDismissed] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

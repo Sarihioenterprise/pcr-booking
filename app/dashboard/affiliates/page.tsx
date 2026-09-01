@@ -17,8 +17,9 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { DollarSign, Users, UserCheck } from "lucide-react";
+import { DollarSign, Users, UserCheck, ExternalLink } from "lucide-react";
 import { CopyButton } from "./copy-button";
+import Link from "next/link";
 
 const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-700 border-green-200",
@@ -110,19 +111,30 @@ export default async function AffiliatesPage() {
         </Card>
       </div>
 
-      {/* Commission Info */}
+      {/* Commission Info + Payout Button */}
       <Card className="border-0 bg-white shadow-sm ring-0 border-[#2EBD6B]/30">
         <CardContent className="py-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full p-2 bg-[#2EBD6B]/10">
-              <DollarSign className="h-5 w-5 text-[#2EBD6B]" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full p-2 bg-[#2EBD6B]/10">
+                <DollarSign className="h-5 w-5 text-[#2EBD6B]" />
+              </div>
+              <div>
+                <p className="font-semibold">30% Recurring Commission</p>
+                <p className="text-sm text-muted-foreground">
+                  Earn 30% of each referred operator&apos;s monthly subscription for 12 months.
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold">30% Recurring Commission</p>
-              <p className="text-sm text-muted-foreground">
-                Earn 30% of each referred operator&apos;s monthly subscription for 12 months.
-              </p>
-            </div>
+            <Link
+              href="https://app.getrewardful.com/affiliates"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg bg-[#2EBD6B] px-4 py-2 text-sm font-semibold text-white whitespace-nowrap hover:bg-[#27a65d] transition-colors"
+            >
+              Request Payout
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </CardContent>
       </Card>

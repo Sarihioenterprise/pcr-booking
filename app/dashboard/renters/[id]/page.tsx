@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { SMSButton } from "@/components/dashboard/sms-button";
 import { SavedCards } from "@/components/renters/SavedCards";
+import { LicenseVerificationSection } from "@/components/driver-check/LicenseVerificationSection";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -332,6 +333,7 @@ export default function RenterDetailPage() {
       <Tabs defaultValue="profile">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="license">License Check</TabsTrigger>
           <TabsTrigger value="history">Rental History</TabsTrigger>
           <TabsTrigger value="payments">Payment Methods</TabsTrigger>
           <TabsTrigger value="communications">Communication Log</TabsTrigger>
@@ -457,6 +459,15 @@ export default function RenterDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* LICENSE CHECK TAB */}
+        <TabsContent value="license">
+          <LicenseVerificationSection
+            renterId={String(id)}
+            renterEmail={renter.email ?? undefined}
+            renterName={renter.name}
+          />
         </TabsContent>
 
         {/* PAYMENT METHODS TAB */}

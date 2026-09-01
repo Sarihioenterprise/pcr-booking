@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   DollarSign,
   CalendarDays,
@@ -19,6 +20,7 @@ import {
 import { AnalyticsClient } from "./analytics-client";
 import { LeadSourcesWidget } from "@/components/dashboard/lead-sources-widget";
 import { AnalyticsGate } from "@/components/dashboard/analytics-gate";
+import { ExpenseManager } from "@/components/dashboard/expense-manager";
 
 export default async function AnalyticsPage() {
   const operator = await getOperator();
@@ -151,6 +153,9 @@ export default async function AnalyticsPage() {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10);
 
+  // Vehicles list for expense form
+  const vehiclesList = (vehicles || []).map((v) => ({ id: v.id, make: v.make, model: v.model, year: v.year }));
+
   return (
     <div className="space-y-6 overflow-x-hidden w-full">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -165,9 +170,9 @@ export default async function AnalyticsPage() {
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Link href="/dashboard/fleet/revenue">
-            <Button variant="outline" size="sm">
-              <Car className="mr-2 h-4 w-4" />
-              Revenue by Vehicle
+            <Button variant="outline" size="sm" className="shrink-0">
+              <Car className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Revenue by Vehicle</span>
             </Button>
           </Link>
           <AnalyticsClient operatorId={operator.id} operatorPlan={operator.plan} />
@@ -182,6 +187,14 @@ export default async function AnalyticsPage() {
         pcrConversions={0}
       />
 
+      <Tabs defaultValue="overview">
+        <TabsList className="bg-white border shadow-sm">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="expenses">Expenses</TabsTrigger>
+          <TabsTrigger value="revenue">Revenue</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6 mt-4">
       <AnalyticsGate operatorPlan={operator.plan}>
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -379,6 +392,130 @@ export default async function AnalyticsPage() {
         </Card>
       </div>
       </AnalyticsGate>
+        </TabsContent>
+
+        {/* ── Expenses Tab ─────────────────────────────────────── */}
+        <TabsContent value="expenses" className="space-y-4 mt-4">
+          <Card className="border-0 bg-white shadow-sm ring-0">
+            <CardHeader>
+              <CardTitle className="text-base">Expenses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ExpenseManager vehicles={vehiclesList} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Revenue Tab ──────────────────────────────────────── */}
+        <TabsContent value="revenue" className="space-y-4 mt-4">
+          {/* Net Profit Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader className="flex flex-row items-center justify-between pb-1">
+                <CardTitle className="text-sm font-medium text-gray-500">Total Revenue (YTD)</CardTitle>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
+                  <DollarSign className="h-[18px] w-[18px] text-[#2EBD6B]" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tracking-tight text-gray-900">
+                  ${totalRevenue.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">This month: ${thisMonthRevenue.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader className="flex flex-row items-center justify-between pb-1">
+                <CardTitle className="text-sm font-medium text-gray-500">Total Bookings (YTD)</CardTitle>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
+                  <CalendarDays className="h-[18px] w-[18px] text-blue-500" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tracking-tight text-gray-900">
+                  {bookings.filter((b) => ["completed", "active", "confirmed"].includes(b.status)).length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Non-cancelled bookings</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 bg-white shadow-sm ring-0">
+              <CardHeader className="flex flex-row items-center justify-between pb-1">
+                <CardTitle className="text-sm font-medium text-gray-500">Fleet Utilization</CardTitle>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/10">
+                  <Car className="h-[18px] w-[18px] text-[#2EBD6B]" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tracking-tight text-gray-900">
+                  {fleetUtilization}%
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{activeRentals} of {totalVehicles} vehicles active</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Revenue by Month */}
+          <Card className="border-0 bg-white shadow-sm ring-0">
+            <CardHeader>
+              <CardTitle className="text-base">Revenue by Month (YTD)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-1 h-48">
+                {(() => {
+                  const maxRevenue = Math.max(...revenueByMonth.map((r) => r.revenue), 1);
+                  return revenueByMonth.map((item) => (
+                    <div key={item.month} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground font-medium">
+                        {item.revenue > 0 ? `$${(item.revenue / 1000).toFixed(1)}k` : ""}
+                      </span>
+                      <div
+                        className="w-full rounded-t bg-[#2EBD6B] transition-all duration-300 min-h-[2px]"
+                        style={{ height: `${Math.max((item.revenue / maxRevenue) * 160, 2)}px` }}
+                      />
+                      <span className="text-[10px] text-muted-foreground">{item.month}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Vehicles */}
+          <Card className="border-0 bg-white shadow-sm ring-0">
+            <CardHeader>
+              <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {topVehicles.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-2 font-medium text-muted-foreground">Vehicle</th>
+                        <th className="pb-2 font-medium text-muted-foreground text-right">Revenue</th>
+                        <th className="pb-2 font-medium text-muted-foreground text-right">Bookings</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topVehicles.map((v) => (
+                        <tr key={v.id} className="border-b last:border-0">
+                          <td className="py-2.5 font-medium">{v.label}</td>
+                          <td className="py-2.5 text-right text-[#2EBD6B] font-semibold">${v.revenue.toLocaleString()}</td>
+                          <td className="py-2.5 text-right text-muted-foreground">{v.bookings}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-6">No vehicle data yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

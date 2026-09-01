@@ -35,7 +35,7 @@ export async function getOperator(): Promise<Operator> {
   // ── Demo account hard bypass ────────────────────────────────────────────────
   // The demo@pcrbooking.com account is used for sales demos and must NEVER see
   // a paywall, regardless of DB state. This bypass is intentional and permanent.
-  const DEMO_EMAILS = ["demo@pcrbooking.com"];
+  const DEMO_EMAILS = ["demo@pcrbooking.com", "hoor@pcrbooking.com"];
   const isDemoAccount = DEMO_EMAILS.includes(operator.business_email ?? "");
 
   // ── Owner account hard bypass ─────────────────────────────────────────────

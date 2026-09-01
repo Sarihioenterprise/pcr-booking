@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 import Link from "next/link";
-import OnboardingChecklist from "@/components/dashboard/onboarding-checklist";
+import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { LeadSourcesWidget } from "@/components/dashboard/lead-sources-widget";
 import {
   Card,
@@ -48,6 +48,9 @@ export default async function DashboardPage() {
     .toISOString()
     .split("T")[0];
 
+  // Revenue trend — last 6 months
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split("T")[0];
+
   // 7 days from now
   const nextWeek = new Date(now);
   nextWeek.setDate(nextWeek.getDate() + 7);
@@ -67,6 +70,7 @@ export default async function DashboardPage() {
     vehiclesRes,
     noShowsRes,
     overdueMaintenanceRes,
+    revenueTrendRes,
   ] = await Promise.all([
     // Total bookings this month
     supabase
@@ -130,6 +134,14 @@ export default async function DashboardPage() {
       .neq("status", "completed")
       .not("date_due", "is", null)
       .lt("date_due", todayStr),
+
+    // Revenue trend — last 6 months raw bookings
+    supabase
+      .from("bookings")
+      .select("start_date, total_price, status")
+      .eq("operator_id", operator.id)
+      .gte("start_date", sixMonthsAgo)
+      .neq("status", "cancelled"),
   ]);
 
   // Vehicles needing service - deduplicate by vehicle
@@ -151,6 +163,19 @@ export default async function DashboardPage() {
     }
   }
   const vehiclesNeedingService = Array.from(vehiclesNeedingServiceMap.values());
+
+  // Build 6-month revenue trend
+  const revenueTrendRaw = revenueTrendRes.data || [];
+  const revenueChartData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const ms = d.toISOString().split("T")[0];
+    const me = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split("T")[0];
+    const label = d.toLocaleDateString("en-US", { month: "short" });
+    const revenue = revenueTrendRaw
+      .filter((b) => b.start_date >= ms && b.start_date <= me)
+      .reduce((sum, b) => sum + (b.total_price || 0), 0);
+    return { month: label, revenue };
+  });
 
   const monthBookings = monthBookingsRes.data || [];
   const totalBookingsThisMonth = monthBookings.length;
@@ -178,52 +203,28 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      title: "Bookings This Month",
-      value: String(totalBookingsThisMonth),
-      icon: CalendarDays,
-      href: "/dashboard/bookings",
-      iconBg: "bg-[#2EBD6B]/10",
-      iconColor: "text-[#2EBD6B]",
-    },
-    {
-      title: "Revenue This Month",
+      title: "Month Revenue",
       value: `$${revenueThisMonth.toLocaleString()}`,
       icon: DollarSign,
       href: undefined,
-      iconBg: "bg-[#2EBD6B]/10",
-      iconColor: "text-[#2EBD6B]",
     },
     {
       title: "Active Rentals",
       value: String(activeRentalsCount),
       icon: Car,
       href: "/dashboard/bookings?filter=active",
-      iconBg: "bg-[#2EBD6B]/10",
-      iconColor: "text-[#2EBD6B]",
+    },
+    {
+      title: "Fleet Size",
+      value: String(vehicleCount),
+      icon: CalendarDays,
+      href: "/dashboard/fleet",
     },
     {
       title: "Leads Today",
       value: String(leadsToday),
       icon: Users,
       href: undefined,
-      iconBg: "bg-[#2EBD6B]/10",
-      iconColor: "text-[#2EBD6B]",
-    },
-    {
-      title: "Upcoming Returns",
-      value: String(upcomingReturns.length),
-      icon: Clock,
-      href: undefined,
-      iconBg: "bg-[#2EBD6B]/10",
-      iconColor: "text-[#2EBD6B]",
-    },
-    {
-      title: "No Shows",
-      value: String(noShowCount),
-      icon: Ban,
-      href: "/dashboard/bookings?filter=no_show",
-      iconBg: "bg-red-100",
-      iconColor: "text-red-500",
     },
   ];
 
@@ -256,27 +257,63 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Onboarding Checklist */}
-      <OnboardingChecklist hasVehicles={hasVehicles} bookingSlug={operator.booking_slug} />
+      {/* First-vehicle hero — shown until they add at least one vehicle */}
+      {!hasVehicles && (
+        <div className="rounded-2xl bg-gradient-to-br from-[#2EBD6B]/10 to-[#2EBD6B]/5 border border-[#2EBD6B]/20 p-8 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="h-16 w-16 rounded-full bg-[#2EBD6B]/15 flex items-center justify-center">
+              <Car className="h-9 w-9 text-[#2EBD6B]" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Add your first vehicle to get started</h2>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            Once your fleet is in, your booking page goes live and renters can start booking directly — no calls, no back-and-forth.
+          </p>
+          <Link
+            href="/dashboard/onboarding"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#2EBD6B] px-6 py-3 text-base font-semibold text-white hover:bg-[#1a9952] transition-colors"
+          >
+            <Plus className="h-5 w-5" />
+            Add Your First Vehicle
+          </Link>
+        </div>
+      )}
+
+      {/* Revenue Trend Chart */}
+      <Card className="border-0 shadow-md ring-0" style={{ backgroundColor: "#0c0c1c" }}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold text-gray-400 uppercase tracking-widest">
+            Revenue Trend — Last 6 Months
+          </CardTitle>
+          <p className="text-3xl font-bold text-white mt-1">
+            ${revenueThisMonth.toLocaleString()}
+            <span className="text-base font-normal text-gray-400 ml-2">this month</span>
+          </p>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <RevenueChart data={revenueChartData} />
+        </CardContent>
+      </Card>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => {
           const card = (
             <Card
               key={stat.title}
-              className="border-0 bg-white shadow-sm ring-0 hover:shadow-md transition-shadow"
+              className="border-0 shadow-md ring-0 hover:shadow-lg transition-all"
+              style={{ backgroundColor: "#0c0c1c" }}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-1">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                   {stat.title}
                 </CardTitle>
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.iconBg}`}>
-                  <stat.icon className={`h-[18px] w-[18px] ${stat.iconColor}`} />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#2EBD6B]/15 ring-1 ring-[#2EBD6B]/30">
+                  <stat.icon className="h-4 w-4 text-[#2EBD6B]" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold tracking-tight text-gray-900">
+                <div className="text-3xl font-bold tracking-tight text-[#2EBD6B]">
                   {stat.value}
                 </div>
               </CardContent>
@@ -331,6 +368,31 @@ export default async function DashboardPage() {
         otherCount={otherLeads}
         pcrConversions={0}
       />
+
+      {/* Website Upsell Banner */}
+      <div className="relative rounded-xl overflow-hidden border border-blue-500/40 bg-[#0a1020]">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 pl-6">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 border border-blue-500/30">
+            <ExternalLink className="h-5 w-5 text-blue-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold text-white leading-snug">
+              Get a Professional Website — $997
+            </h3>
+            <p className="mt-1 text-sm text-gray-300 leading-relaxed">
+              We&apos;ll build your complete business website with all your pages, vehicles, and branding — live in 24–72 hours. You focus on the fleet.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <Link href="/dashboard/website">
+              <button className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 transition-colors">
+                Learn More
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* Vehicles Needing Service */}
       {vehiclesNeedingService.length > 0 && (

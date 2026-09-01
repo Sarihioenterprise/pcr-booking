@@ -389,19 +389,19 @@ export default function LeadsPage() {
       <PCRLeadsUpsellDynamic leads={leads} />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
           <p className="text-gray-500">{totalLeads} total leads</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Source filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center gap-1.5">
+            <Filter className="h-4 w-4 text-gray-400 shrink-0" />
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/30"
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2EBD6B]/30"
             >
               <option value="all">All Sources</option>
               {sources.map((s) => (
@@ -416,7 +416,7 @@ export default function LeadsPage() {
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
             <button
               onClick={() => setViewMode("pipeline")}
-              className={`px-3 py-2 ${
+              className={`px-3 py-1.5 ${
                 viewMode === "pipeline"
                   ? "bg-[#2EBD6B] text-white"
                   : "bg-white text-gray-600 hover:bg-gray-50"
@@ -426,7 +426,7 @@ export default function LeadsPage() {
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`px-3 py-2 ${
+              className={`px-3 py-1.5 ${
                 viewMode === "table"
                   ? "bg-[#2EBD6B] text-white"
                   : "bg-white text-gray-600 hover:bg-gray-50"
@@ -447,63 +447,41 @@ export default function LeadsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border-0 bg-white shadow-sm ring-0">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                <Users className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{totalLeads}</p>
-                <p className="text-xs text-gray-500">Total Leads</p>
-              </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 mb-2">
+              <Users className="h-4 w-4 text-blue-500" />
             </div>
+            <p className="text-2xl font-bold text-gray-900">{totalLeads}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Total Leads</p>
           </CardContent>
         </Card>
         <Card className="border-0 bg-white shadow-sm ring-0">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
-                <TrendingUp className="h-5 w-5 text-[#2EBD6B]" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {conversionRate}%
-                </p>
-                <p className="text-xs text-gray-500">Conversion Rate</p>
-              </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 mb-2">
+              <TrendingUp className="h-4 w-4 text-[#2EBD6B]" />
             </div>
+            <p className="text-2xl font-bold text-gray-900">{conversionRate}%</p>
+            <p className="text-xs text-gray-500 mt-0.5">Conversion Rate</p>
           </CardContent>
         </Card>
         <Card className="border-0 bg-white shadow-sm ring-0">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
-                <DollarSign className="h-5 w-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(pipelineValue)}
-                </p>
-                <p className="text-xs text-gray-500">Pipeline Value</p>
-              </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 mb-2">
+              <DollarSign className="h-4 w-4 text-purple-500" />
             </div>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(pipelineValue)}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Pipeline Value</p>
           </CardContent>
         </Card>
         <Card className="border-0 bg-white shadow-sm ring-0">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-                <Clock className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {avgResponseDays}
-                </p>
-                <p className="text-xs text-gray-500">Avg Response (days)</p>
-              </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 mb-2">
+              <Clock className="h-4 w-4 text-amber-500" />
             </div>
+            <p className="text-2xl font-bold text-gray-900">{avgResponseDays}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Avg Response (days)</p>
           </CardContent>
         </Card>
       </div>

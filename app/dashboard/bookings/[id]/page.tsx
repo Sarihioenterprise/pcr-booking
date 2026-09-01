@@ -77,6 +77,7 @@ import {
   Fuel,
   Camera,
 } from "lucide-react";
+import { InvoiceButton } from "@/components/bookings/InvoiceButton";
 
 // ── License Viewer Component ──────────────────────────────────────────
 
@@ -1916,6 +1917,29 @@ export default function BookingDetailPage({
                   <Printer className="h-4 w-4 mr-2 text-slate-500" />
                   Print Agreement
                 </Button>
+
+                <InvoiceButton
+                  data={{
+                    bookingId: booking.id,
+                    renterName: booking.renter_name,
+                    renterEmail: booking.renter_email || null,
+                    renterPhone: booking.renter_phone || null,
+                    operatorName: operator?.business_name || "PCR Booking",
+                    vehicleYear: vehicle?.year || null,
+                    vehicleMake: vehicle?.make || null,
+                    vehicleModel: vehicle?.model || null,
+                    startDate: booking.start_date,
+                    endDate: booking.end_date,
+                    durationDays: booking.duration_days,
+                    dailyRate: booking.daily_rate,
+                    totalPrice: booking.total_price,
+                    taxAmount: booking.tax_amount,
+                    discountAmount: booking.discount_amount,
+                    depositAmount: booking.deposit_amount,
+                    depositStatus: booking.deposit_status,
+                    createdAt: booking.created_at,
+                  }}
+                />
 
                 <Separator className="my-2" />
 
