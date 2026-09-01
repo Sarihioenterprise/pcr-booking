@@ -110,6 +110,11 @@ const PLAN_DETAILS: Record<string, { name: string; price: string; features: stri
     price: "$299/mo",
     features: ["Everything in Pro", "White-label", "API access", "Dedicated support"],
   },
+  enterprise: {
+    name: "Enterprise",
+    price: "$499/mo",
+    features: ["Everything in Scale", "Custom integrations", "Dedicated account manager", "Custom reporting", "SLA guarantee"],
+  },
 };
 
 export default function SettingsPage() {
@@ -1887,7 +1892,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {Object.entries(PLAN_DETAILS).map(([key, plan]) => {
                   const isCurrent = key === currentPlan;
                   return (

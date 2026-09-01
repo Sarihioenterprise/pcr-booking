@@ -7,6 +7,7 @@ const PRICE_IDS: Record<string, string> = {
   pro: process.env.STRIPE_PRICE_PRO!,
   scale: process.env.STRIPE_PRICE_SCALE!,
   fleet: process.env.STRIPE_PRICE_FLEET!,
+  enterprise: process.env.STRIPE_PRICE_ENTERPRISE || "price_enterprise_placeholder",
   // Annual price IDs: env vars are confirmed set in Vercel production.
   // Fallback strings are intentionally invalid ("price_annual_*_placeholder") so
   // if an env var is ever missing, Stripe will reject the price ID with a clear error
@@ -24,6 +25,7 @@ const PLAN_VALUES: Record<string, number> = {
   pro: 149,
   scale: 249,
   fleet: 499,
+  enterprise: 499,
   growth_annual: 790,
   pro_annual: 1490,
   scale_annual: 2490,
