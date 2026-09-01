@@ -7,16 +7,16 @@ import {
   LayoutDashboard,
   CalendarDays,
   Car,
-  DollarSign,
-  BarChart3,
+  Shield,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/bookings", label: "Bookings", icon: CalendarDays },
   { href: "/dashboard/fleet", label: "Fleet", icon: Car },
-  { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/driver-checks", label: "Driver Checks", icon: Shield },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 export function BottomNav() {
