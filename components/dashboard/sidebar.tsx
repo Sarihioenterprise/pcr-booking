@@ -29,6 +29,7 @@ import {
   Truck,
   PieChart,
   Globe,
+  Shield,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
@@ -41,6 +42,7 @@ const navSections = [
       { href: "/dashboard/bookings", label: "Bookings", icon: CalendarDays },
       { href: "/dashboard/fleet", label: "Fleet", icon: Car },
       { href: "/dashboard/renters", label: "Renters", icon: UserCircle },
+      { href: "/dashboard/driver-checks", label: "Driver Checks", icon: Shield },
       { href: "/dashboard/payments", label: "Payments", icon: DollarSign },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
     ],
