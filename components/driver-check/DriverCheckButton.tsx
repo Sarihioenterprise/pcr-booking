@@ -129,9 +129,9 @@ export function DriverCheckButton({ renterId, renterEmail, renterName, onCheckIn
       </Button>
 
       <Dialog open={status !== "idle"} onOpenChange={(open) => { if (!open) setStatus("idle"); }}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-slate-100 max-w-md">
+        <DialogContent className="bg-slate-900 border-slate-700 text-slate-100 max-w-md [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-slate-100">
               <Shield className="h-5 w-5 text-emerald-400" />
               PCR Booking Driver Verification
             </DialogTitle>
@@ -203,8 +203,8 @@ export function DriverCheckButton({ renterId, renterEmail, renterName, onCheckIn
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setStatus("idle")} disabled={status === "charging" || status === "submitting"}>
+          <DialogFooter className="bg-slate-900 border-t border-slate-800 pt-4 -mx-6 px-6 -mb-6 pb-6 rounded-b-lg">
+            <Button variant="ghost" onClick={() => setStatus("idle")} disabled={status === "charging" || status === "submitting"} className="text-slate-400 hover:text-slate-100 hover:bg-slate-800">
               Cancel
             </Button>
             <Button
