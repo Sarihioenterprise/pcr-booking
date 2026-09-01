@@ -32,10 +32,6 @@ function ThankYouContent() {
   const plan = searchParams.get("plan") || "growth";
   const billing = searchParams.get("billing") || "monthly";
   const valueParam = searchParams.get("value");
-  // eid = CAPI deduplication event_id generated at checkout time.
-  // The server fires a CAPI Purchase event with this same event_id so Meta
-  // deduplicates both into one conversion (browser + server = 1 event).
-  const eid = searchParams.get("eid");
 
   const planLabel = PLAN_LABELS[plan] || plan;
   const billingLabel = billing === "annual" ? "Annual" : "Monthly";
@@ -44,26 +40,11 @@ function ThankYouContent() {
     : (PLAN_VALUES[plan]?.[billing] ?? 79);
 
   useEffect(() => {
-    // Fire Meta Pixel Purchase event with deduplication event_id.
-    // The CAPI Purchase event (fired from Stripe webhook on subscription.created)
-    // uses the same eid so Meta deduplicates both into one conversion.
-    // Without eid (legacy sessions before this deploy), it fires without deduplication.
-    if (typeof window !== "undefined" && window.fbq) {
-      const eventOptions = eid ? { eventID: eid } : undefined;
-      if (eventOptions) {
-        window.fbq("track", "Purchase", {
-          value,
-          currency: "USD",
-          content_name: `${planLabel} ${billingLabel}`,
-        }, eventOptions);
-      } else {
-        window.fbq("track", "Purchase", {
-          value,
-          currency: "USD",
-          content_name: `${planLabel} ${billingLabel}`,
-        });
-      }
-    }
+    // NOTE: Meta Pixel Purchase is intentionally NOT fired here.
+    // This page is shown for both trial signups and paid signups.
+    // Purchase events for real charges are fired server-side via CAPI
+    // in the invoice.payment_succeeded webhook handler only.
+    // Firing Purchase here would corrupt the signal pool with trial starts.
 
     // Fire Google Ads conversion event
     if (typeof window !== "undefined" && window.gtag) {

@@ -297,14 +297,11 @@ async function handleSubscriptionUpsert(
     }
   }
 
-  // ── Meta CAPI: StartTrial + Purchase (deduplicated) ───────────────────────
+  // ── Meta CAPI: StartTrial only ────────────────────────────────────────────
   // Fire on subscription.created (new trial) only — not on subsequent updates.
-  // The capi_event_id from subscription metadata is shared with the browser pixel
-  // Purchase event so Meta can deduplicate both into one conversion.
-  // We fire BOTH StartTrial (trial-specific signal) AND Purchase (main conversion
-  // event, deduplicated with browser /thank-you page if eid was in the success URL).
+  // Purchase must NOT fire here — trial starts involve no real money.
+  // Purchase fires in handlePaymentSucceeded when actual charges occur.
   if (isNewSubscription && subscription.status === "trialing") {
-    const capiEventId = (subscription.metadata?.capi_event_id as string | undefined) || generateEventId("trial");
     const planTier = getPlanFromSubscription(subscription);
     const planValue = subscription.items.data[0]?.price?.unit_amount
       ? subscription.items.data[0].price.unit_amount / 100
@@ -320,26 +317,13 @@ async function handleSubscriptionUpsert(
       customerEmail = customer.email ?? null;
     } catch { /* non-fatal */ }
 
-    // Fire StartTrial (trial-specific signal — use a fresh ID, not deduplicated)
+    // Fire StartTrial only — no Purchase on free trial starts
     capiStartTrial({
       eventId: generateEventId("starttrial"),
       email: customerEmail,
       value: planValue,
       planName,
     }).catch((err) => console.error("[CAPI] StartTrial failed:", err));
-
-    // Fire Purchase (main conversion — deduplicated with browser thank-you event)
-    // For new users (checkout-public → auth/signup), the browser does NOT fire a
-    // Purchase event, so CAPI Purchase fires standalone.
-    // For existing users (checkout → /thank-you), the browser fires Purchase with
-    // the same eid, and Meta deduplicates them into one conversion.
-    capiPurchase({
-      eventId: capiEventId,
-      email: customerEmail,
-      value: planValue,
-      planName,
-      orderId: subscription.id,
-    }).catch((err) => console.error("[CAPI] Purchase (trial) failed:", err));
   }
 
   // ── GHL CRM: lifecycle sync ─────────────────────────────────────────────
