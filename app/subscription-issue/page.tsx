@@ -1,4 +1,17 @@
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+
 export default function SubscriptionIssuePage() {
+  const router = useRouter();
+
+  async function handleSwitchAccount() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center px-4 py-16 text-center">
       <div className="max-w-md">
@@ -19,16 +32,22 @@ export default function SubscriptionIssuePage() {
             Start Your 14-Day Free Trial
           </a>
           <a
-            href="/auth/login"
+            href="/dashboard"
             className="block w-full bg-white border border-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Sign in to a Different Account
+            Go to Dashboard
           </a>
+          <button
+            onClick={handleSwitchAccount}
+            className="block w-full bg-white border border-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          >
+            Sign Out &amp; Use a Different Account
+          </button>
         </div>
         <p className="mt-6 text-xs text-gray-400">
           Already subscribed but seeing this?{" "}
-          <a href="/auth/login" className="text-[#2EBD6B] hover:underline">
-            Try logging in again
+          <a href="/dashboard" className="text-[#2EBD6B] hover:underline">
+            Try going to the dashboard
           </a>{" "}
           or email{" "}
           <a href="mailto:support@pcrbooking.com" className="text-[#2EBD6B] hover:underline">

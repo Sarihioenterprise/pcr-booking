@@ -38,9 +38,15 @@ export async function getOperator(): Promise<Operator> {
   const DEMO_EMAILS = ["demo@pcrbooking.com"];
   const isDemoAccount = DEMO_EMAILS.includes(operator.business_email ?? "");
 
+  // ── Owner account hard bypass ─────────────────────────────────────────────
+  // The platform owner (Alton) must never be blocked by the subscription gate,
+  // regardless of DB state. Checked against the auth user email (not business_email).
+  const OWNER_EMAILS = new Set(["aguytonestate@gmail.com", "aguytonestation@gmail.com"]);
+  const isOwner = OWNER_EMAILS.has(user.email ?? "");
+
   // Subscription gate: operator must have an active Stripe subscription to access dashboard.
   // stripe_subscription_id is set by the Stripe webhook on subscription creation/activation.
-  if (!isDemoAccount && !operator.stripe_subscription_id) {
+  if (!isDemoAccount && !isOwner && !operator.stripe_subscription_id) {
     redirect("/subscription-issue");
   }
 
