@@ -143,6 +143,7 @@ export default function SettingsPage() {
 
   // White label branding (Scale plan — applied to public /rent/[slug] page)
   const [wlLogoUrl, setWlLogoUrl] = useState("");
+  const [wlLogoPreview, setWlLogoPreview] = useState<string | null>(null);
   const [wlPrimaryColor, setWlPrimaryColor] = useState("#2EBD6B");
   const [wlCompanyName, setWlCompanyName] = useState("");
   const [wlLogoUploading, setWlLogoUploading] = useState(false);
@@ -429,16 +430,63 @@ export default function SettingsPage() {
     if (!error) showSuccess("Branding saved");
   }
 
+  // Resize + compress logo client-side using Canvas API
+  // Fits within 400x120 (2x retina of recommended 200x60), preserves aspect ratio
+  // Outputs WebP at 85% quality, falls back to PNG
+  async function compressAndResizeLogo(file: File): Promise<{ blob: Blob; ext: string; previewUrl: string }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_W = 400;
+          const MAX_H = 120;
+          let { width, height } = img;
+          const ratio = Math.min(MAX_W / width, MAX_H / height, 1); // never upscale
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("Canvas not available"));
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const supportsWebP = canvas.toDataURL("image/webp").startsWith("data:image/webp");
+          const mimeType = supportsWebP ? "image/webp" : "image/png";
+          const ext = supportsWebP ? "webp" : "png";
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return reject(new Error("Canvas toBlob failed"));
+              const previewUrl = URL.createObjectURL(blob);
+              resolve({ blob, ext, previewUrl });
+            },
+            mimeType,
+            0.85,
+          );
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   // Upload logo to operator-assets bucket
   async function handleWlLogoUpload(file: File) {
     if (!operator) return;
     setWlLogoUploading(true);
     try {
-      const ext = file.name.split(".").pop();
+      const { blob, ext, previewUrl } = await compressAndResizeLogo(file);
+      setWlLogoPreview(previewUrl);
+
       const fileName = `${operator.id}/brand-logo-${Date.now()}.${ext}`;
       const { data, error: uploadError } = await supabase.storage
         .from("operator-assets")
-        .upload(fileName, file, { cacheControl: "3600", upsert: true });
+        .upload(fileName, blob, { cacheControl: "3600", upsert: true, contentType: blob.type });
 
       if (uploadError) throw uploadError;
 
@@ -1160,7 +1208,7 @@ export default function SettingsPage() {
                               }}
                             />
                           </label>
-                          <p className="text-xs text-muted-foreground">PNG, JPG, SVG — recommended 200×60px or wider</p>
+                          <p className="text-xs text-muted-foreground">Any size accepted — auto-resized to fit 400×120px</p>
                           {wlLogoUrl && (
                             <div className="flex items-center gap-2 mt-1">
                               <Input
@@ -1169,15 +1217,15 @@ export default function SettingsPage() {
                                 placeholder="https://..."
                                 className="text-xs font-mono"
                               />
-                              <Button variant="ghost" size="sm" onClick={() => setWlLogoUrl("")} className="shrink-0 text-red-500 hover:text-red-600">
+                              <Button variant="ghost" size="sm" onClick={() => { setWlLogoUrl(""); setWlLogoPreview(null); }} className="shrink-0 text-red-500 hover:text-red-600">
                                 ✕
                               </Button>
                             </div>
                           )}
                         </div>
                         <div className="h-16 w-32 border rounded-lg bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden">
-                          {wlLogoUrl ? (
-                            <img src={wlLogoUrl} alt="Logo preview" className="max-h-14 max-w-full object-contain" />
+                          {(wlLogoPreview || wlLogoUrl) ? (
+                            <img src={wlLogoPreview ?? wlLogoUrl} alt="Logo preview" className="max-h-14 max-w-full object-contain" />
                           ) : (
                             <ImageIcon className="h-6 w-6 text-slate-300" />
                           )}
