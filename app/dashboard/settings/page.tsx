@@ -65,6 +65,7 @@ import {
   RefreshCw,
   Shield,
   ShieldCheck,
+  CalendarDays,
 } from "lucide-react";
 import { canUseCustomDomain } from "@/lib/plan-tier";
 import type {
@@ -181,6 +182,10 @@ export default function SettingsPage() {
 
   // Widget
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+
+  // Calendar sync
+  const [calendarToken, setCalendarToken] = useState("");
+  const [copiedCalendar, setCopiedCalendar] = useState(false);
 
   // Notification preferences
   const [notifPaymentReminder3Days, setNotifPaymentReminder3Days] = useState(false);
@@ -349,6 +354,10 @@ export default function SettingsPage() {
         // Booking slug
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setBookingSlug((op as any).booking_slug || op.referral_code || "");
+
+        // Calendar token
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setCalendarToken((op as any).calendar_token || "");
 
         // Custom domain
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1006,6 +1015,7 @@ export default function SettingsPage() {
           <TabsTrigger value="webhooks"><Webhook className="h-3.5 w-3.5 mr-1.5" />Webhooks</TabsTrigger>
           <TabsTrigger value="widget"><Code className="h-3.5 w-3.5 mr-1.5" />Widget</TabsTrigger>
           <TabsTrigger value="compliance"><Shield className="h-3.5 w-3.5 mr-1.5" />Compliance</TabsTrigger>
+          <TabsTrigger value="calendar"><CalendarDays className="h-3.5 w-3.5 mr-1.5" />Calendar</TabsTrigger>
           <TabsTrigger value="subscription"><Crown className="h-3.5 w-3.5 mr-1.5" />Plan</TabsTrigger>
         </TabsList>
         </div>
@@ -2380,6 +2390,64 @@ export default function SettingsPage() {
                     <p className="font-semibold text-red-900">Background Check: Suspended</p>
                     <p className="text-sm text-red-800 mt-0.5">Your background check has been suspended. Please contact support for more information.</p>
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Calendar Sync ── */}
+        <TabsContent value="calendar">
+          <Card className="border-0 bg-white shadow-sm ring-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-[#2EBD6B]" />
+                Calendar Sync
+              </CardTitle>
+              <CardDescription>
+                Subscribe to your bookings in Google Calendar, Apple Calendar, or any calendar app that supports iCal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {calendarToken ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Your iCal Feed URL</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        readOnly
+                        value={`https://pcrbooking.com/api/calendar/${calendarToken}`}
+                        className="font-mono text-xs bg-slate-50"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://pcrbooking.com/api/calendar/${calendarToken}`);
+                          setCopiedCalendar(true);
+                          setTimeout(() => setCopiedCalendar(false), 2000);
+                        }}
+                      >
+                        {copiedCalendar ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                        {copiedCalendar ? "Copied!" : "Copy"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-slate-50 p-4 space-y-2 text-sm text-muted-foreground">
+                    <p className="font-medium text-slate-700">How to subscribe:</p>
+                    <ul className="space-y-1 list-disc list-inside text-xs">
+                      <li><span className="font-medium text-slate-600">Google Calendar:</span> Other calendars → From URL → paste the link</li>
+                      <li><span className="font-medium text-slate-600">Apple Calendar:</span> File → New Calendar Subscription → paste the link</li>
+                      <li><span className="font-medium text-slate-600">Outlook:</span> Add calendar → Subscribe from web → paste the link</li>
+                    </ul>
+                    <p className="text-xs mt-2">Shows confirmed, active, and completed bookings. Updates automatically. Keep this URL private — anyone with it can view your bookings.</p>
+                  </div>
+                </>
+              ) : (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  <CalendarDays className="h-8 w-8 mx-auto mb-3 text-slate-300" />
+                  <p>Calendar sync is being set up. Reload this page in a moment.</p>
                 </div>
               )}
             </CardContent>
