@@ -1952,11 +1952,40 @@ export default function BookingDetailPage({
     ${agreement.signer_ip ? ` · IP: ${esc(agreement.signer_ip)}` : ""}
   </p>
 </div>` : "";
+                    const fmtDate = (ymd: string) => new Date(ymd + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+                    const vehicleLabel = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle Rental";
+                    const bookingHeader = `
+<div style="font-family:Georgia,serif;border-bottom:2px solid #222;padding-bottom:20px;margin-bottom:32px;">
+  <h1 style="font-size:22px;font-weight:bold;letter-spacing:1px;margin:0 0 4px">RENTAL AGREEMENT</h1>
+  <p style="color:#666;font-size:13px;margin:0 0 20px">${esc(operator?.business_name || "")}</p>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <tr>
+      <td style="padding:6px 0;color:#666;width:140px">Renter</td>
+      <td style="padding:6px 0;font-weight:bold">${esc(booking.renter_name || "")}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0;color:#666">Vehicle</td>
+      <td style="padding:6px 0">${esc(vehicleLabel)}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0;color:#666">Rental Period</td>
+      <td style="padding:6px 0">${fmtDate(booking.start_date)} – ${fmtDate(booking.end_date)} (${booking.duration_days} days)</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0;color:#666">Daily Rate</td>
+      <td style="padding:6px 0">$${Number(booking.daily_rate).toFixed(2)}/day</td>
+    </tr>
+    <tr style="border-top:1px solid #ddd;">
+      <td style="padding:10px 0 6px;font-weight:bold">Total Amount</td>
+      <td style="padding:10px 0 6px;font-weight:bold;font-size:16px">$${Number(booking.total_price).toFixed(2)}</td>
+    </tr>
+  </table>
+</div>`;
                     win.document.write(
                       `<!DOCTYPE html><html><head><title>Rental Agreement</title>` +
                       `<style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;line-height:1.6}` +
                       `pre{white-space:pre-wrap;font-family:Georgia,serif;font-size:14px}</style>` +
-                      `</head><body><pre>${esc(agreement.content)}</pre>${signatureBlock}</body></html>`
+                      `</head><body>${bookingHeader}<pre>${esc(agreement.content)}</pre>${signatureBlock}</body></html>`
                     );
                     win.document.close();
                     win.focus();

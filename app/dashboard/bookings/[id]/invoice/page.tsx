@@ -25,14 +25,21 @@ export default async function InvoicePage({
   // Admin client bypasses RLS; auth gate is enforced by getOperator() above.
   // operator.business_name is used in the invoice header.
   // Note: bookings has no FK to renters table; use renter_email/renter_phone columns directly.
-  const { data: booking, error } = await supabase
-    .from("bookings")
-    .select("*, vehicles(year, make, model)")
-    .eq("id", id)
-    .single();
+  const [{ data: booking, error }, { data: scheduleRows }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("*, vehicles(year, make, model)")
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("payment_schedule")
+      .select("amount, paid_at, status")
+      .eq("booking_id", id)
+      .eq("status", "paid"),
+  ]);
 
-  console.log("[invoice] id:", id, "error:", error?.message ?? null, "found:", !!booking);
   if (error || !booking) notFound();
+  const amountPaid = (scheduleRows || []).reduce((sum, r) => sum + Number(r.amount), 0);
 
   const vehicle = booking.vehicles as { year: number; make: string; model: string } | null;
   const vehicleLabel = vehicle
@@ -142,6 +149,16 @@ export default async function InvoicePage({
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 60, padding: "12px 0 6px", fontSize: 15, fontWeight: "bold", borderTop: "2px solid #111", marginTop: 4 }}>
             <span>Total Due</span><span>{fmt(booking.total_price)}</span>
           </div>
+          {amountPaid > 0 && (
+            <>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 60, padding: "6px 0", fontSize: 13, color: "#16a34a" }}>
+                <span>Amount Paid</span><span>-{fmt(amountPaid)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 60, padding: "6px 0", fontSize: 14, fontWeight: "bold", borderTop: "1px solid #ddd", marginTop: 2 }}>
+                <span>Balance Due</span><span>{fmt(Math.max(0, booking.total_price - amountPaid))}</span>
+              </div>
+            </>
+          )}
           {(booking.deposit_amount || 0) > 0 && (
             <div style={{ fontSize: 12, color: "#888", marginTop: 8, textAlign: "right" }}>
               Security Deposit: {fmt(booking.deposit_amount)} ({booking.deposit_status || "pending"})
