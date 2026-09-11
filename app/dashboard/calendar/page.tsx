@@ -251,11 +251,7 @@ export default function CalendarPage() {
           <Select value={filterVehicle} onValueChange={(val) => setFilterVehicle(val ?? "all")}>
             <SelectTrigger className="min-w-[180px]">
               <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-              <SelectValue placeholder="All Vehicles">
-                {filterVehicle === "all"
-                  ? "All Vehicles"
-                  : (() => { const v = vehicles.find(x => x.id === filterVehicle); return v ? `${v.year} ${v.make} ${v.model}` : "All Vehicles"; })()}
-              </SelectValue>
+              <SelectValue placeholder="All Vehicles" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Vehicles</SelectItem>

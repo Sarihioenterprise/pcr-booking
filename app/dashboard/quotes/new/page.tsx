@@ -229,11 +229,7 @@ export default function NewQuotePage() {
               <Label>Vehicle</Label>
               <Select value={vehicleId} onValueChange={(v) => setVehicleId(v ?? "")}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a vehicle (optional)">
-                    {vehicleId
-                      ? (() => { const v = vehicles.find(x => x.id === vehicleId); return v ? `${v.year} ${v.make} ${v.model}` : undefined; })()
-                      : undefined}
-                  </SelectValue>
+                  <SelectValue placeholder="Select a vehicle (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {vehicles.map((v) => (
