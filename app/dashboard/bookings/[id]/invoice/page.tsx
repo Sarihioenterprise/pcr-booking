@@ -147,7 +147,7 @@ export default async function InvoicePage({
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 60, padding: "12px 0 6px", fontSize: 15, fontWeight: "bold", borderTop: "2px solid #111", marginTop: 4 }}>
-            <span>Total Due</span><span>{fmt(booking.total_price)}</span>
+            <span>Total</span><span>{fmt(booking.total_price)}</span>
           </div>
           {amountPaid > 0 && (
             <>
