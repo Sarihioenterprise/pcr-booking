@@ -2008,15 +2008,16 @@ export default function BookingDetailPage({
     </tr>
   </table>
 </div>`;
+                    const printBtn = `<div style="text-align:center;margin:32px 0 0;padding-top:24px;border-top:1px solid #ddd"><button onclick="window.print()" style="background:#111;color:#fff;border:none;padding:10px 28px;font-size:15px;border-radius:6px;cursor:pointer">Print / Save PDF</button></div>`;
                     win.document.write(
                       `<!DOCTYPE html><html><head><title>Rental Agreement</title>` +
                       `<style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;line-height:1.6}` +
-                      `pre{white-space:pre-wrap;font-family:Georgia,serif;font-size:14px}</style>` +
-                      `</head><body>${bookingHeader}<pre>${esc(agreement.content)}</pre>${signatureBlock}</body></html>`
+                      `pre{white-space:pre-wrap;font-family:Georgia,serif;font-size:14px}` +
+                      `@media print{button{display:none}}</style>` +
+                      `</head><body>${bookingHeader}<pre>${esc(agreement.content)}</pre>${signatureBlock}${printBtn}</body></html>`
                     );
                     win.document.close();
                     win.focus();
-                    win.print();
                   }}
                 >
                   <Printer className="h-4 w-4 mr-2 text-slate-500" />
