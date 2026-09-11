@@ -882,10 +882,14 @@ export default function BookingDetailPage({
   const totalPaid = payments
     .filter((p) => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0);
+  const totalRefunded = payments
+    .filter((p) => p.status === "refunded")
+    .reduce((sum, p) => sum + p.amount, 0);
   const totalDue = booking
     ? booking.total_price + booking.tax_amount - booking.discount_amount
     : 0;
-  const remaining = totalDue - totalPaid;
+  // Cancelled bookings: renter owes $0 — refunds return their money, nothing to collect
+  const remaining = isCancelled ? 0 : totalDue - totalPaid;
 
   const nextStep =
     !isCancelled && booking && currentStepIndex < STATUS_STEPS.length - 1
@@ -1547,11 +1551,11 @@ export default function BookingDetailPage({
               {/* ── Payments Tab ────────────────────────────────── */}
               <TabsContent value="payments" className="space-y-4">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className={`grid grid-cols-1 gap-4 ${totalRefunded > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
                   <Card className="border-0 bg-white shadow-sm">
                     <CardContent className="pt-5 pb-4">
                       <p className="text-xs text-slate-400 uppercase tracking-wide">
-                        Total Due
+                        Total
                       </p>
                       <p className="text-2xl font-bold text-slate-900 mt-1">
                         {formatCurrency(totalDue)}
@@ -1568,6 +1572,18 @@ export default function BookingDetailPage({
                       </p>
                     </CardContent>
                   </Card>
+                  {totalRefunded > 0 && (
+                    <Card className="border-0 bg-white shadow-sm">
+                      <CardContent className="pt-5 pb-4">
+                        <p className="text-xs text-slate-400 uppercase tracking-wide">
+                          Refunded
+                        </p>
+                        <p className="text-2xl font-bold text-blue-600 mt-1">
+                          {formatCurrency(totalRefunded)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                   <Card className="border-0 bg-white shadow-sm">
                     <CardContent className="pt-5 pb-4">
                       <p className="text-xs text-slate-400 uppercase tracking-wide">
