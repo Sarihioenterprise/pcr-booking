@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, Clock, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, XCircle, RefreshCw } from "lucide-react";
 import type { PaymentScheduleItem } from "@/lib/types";
 
 const statusConfig: Record<
@@ -38,6 +38,11 @@ const statusConfig: Record<
     label: "Failed",
     className: "bg-red-500/10 text-red-600 border-red-500/20",
     icon: XCircle,
+  },
+  refunded: {
+    label: "Refunded",
+    className: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    icon: RefreshCw,
   },
 };
 

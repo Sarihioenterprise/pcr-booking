@@ -499,6 +499,8 @@ export default function BookingDetailPage({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentNote, setPaymentNote] = useState("");
+  const [refundDialog, setRefundDialog] = useState(false);
+  const [refundLoading, setRefundLoading] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
@@ -1619,13 +1621,17 @@ export default function BookingDetailPage({
                                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
                                   p.status === "paid"
                                     ? "bg-[#2EBD6B]/10"
-                                    : p.status === "overdue"
-                                      ? "bg-red-50"
-                                      : "bg-slate-100"
+                                    : p.status === "refunded"
+                                      ? "bg-blue-50"
+                                      : p.status === "overdue"
+                                        ? "bg-red-50"
+                                        : "bg-slate-100"
                                 }`}
                               >
                                 {p.status === "paid" ? (
                                   <Check className="h-4 w-4 text-[#2EBD6B]" />
+                                ) : p.status === "refunded" ? (
+                                  <RefreshCw className="h-4 w-4 text-blue-500" />
                                 ) : p.status === "overdue" ? (
                                   <AlertCircle className="h-4 w-4 text-red-500" />
                                 ) : (
@@ -1648,15 +1654,36 @@ export default function BookingDetailPage({
                               className={
                                 p.status === "paid"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : p.status === "overdue"
-                                    ? "bg-red-50 text-red-700 border-red-200"
-                                    : "bg-slate-50 text-slate-600 border-slate-200"
+                                  : p.status === "refunded"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : p.status === "overdue"
+                                      ? "bg-red-50 text-red-700 border-red-200"
+                                      : "bg-slate-50 text-slate-600 border-slate-200"
                               }
                             >
                               {p.status}
                             </Badge>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Refund button — only on cancelled bookings with unrefunded paid entries */}
+                    {isCancelled && payments.some(p => p.status === "paid" && p.stripe_payment_intent_id) && (
+                      <div className="mt-4 pt-4 border-t border-slate-100">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => setRefundDialog(true)}
+                          disabled={refundLoading}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                          Issue Refund
+                        </Button>
+                        <p className="text-xs text-slate-400 mt-1.5">
+                          Refunds the Stripe charge. Cannot be undone.
+                        </p>
                       </div>
                     )}
 
@@ -2183,6 +2210,61 @@ export default function BookingDetailPage({
               className="bg-[#2EBD6B] hover:bg-[#27a85e] text-white"
             >
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Refund Dialog ──────────────────────────────────────────── */}
+      <Dialog open={refundDialog} onOpenChange={setRefundDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Issue Refund</DialogTitle>
+            <DialogDescription>
+              This will refund{" "}
+              <strong>
+                {formatCurrency(
+                  payments
+                    .filter(p => p.status === "paid" && p.stripe_payment_intent_id)
+                    .reduce((sum, p) => sum + Number(p.amount), 0)
+                )}
+              </strong>{" "}
+              via Stripe. The charge will be returned to the renter's card. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setRefundDialog(false)} disabled={refundLoading}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={refundLoading}
+              onClick={async () => {
+                if (!booking) return;
+                setRefundLoading(true);
+                try {
+                  const res = await fetch(`/api/bookings/${booking.id}/refund`, { method: "POST" });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || "Refund failed");
+                  setPayments(prev => prev.map(p =>
+                    p.status === "paid" && p.stripe_payment_intent_id
+                      ? { ...p, status: "refunded" as const }
+                      : p
+                  ));
+                  setRefundDialog(false);
+                  showToast(`Refunded ${formatCurrency(data.refunded)} successfully.`);
+                } catch (err: unknown) {
+                  showToast(err instanceof Error ? err.message : "Refund failed");
+                } finally {
+                  setRefundLoading(false);
+                }
+              }}
+            >
+              {refundLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
+              ) : (
+                "Confirm Refund"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

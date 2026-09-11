@@ -447,7 +447,7 @@ export interface PaymentScheduleItem {
   operator_id: string;
   amount: number;
   due_date: string;
-  status: "pending" | "paid" | "overdue" | "failed";
+  status: "pending" | "paid" | "overdue" | "failed" | "refunded";
   stripe_payment_intent_id: string | null;
   paid_at: string | null;
   created_at: string;
