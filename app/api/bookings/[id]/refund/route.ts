@@ -36,19 +36,35 @@ export async function POST(
       );
     }
 
-    // Get paid payment_schedule entries that haven't been refunded
+    if (!operator.stripe_account_id) {
+      return NextResponse.json(
+        { error: "Operator Stripe account not configured" },
+        { status: 400 }
+      );
+    }
+
+    // Get all payment_schedule entries for this booking to check for duplicates
     const { data: scheduleRows, error: scheduleError } = await supabase
       .from("payment_schedule")
       .select("id, amount, stripe_payment_intent_id, status")
       .eq("booking_id", bookingId)
-      .eq("status", "paid");
+      .in("status", ["paid", "refunded"]);
 
     if (scheduleError) {
       return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
     }
 
+    // Prevent duplicate refunds
+    const alreadyRefunded = (scheduleRows || []).some((r) => r.status === "refunded");
+    if (alreadyRefunded) {
+      return NextResponse.json(
+        { error: "A refund has already been issued for this booking" },
+        { status: 409 }
+      );
+    }
+
     const refundable = (scheduleRows || []).filter(
-      (r) => r.stripe_payment_intent_id
+      (r) => r.status === "paid" && r.stripe_payment_intent_id
     );
 
     if (refundable.length === 0) {
@@ -58,14 +74,16 @@ export async function POST(
       );
     }
 
-    // Issue Stripe refund for each paid entry
+    // Issue Stripe refund for each paid entry — must route to connected account
+    const stripeAccountOpts = { stripeAccount: operator.stripe_account_id };
     let totalRefunded = 0;
     const refundedIds: string[] = [];
 
     for (const row of refundable) {
-      const refund = await stripe.refunds.create({
-        payment_intent: row.stripe_payment_intent_id!,
-      });
+      const refund = await stripe.refunds.create(
+        { payment_intent: row.stripe_payment_intent_id! },
+        stripeAccountOpts
+      );
 
       if (refund.status === "succeeded" || refund.status === "pending") {
         totalRefunded += Number(row.amount);
