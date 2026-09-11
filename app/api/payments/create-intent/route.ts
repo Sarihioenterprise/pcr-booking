@@ -110,6 +110,19 @@ export async function POST(request: NextRequest) {
       payment_intent_id: paymentIntent.id,
     });
   } catch (err) {
+    const stripeErr = err as { code?: string; type?: string; message?: string };
+    // Stripe Connect account not fully onboarded → treat as "not set up"
+    if (
+      stripeErr.code === "insufficient_capabilities_for_transfer" ||
+      stripeErr.code === "account_invalid" ||
+      (stripeErr.type === "invalid_request_error" &&
+        stripeErr.message?.includes("capability"))
+    ) {
+      return NextResponse.json(
+        { error: "This rental company hasn't finished setting up payments yet. Please contact them directly to complete your payment." },
+        { status: 403 }
+      );
+    }
     console.error("Create payment intent error:", err);
     return NextResponse.json(
       { error: "Failed to create payment intent" },

@@ -16,6 +16,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Camera, CheckCircle2, Loader2, AlertCircle, RotateCcw } from "lucide-react";
+import { compressImage } from "@/lib/compress-image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -72,7 +73,7 @@ export default function InspectionPhotos({
 
       try {
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", await compressImage(file));
         formData.append("zone", zone);
         formData.append("type", type);
 

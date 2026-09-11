@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
@@ -25,7 +26,13 @@ interface InvoiceData {
 }
 
 export function InvoiceButton({ data }: { data: InvoiceData }) {
+  const [downloading, setDownloading] = React.useState(false);
+  const [dlError, setDlError] = React.useState("");
+
   async function handleDownload() {
+    setDownloading(true);
+    setDlError("");
+    try {
     const { jsPDF } = await import("jspdf");
     const doc = new jsPDF({ unit: "pt", format: "a4" });
 
@@ -189,13 +196,37 @@ export function InvoiceButton({ data }: { data: InvoiceData }) {
     doc.setTextColor(140, 140, 140);
     doc.text("Thank you for your business.", pageW / 2, footerY + 8, { align: "center" });
 
-    doc.save(`invoice-${data.bookingId.slice(0, 8)}.pdf`);
+    // Use explicit blob + anchor approach for reliable cross-browser downloads
+    const pdfBlob = doc.output("blob");
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const filename = `invoice-${data.bookingId.slice(0, 8)}.pdf`;
+
+    // Try download via anchor click
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Revoke after a moment
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      console.error("Invoice download error:", err);
+      setDlError(err instanceof Error ? err.message : "Download failed — try again");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
-    <Button variant="outline" onClick={handleDownload} className="w-full justify-start">
-      <Download className="h-4 w-4 mr-2 text-slate-500" />
-      Download Invoice
-    </Button>
+    <div className="w-full">
+      <Button variant="outline" onClick={handleDownload} disabled={downloading} className="w-full justify-start">
+        <Download className="h-4 w-4 mr-2 text-slate-500" />
+        {downloading ? "Generating…" : "Download Invoice"}
+      </Button>
+      {dlError && <p className="text-xs text-red-500 mt-1">{dlError}</p>}
+    </div>
   );
 }

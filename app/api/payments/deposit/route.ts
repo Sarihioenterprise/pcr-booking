@@ -153,6 +153,11 @@ export async function POST(request: NextRequest) {
       if (error || !data) {
         return NextResponse.json({ error: "Booking not found" }, { status: 404 });
       }
+
+      if (data.status === "cancelled") {
+        return NextResponse.json({ error: "Cannot request a deposit hold on a cancelled booking." }, { status: 400 });
+      }
+
       booking = data;
     }
 

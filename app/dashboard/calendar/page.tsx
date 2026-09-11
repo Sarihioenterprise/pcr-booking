@@ -118,14 +118,21 @@ export default function CalendarPage() {
       .order("created_at");
 
     // Load bookings for visible range (include padding for multi-month spans)
-    const rangeStart = formatDate(currentYear, currentMonth - 1, 1);
-    const rangeEnd = formatDate(currentYear, currentMonth + 2, 0);
+    // Use Date constructor for month arithmetic — handles under/overflow correctly
+    const rsDate = new Date(currentYear, currentMonth - 1, 1);
+    const reDate = new Date(currentYear, currentMonth + 2, 0);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmtDate = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const rangeStart = fmtDate(rsDate);
+    const rangeEnd = fmtDate(reDate);
 
     const { data: bookingData } = await supabase
       .from("bookings")
       .select("*")
       .eq("operator_id", op.id)
-      .or(`start_date.lte.${rangeEnd},end_date.gte.${rangeStart}`)
+      .lte("start_date", rangeEnd)
+      .gte("end_date", rangeStart)
       .not("status", "eq", "inquiry");
 
     setVehicles((vehicleData as Vehicle[]) || []);
@@ -244,7 +251,11 @@ export default function CalendarPage() {
           <Select value={filterVehicle} onValueChange={(val) => setFilterVehicle(val ?? "all")}>
             <SelectTrigger className="min-w-[180px]">
               <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-              <SelectValue />
+              <SelectValue placeholder="All Vehicles">
+                {filterVehicle === "all"
+                  ? "All Vehicles"
+                  : (() => { const v = vehicles.find(x => x.id === filterVehicle); return v ? `${v.year} ${v.make} ${v.model}` : "All Vehicles"; })()}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Vehicles</SelectItem>

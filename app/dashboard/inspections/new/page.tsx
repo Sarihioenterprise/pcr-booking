@@ -27,6 +27,7 @@ import {
   Fuel,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/compress-image";
 import type { Vehicle, Booking, InspectionChecklist } from "@/lib/types";
 
 const checklistItems: { key: keyof InspectionChecklist; label: string }[] = [
@@ -155,7 +156,7 @@ export default function NewInspectionPage() {
     // Upload each photo
     for (const entry of newEntries) {
       const fd = new FormData();
-      fd.append("file", entry.file);
+      fd.append("file", await compressImage(entry.file));
       if (operatorId) fd.append("operator_id", operatorId);
 
       try {

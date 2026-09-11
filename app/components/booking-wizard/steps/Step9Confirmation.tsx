@@ -77,7 +77,7 @@ export function Step9Confirmation() {
               Deposit request sent
             </span>
           )}
-          {state.pickup_inspection_id && (
+          {state.pickup_inspection_id && state.inspection_zones.some(z => z.path) && (
             <span className="flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full font-medium">
               <CheckCircle2 className="h-3 w-3" /> Pickup photos saved
             </span>

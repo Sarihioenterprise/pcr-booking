@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,8 +12,8 @@ import Link from "next/link";
 
 export default function NewRenterPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -39,40 +38,32 @@ export default function NewRenterPage() {
     if (!form.name.trim()) return;
 
     setSaving(true);
+    setSaveError("");
 
     try {
-      // Get operator
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: operator } = await supabase
-        .from("operators")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!operator) return;
-
-      const { error } = await supabase.from("renters").insert({
-        operator_id: operator.id,
-        name: form.name.trim(),
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        date_of_birth: form.date_of_birth || null,
-        drivers_license_number: form.drivers_license_number.trim() || null,
-        drivers_license_expiry: form.drivers_license_expiry || null,
-        address: form.address.trim() || null,
-        city: form.city.trim() || null,
-        state: form.state.trim() || null,
-        zip: form.zip.trim() || null,
-        notes: form.notes.trim() || null,
-        is_blacklisted: false,
+      const res = await fetch("/api/renters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          date_of_birth: form.date_of_birth || null,
+          drivers_license_number: form.drivers_license_number.trim() || null,
+          drivers_license_expiry: form.drivers_license_expiry || null,
+          address: form.address.trim() || null,
+          city: form.city.trim() || null,
+          state: form.state.trim() || null,
+          zip: form.zip.trim() || null,
+          notes: form.notes.trim() || null,
+        }),
       });
 
-      if (!error) {
+      if (res.ok) {
         router.push("/dashboard/renters");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error || "Failed to save renter");
       }
     } finally {
       setSaving(false);
@@ -236,6 +227,11 @@ export default function NewRenterPage() {
           </CardContent>
         </Card>
 
+        {saveError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {saveError}
+          </p>
+        )}
         <div className="flex justify-end gap-3">
           <Link href="/dashboard/renters">
             <Button variant="outline">Cancel</Button>

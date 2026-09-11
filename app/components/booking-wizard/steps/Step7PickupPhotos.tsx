@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useWizard } from "../WizardContext";
+import { compressImage } from "@/lib/compress-image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Camera, ChevronLeft, ChevronRight, X, CheckCircle2, Upload } from "lucide-react";
@@ -33,7 +34,7 @@ export function Step7PickupPhotos({ onNext, onBack, operatorId }: Step7Props) {
 
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", await compressImage(file));
       fd.append("zone", zone);
       fd.append("type", "pickup");
 
@@ -82,8 +83,8 @@ export function Step7PickupPhotos({ onNext, onBack, operatorId }: Step7Props) {
     setError("");
 
     try {
-      // Mark pickup inspection complete on the booking
-      if (state.booking_id) {
+      // Only mark pickup inspection complete if at least one photo was uploaded
+      if (state.booking_id && uploadedCount > 0) {
         await fetch(`/api/bookings/${state.booking_id}/zone-photos`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -94,7 +95,7 @@ export function Step7PickupPhotos({ onNext, onBack, operatorId }: Step7Props) {
       dispatch({
         type: "SET_INSPECTION",
         payload: {
-          pickup_inspection_id: state.booking_id, // use booking_id as inspection ref
+          pickup_inspection_id: uploadedCount > 0 ? state.booking_id : null,
           inspection_zones: zones,
         },
       });

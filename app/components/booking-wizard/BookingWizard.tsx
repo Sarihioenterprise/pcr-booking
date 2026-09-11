@@ -40,52 +40,65 @@ function WizardInner({ operatorId }: BookingWizardProps) {
   }
 
   /**
-   * After step 4 completes, create the booking so steps 5-7 can use booking_id.
+   * After step 4 completes, create (or update) the booking so steps 5-7 can use booking_id.
    * Called when moving FROM step 4 TO step 5.
+   * All customer fields are passed directly from Step4's local form state to avoid
+   * reading stale context (dispatch is async w.r.t. re-renders).
    */
-  async function nextFromStep4() {
-    // Create booking now (before signature)
+  async function nextFromStep4(firstName: string, lastName: string, email: string, phone: string, renterId: string | null) {
     try {
       const addonIds = state.addons.map((a) => a.id);
-      const renterFullName = `${state.first_name} ${state.last_name}`.trim();
+      const renterFullName = `${firstName} ${lastName}`.trim();
 
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vehicle_id: state.vehicle?.id ?? null,
-          renter_name: renterFullName,
-          renter_phone: state.phone || null,
-          renter_email: state.email || null,
-          drivers_license: state.license_number || null,
-          start_date: state.start_date,
-          end_date: state.end_date,
-          status: "confirmed",
-          selected_addon_ids: addonIds,
-          pickup_location: state.location_name || null,
-          pickup_time: state.start_time || null,
-          return_time: state.return_time || null,
-          renter_dob: state.dob || null,
-          renter_license_state: state.license_state || null,
-          renter_license_expiry: state.license_expiry || null,
-          renter_license_photo_path: state.license_photo_path || null,
-          renter_id: state.renter_id ?? undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create booking");
+      if (state.booking_id) {
+        // Booking already exists (user went back to edit customer info) — patch email/phone/renter_id.
+        await fetch(`/api/bookings/${state.booking_id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            renter_email: email || null,
+            renter_phone: phone || null,
+            ...(renterId ? { renter_id: renterId } : {}),
+          }),
+        }).catch(() => {});
+      } else {
+        // First pass — create the booking.
+        const res = await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vehicle_id: state.vehicle?.id ?? null,
+            renter_name: renterFullName,
+            renter_phone: phone || null,
+            renter_email: email || null,
+            drivers_license: state.license_number || null,
+            start_date: state.start_date,
+            end_date: state.end_date,
+            status: "pending",
+            selected_addon_ids: addonIds,
+            pickup_location: state.location_name || null,
+            pickup_time: state.start_time || null,
+            return_time: state.return_time || null,
+            renter_dob: state.dob || null,
+            renter_license_state: state.license_state || null,
+            renter_license_expiry: state.license_expiry || null,
+            renter_license_photo_path: state.license_photo_path || null,
+            ...(renterId ? { renter_id: renterId } : {}),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to create booking");
 
-      dispatch({
-        type: "SET_BOOKING",
-        payload: {
-          booking_id: data.booking.id,
-          booking_number: data.booking.id.slice(0, 8).toUpperCase(),
-        },
-      });
+        dispatch({
+          type: "SET_BOOKING",
+          payload: {
+            booking_id: data.booking.id,
+            booking_number: data.booking.id.slice(0, 8).toUpperCase(),
+          },
+        });
+      }
     } catch (err) {
-      // If booking creation fails, still allow wizard to continue
-      // (edge case: duplicate or validation error)
-      console.warn("Booking pre-create failed:", err);
+      console.warn("Booking step-4 transition failed:", err);
     }
     next();
   }
@@ -114,7 +127,7 @@ function WizardInner({ operatorId }: BookingWizardProps) {
             drivers_license: state.license_number || null,
             start_date: state.start_date,
             end_date: state.end_date,
-            status: "confirmed",
+            status: "pending",
             selected_addon_ids: addonIds,
             pickup_location: state.location_name || null,
           }),
@@ -188,7 +201,7 @@ function WizardInner({ operatorId }: BookingWizardProps) {
 
         {/* Steps */}
         {step === 1 && <Step1Dates onNext={next} />}
-        {step === 2 && <Step2Vehicles onNext={next} onBack={back} />}
+        {step === 2 && <Step2Vehicles onNext={next} onBack={back} operatorId={operatorId} />}
         {step === 3 && (
           <Step3Addons onNext={next} onBack={back} operatorId={operatorId} />
         )}

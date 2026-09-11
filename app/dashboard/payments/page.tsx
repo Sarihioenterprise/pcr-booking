@@ -48,44 +48,49 @@ export default async function PaymentsPage() {
   const operator = await getOperator();
   const supabase = createAdminClient();
 
-  // Fetch invoices
-  const { data: invoicesData } = await supabase
-    .from("invoices")
-    .select(
-      `
-      id,
-      invoice_number,
-      booking_id,
-      renter_id,
-      amount,
-      total,
-      status,
-      paid_at,
-      created_at,
-      bookings(renter_name, vehicle_id, vehicles(make, model, year)),
-      renters(name)
-    `
-    )
-    .eq("operator_id", operator.id)
-    .order("created_at", { ascending: false });
+  // Fetch invoices and payment_schedule receipts in parallel
+  const [{ data: invoicesData }, { data: scheduleData }] = await Promise.all([
+    supabase
+      .from("invoices")
+      .select(
+        `id, invoice_number, booking_id, renter_id, amount, total, status, paid_at, created_at,
+        bookings(renter_name, vehicle_id, vehicles(make, model, year)), renters(name)`
+      )
+      .eq("operator_id", operator.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("payment_schedule")
+      .select("id, booking_id, amount, paid_at, created_at, status, bookings(renter_name, vehicles(make, model, year))")
+      .eq("operator_id", operator.id)
+      .eq("status", "paid")
+      .not("paid_at", "is", null)
+      .order("paid_at", { ascending: false }),
+  ]);
 
-  // Calculate metrics
+  // Calculate metrics combining both sources
   const safeInvoices: Invoice[] = (invoicesData as unknown as Invoice[]) || [];
+  const safeSchedule = (scheduleData as unknown as Array<{
+    id: string; booking_id: string | null; amount: number; paid_at: string;
+    created_at: string; status: string;
+    bookings?: { renter_name: string | null; vehicles?: { make: string; model: string; year: number } | null } | null;
+  }>) || [];
+
   const currentMonth = new Date();
-  const paidThisMonth = safeInvoices
+
+  const invoicePaidThisMonth = safeInvoices
     .filter((inv) => inv.status === "paid" && inv.paid_at)
     .filter((inv) => {
-      const paidDate = new Date(inv.paid_at!);
-      return (
-        paidDate.getMonth() === currentMonth.getMonth() &&
-        paidDate.getFullYear() === currentMonth.getFullYear()
-      );
+      const d = new Date(inv.paid_at!);
+      return d.getMonth() === currentMonth.getMonth() && d.getFullYear() === currentMonth.getFullYear();
     });
+  const schedulePaidThisMonth = safeSchedule.filter((s) => {
+    const d = new Date(s.paid_at);
+    return d.getMonth() === currentMonth.getMonth() && d.getFullYear() === currentMonth.getFullYear();
+  });
 
-  const totalReceivedThisMonth = paidThisMonth.reduce(
-    (sum, inv) => sum + Number(inv.total),
-    0
-  );
+  const totalReceivedThisMonth =
+    invoicePaidThisMonth.reduce((sum, inv) => sum + Number(inv.total), 0) +
+    schedulePaidThisMonth.reduce((sum, s) => sum + Number(s.amount), 0);
 
   const totalOutstanding = safeInvoices
     .filter((inv) => inv.status !== "paid" && inv.status !== "cancelled")
@@ -306,6 +311,57 @@ export default async function PaymentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment Link Receipts */}
+      {safeSchedule.length > 0 && (
+        <Card className="border-0 bg-white shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Payment Link Receipts
+            </CardTitle>
+            <CardDescription>
+              Payments collected via payment links
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead>Renter</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Date Paid</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {safeSchedule.map((s) => {
+                    const renterName = s.bookings?.renter_name || "Unknown";
+                    const vehicleLabel = s.bookings?.vehicles
+                      ? `${s.bookings.vehicles.year} ${s.bookings.vehicles.make} ${s.bookings.vehicles.model}`
+                      : "—";
+                    return (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{renterName}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{vehicleLabel}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          ${Number(s.amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {new Date(s.paid_at).toLocaleDateString("en-US", {
+                            month: "short", day: "numeric", year: "numeric",
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

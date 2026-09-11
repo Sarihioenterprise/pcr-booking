@@ -21,9 +21,10 @@ export function Step3Addons({ onNext, onBack, operatorId }: Step3Props) {
   const [rawAddons, setRawAddons] = useState<WizardAddon[]>([]);
 
   useEffect(() => {
-    if (!operatorId) return;
     setLoading(true);
-    fetch(`/api/addons/public?operator_id=${operatorId}`)
+    // Use the authenticated endpoint (same as new-booking-form and quotes) so RLS
+    // scopes results to the current operator without needing to pass an explicit id.
+    fetch(`/api/addons`)
       .then((r) => r.json())
       .then((d) => {
         const addons: WizardAddon[] = (d.addons ?? []).map(
@@ -49,8 +50,8 @@ export function Step3Addons({ onNext, onBack, operatorId }: Step3Props) {
       })
       .catch(() => setRawAddons([]))
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [operatorId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function calcTotal(addons: WizardAddon[], days: number): number {
     return addons

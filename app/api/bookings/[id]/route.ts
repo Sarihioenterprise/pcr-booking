@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOperator } from "@/lib/get-operator";
 
 const ALLOWED_STATUSES = ["pending", "confirmed", "active", "completed", "cancelled"] as const;
@@ -16,7 +16,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const operator = await getOperator();
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const body = await request.json();
 
     // Build an allowlist of mutable fields to prevent mass-assignment
@@ -60,6 +60,15 @@ export async function PATCH(
     if (typeof body.renter_license_photo_path === "string") {
       updates.renter_license_photo_path = body.renter_license_photo_path;
     }
+    if (typeof body.renter_email === "string" || body.renter_email === null) {
+      updates.renter_email = body.renter_email || null;
+    }
+    if (typeof body.renter_phone === "string" || body.renter_phone === null) {
+      updates.renter_phone = body.renter_phone || null;
+    }
+    if (typeof body.renter_id === "string" && body.renter_id) {
+      updates.renter_id = body.renter_id;
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
@@ -95,29 +104,52 @@ export async function GET(
   try {
     const { id } = await params;
     const operator = await getOperator();
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data: booking, error } = await supabase
       .from("bookings")
       .select(
         `*,
         vehicles(id, make, model, year, color, plate, vin, daily_rate, weekly_rate, monthly_rate, mileage, fuel_level, category, purchase_price, monthly_cost, minimum_rental_days, status, photo_url, location_id),
-        renters(id, name, email, phone, drivers_license_url, drivers_license_number, drivers_license_expiry, date_of_birth),
-        rental_agreements(id, status, renter_signature, signed_at, sign_token, sent_at, viewed_at, signer_ip, signer_ua, signature_png_b64, content, template_id, created_at, updated_at),
+        rental_agreements(*),
         payment_schedule(id, amount, due_date, status, stripe_payment_intent_id, paid_at, created_at)`
       )
       .eq("id", id)
       .eq("operator_id", operator.id)
       .single();
 
-    if (error || !booking) {
+    if (error) {
+      // PGRST116 = no rows found → treat as 404
+      if (error.code === "PGRST116") {
+        return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+      }
+      console.error("[GET /api/bookings/:id] query error:", error);
+      return NextResponse.json(
+        { error: error.message || "Failed to load booking" },
+        { status: 500 }
+      );
+    }
+
+    if (!booking) {
       return NextResponse.json(
         { error: "Booking not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(booking);
+    // Fetch renter separately to avoid PostgREST join (no FK in schema cache)
+    let renter = null;
+    const renterId = (booking as unknown as { renter_id?: string }).renter_id;
+    if (renterId) {
+      const { data: renterData } = await supabase
+        .from("renters")
+        .select("id, name, email, phone, drivers_license_url, drivers_license_number, drivers_license_expiry, date_of_birth")
+        .eq("id", renterId)
+        .single();
+      renter = renterData;
+    }
+
+    return NextResponse.json({ ...booking, renters: renter });
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },

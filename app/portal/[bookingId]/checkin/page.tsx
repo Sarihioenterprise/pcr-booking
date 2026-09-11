@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { compressImage } from "@/lib/compress-image";
 import SignatureCanvas from "react-signature-canvas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -197,7 +198,7 @@ export default function SelfCheckInPage() {
     for (const zone of ZONES) {
       const file = photos[zone];
       if (file) {
-        formData.append(`photo_${zone.replace(/ /g, "_")}`, file);
+        formData.append(`photo_${zone.replace(/ /g, "_")}`, await compressImage(file));
       }
     }
 

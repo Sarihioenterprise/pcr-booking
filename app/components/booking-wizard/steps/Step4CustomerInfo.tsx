@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, ChevronLeft, ChevronRight, Upload, X, CheckCircle } from "lucide-react";
+import { compressImage } from "@/lib/compress-image";
 
 interface Step4Props {
-  onNext: () => void;
+  onNext: (firstName: string, lastName: string, email: string, phone: string, renterId: string | null) => void;
   onBack: () => void;
   operatorId: string;
 }
@@ -40,10 +41,15 @@ export function Step4CustomerInfo({ onNext, onBack, operatorId }: Step4Props) {
   async function handleLicenseUpload(file: File) {
     setUploading(true);
     try {
+      const uploadFile = await compressImage(file);
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", uploadFile);
       fd.append("operator_id", operatorId);
       const res = await fetch("/api/license/upload", { method: "POST", body: fd });
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Upload failed. Please try again.");
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
       dispatch({
@@ -69,22 +75,27 @@ export function Step4CustomerInfo({ onNext, onBack, operatorId }: Step4Props) {
       setError("First and last name are required.");
       return;
     }
-    if (!form.phone.trim() && !form.email.trim()) {
-      setError("Please provide at least a phone number or email.");
+    if (!form.email.trim()) {
+      setError("Email is required to send the rental agreement for signature.");
       return;
     }
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       setError("Please enter a valid email address.");
+      return;
+    }
+    if (!form.phone.trim() && !form.email.trim()) {
+      setError("Please provide at least a phone number or email.");
       return;
     }
 
     setSaving(true);
     try {
-      // Upsert renter
+      // Upsert renter — pass existing renter_id so a Back+email-change does UPDATE, not create
       const renterRes = await fetch("/api/renters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(state.renter_id ? { renter_id: state.renter_id } : {}),
           name: `${form.first_name.trim()} ${form.last_name.trim()}`,
           email: form.email || null,
           phone: form.phone || null,
@@ -116,7 +127,8 @@ export function Step4CustomerInfo({ onNext, onBack, operatorId }: Step4Props) {
         },
       });
 
-      onNext();
+      // Pass form values directly — parent reads these before context re-renders
+      onNext(form.first_name.trim(), form.last_name.trim(), form.email, form.phone, renter_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {

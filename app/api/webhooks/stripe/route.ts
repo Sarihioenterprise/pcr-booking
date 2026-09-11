@@ -104,6 +104,36 @@ export async function POST(request: NextRequest) {
         await handleTrialWillEnd(supabase, subscription, stripe);
         break;
       }
+      case "payment_intent.succeeded": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const bookingId = pi.metadata?.booking_id;
+        const operatorId = pi.metadata?.operator_id;
+        if (bookingId && operatorId) {
+          const amount = pi.amount_received / 100;
+          // Insert only if no row already exists for this payment_intent_id (idempotent)
+          const { data: existing } = await supabase
+            .from("payment_schedule")
+            .select("id")
+            .eq("stripe_payment_intent_id", pi.id)
+            .maybeSingle();
+          if (!existing) {
+            const now = new Date().toISOString();
+            const { error: insErr } = await supabase.from("payment_schedule").insert({
+              booking_id: bookingId,
+              operator_id: operatorId,
+              amount,
+              due_date: now.split("T")[0],
+              status: "paid",
+              stripe_payment_intent_id: pi.id,
+              method: "card",
+              paid_at: now,
+              created_at: now,
+            });
+            if (insErr) console.error("[webhook] payment_intent.succeeded insert failed:", insErr);
+          }
+        }
+        break;
+      }
       case "account.updated": {
         const account = event.data.object as Stripe.Account;
         const accountId = account.id;

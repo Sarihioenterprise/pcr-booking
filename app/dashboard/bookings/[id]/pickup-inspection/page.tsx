@@ -86,7 +86,9 @@ export default function PickupInspectionPage({
   }
 
   function formatDate(d: string) {
-    return new Date(d).toLocaleDateString("en-US", {
+    // Append local-time midnight so YYYY-MM-DD isn't parsed as UTC (which would show -1 day in negative-offset zones)
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d + "T00:00:00") : new Date(d);
+    return parsed.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",

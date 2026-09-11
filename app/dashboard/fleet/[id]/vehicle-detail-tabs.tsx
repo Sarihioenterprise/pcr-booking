@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/compress-image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -169,11 +170,12 @@ export function VehicleDetailTabs({
 
     try {
       // Upload to Supabase Storage
-      const ext = photoFile.name.split(".").pop();
+      const compressed = await compressImage(photoFile);
+      const ext = compressed.name.split(".").pop();
       const fileName = `${vehicle.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { data, error: uploadError } = await supabase.storage
         .from("vehicle-photos")
-        .upload(fileName, photoFile, { cacheControl: "3600", upsert: false });
+        .upload(fileName, compressed, { cacheControl: "3600", upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -700,8 +702,8 @@ export function VehicleDetailTabs({
                       </div>
                       <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
                         <span>
-                          {new Date(booking.start_date).toLocaleDateString()} -{" "}
-                          {new Date(booking.end_date).toLocaleDateString()}
+                          {new Date(booking.start_date + "T00:00:00").toLocaleDateString()} -{" "}
+                          {new Date(booking.end_date + "T00:00:00").toLocaleDateString()}
                         </span>
                         <span>${Number(booking.total_price).toFixed(2)}</span>
                       </div>
@@ -815,10 +817,10 @@ export function VehicleDetailTabs({
                     {blackoutDates.map((bd) => (
                       <TableRow key={bd.id}>
                         <TableCell>
-                          {new Date(bd.start_date).toLocaleDateString()}
+                          {new Date(bd.start_date + "T00:00:00").toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          {new Date(bd.end_date).toLocaleDateString()}
+                          {new Date(bd.end_date + "T00:00:00").toLocaleDateString()}
                         </TableCell>
                         <TableCell>{bd.reason || "—"}</TableCell>
                       </TableRow>

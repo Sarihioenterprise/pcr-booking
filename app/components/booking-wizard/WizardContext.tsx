@@ -5,8 +5,23 @@ import { WizardState, WizardAction, INITIAL_STATE, InspectionZone } from "./type
 
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
-    case "SET_DATES":
-      return { ...state, ...action.payload };
+    case "SET_DATES": {
+      const datesChanged =
+        action.payload.start_date !== state.start_date ||
+        action.payload.end_date !== state.end_date;
+      return {
+        ...state,
+        ...action.payload,
+        // Reset vehicle and totals whenever dates change so stale prices can't carry forward
+        ...(datesChanged ? {
+          vehicle: null,
+          vehicle_subtotal: 0,
+          addons: [],
+          addons_total: 0,
+          grand_total: 0,
+        } : {}),
+      };
+    }
     case "SET_VEHICLE":
       return {
         ...state,

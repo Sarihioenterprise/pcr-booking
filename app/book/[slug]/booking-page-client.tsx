@@ -6,6 +6,7 @@ import {
   Car, CheckCircle2, Calendar, Phone, Mail, User, Upload,
   AlertCircle, Shield, FileText, X, Loader2, Package, Lock,
 } from "lucide-react";
+import { compressImage } from "@/lib/compress-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -214,6 +215,8 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
     }));
   }
 
+  // Compress an image file using canvas before uploading.
+  // Resizes to max 1600px on the longest side and exports as JPEG ~80% quality.
   // Handle license file selection + upload
   async function handleLicenseChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -233,14 +236,26 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
 
     setLicenseUploading(true);
     try {
+      // Compress images so any camera photo fits within Vercel's body limit
+      const uploadFile = await compressImage(file);
+
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", uploadFile);
       fd.append("operator_id", operator.id);
 
       const res = await fetch("/api/license/upload", {
         method: "POST",
         body: fd,
       });
+
+      // Vercel returns HTML (not JSON) for 413 payload-too-large errors.
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        setLicenseError("Upload failed. Please try again.");
+        setLicensePath(null);
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -286,9 +301,20 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
     ? Math.max(1, Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  const vehicleSubtotal = selectedVehicle && daysCount > 0
-    ? selectedVehicle.daily_rate * daysCount
-    : 0;
+  const vehicleSubtotal = (() => {
+    if (!selectedVehicle || daysCount <= 0) return 0;
+    if (daysCount >= 30 && selectedVehicle.monthly_rate) {
+      const months = Math.floor(daysCount / 30);
+      const rem = daysCount % 30;
+      return months * selectedVehicle.monthly_rate + rem * selectedVehicle.daily_rate;
+    }
+    if (daysCount >= 7 && selectedVehicle.weekly_rate) {
+      const weeks = Math.floor(daysCount / 7);
+      const rem = daysCount % 7;
+      return weeks * selectedVehicle.weekly_rate + rem * selectedVehicle.daily_rate;
+    }
+    return selectedVehicle.daily_rate * daysCount;
+  })();
 
   const addonsTotal = daysCount > 0
     ? availableAddons
@@ -767,7 +793,7 @@ export function BookingPageClient({ operator, vehicles, slug, leadSource = "book
                 <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-200 rounded-xl py-6 px-4 cursor-pointer hover:border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <Upload className="h-8 w-8 text-gray-400 mb-2" />
                   <span className="text-sm font-medium text-gray-700">Upload front of license</span>
-                  <span className="text-xs text-gray-400 mt-1">JPEG, PNG, PDF • Max 10 MB</span>
+                  <span className="text-xs text-gray-400 mt-1">JPEG, PNG, PDF • Any size accepted</span>
                   <span className="text-xs text-gray-400">Tap to browse or use camera</span>
                   <input
                     ref={licenseInputRef}

@@ -52,6 +52,30 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // ── Double-booking overlap check ─────────────────────────────────────────
+    // Only enforce for confirmed/active/pending bookings on a specific vehicle.
+    // Inquiry-status bookings are reservations-in-progress and don't block the slot.
+    if (vehicle_id && status !== "inquiry") {
+      const { data: conflicting } = await supabase
+        .from("bookings")
+        .select("id, start_date, end_date, status")
+        .eq("vehicle_id", vehicle_id)
+        .eq("operator_id", operator.id)
+        .in("status", ["confirmed", "active", "pending"])
+        .or(`and(start_date.lt.${end_date},end_date.gt.${start_date})`);
+
+      if (conflicting && conflicting.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "This vehicle already has a confirmed booking overlapping those dates. Please choose different dates or a different vehicle.",
+            conflictingBookings: conflicting.length,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     // Calculate duration
     const start = new Date(start_date);
     const end = new Date(end_date);

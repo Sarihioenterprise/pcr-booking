@@ -76,8 +76,8 @@ import {
   Gauge,
   Fuel,
   Camera,
+  Download,
 } from "lucide-react";
-import { InvoiceButton } from "@/components/bookings/InvoiceButton";
 
 // ── License Viewer Component ──────────────────────────────────────────
 
@@ -197,7 +197,12 @@ const statusBadgeColors: Record<BookingStatus, string> = {
 // ── Helper Functions ────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  // Date-only strings (YYYY-MM-DD) must be parsed as local time, not UTC midnight,
+  // to avoid showing the previous day in negative-offset timezones.
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? new Date(dateStr + "T00:00:00")
+    : new Date(dateStr);
+  return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -516,7 +521,7 @@ export default function BookingDetailPage({
         const response = await fetch(`/api/bookings/${id}`);
 
         if (response.status === 404) {
-          router.push("/dashboard/bookings");
+          setLoadError("Booking not found. It may have been deleted or you may not have access to it.");
           return;
         }
 
@@ -726,14 +731,26 @@ export default function BookingDetailPage({
 
   // ── Payments ────────────────────────────────────────────────────
 
-  function recordPayment() {
+  async function recordPayment() {
     if (!booking) return;
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) return;
     const now = new Date().toISOString();
 
+    // Persist to server first
+    const res = await fetch(`/api/bookings/${booking.id}/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount,
+        method: paymentMethod,
+        note: paymentNote || undefined,
+      }),
+    });
+    const saved = await res.json().catch(() => ({}));
+
     const newPayment: PaymentScheduleItem = {
-      id: `pay-${Date.now()}`,
+      id: saved?.payment?.id ?? `pay-${Date.now()}`,
       booking_id: booking.id,
       operator_id: booking.operator_id,
       amount,
@@ -1221,7 +1238,10 @@ export default function BookingDetailPage({
                         </span>
                         <span className="font-medium">
                           {formatCurrency(
-                            booking.duration_days * booking.daily_rate
+                            booking.total_price
+                              - (booking.tax_amount || 0)
+                              + (booking.discount_amount || 0)
+                              - ((booking as typeof booking & { addons_total?: number }).addons_total || 0)
                           )}
                         </span>
                       </div>
@@ -1570,14 +1590,16 @@ export default function BookingDetailPage({
                         <CreditCard className="h-4 w-4 text-[#2EBD6B]" />
                         Payment Schedule
                       </CardTitle>
-                      <Button
-                        size="sm"
-                        onClick={() => setPaymentDialog(true)}
-                        className="bg-[#2EBD6B] hover:bg-[#27a85e] text-white"
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Record Payment
-                      </Button>
+                      {!isCancelled && (
+                        <Button
+                          size="sm"
+                          onClick={() => setPaymentDialog(true)}
+                          className="bg-[#2EBD6B] hover:bg-[#27a85e] text-white"
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" />
+                          Record Payment
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -1912,34 +1934,50 @@ export default function BookingDetailPage({
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={() => showToast("Preparing agreement for print...")}
+                  onClick={() => {
+                    if (!agreement?.content) {
+                      showToast("No agreement on file for this booking.");
+                      return;
+                    }
+                    const win = window.open("", "_blank");
+                    if (!win) { showToast("Allow pop-ups to print the agreement."); return; }
+                    const esc = (s: string) => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+                    const signatureBlock = agreement.status === "signed" ? `
+<div style="border-top:2px solid #222;margin-top:40px;padding-top:20px;">
+  <p style="font-weight:bold;margin-bottom:8px;">Electronic Signature</p>
+  <p style="font-family:cursive;font-size:28px;color:#1a5c3a;margin:8px 0">${esc(agreement.renter_signature || "")}</p>
+  ${agreement.signature_png_b64 ? `<img src="${agreement.signature_png_b64}" style="max-height:80px;border:1px solid #ccc;border-radius:4px;margin-top:8px;" alt="Drawn signature" />` : ""}
+  <p style="color:#666;font-size:13px;margin-top:12px;">
+    Signed: ${agreement.signed_at ? new Date(agreement.signed_at).toLocaleString("en-US") : "—"}
+    ${agreement.signer_ip ? ` · IP: ${esc(agreement.signer_ip)}` : ""}
+  </p>
+</div>` : "";
+                    win.document.write(
+                      `<!DOCTYPE html><html><head><title>Rental Agreement</title>` +
+                      `<style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;line-height:1.6}` +
+                      `pre{white-space:pre-wrap;font-family:Georgia,serif;font-size:14px}</style>` +
+                      `</head><body><pre>${esc(agreement.content)}</pre>${signatureBlock}</body></html>`
+                    );
+                    win.document.close();
+                    win.focus();
+                    win.print();
+                  }}
                 >
                   <Printer className="h-4 w-4 mr-2 text-slate-500" />
                   Print Agreement
                 </Button>
 
-                <InvoiceButton
-                  data={{
-                    bookingId: booking.id,
-                    renterName: booking.renter_name,
-                    renterEmail: booking.renter_email || null,
-                    renterPhone: booking.renter_phone || null,
-                    operatorName: operator?.business_name || "PCR Booking",
-                    vehicleYear: vehicle?.year || null,
-                    vehicleMake: vehicle?.make || null,
-                    vehicleModel: vehicle?.model || null,
-                    startDate: booking.start_date,
-                    endDate: booking.end_date,
-                    durationDays: booking.duration_days,
-                    dailyRate: booking.daily_rate,
-                    totalPrice: booking.total_price,
-                    taxAmount: booking.tax_amount,
-                    discountAmount: booking.discount_amount,
-                    depositAmount: booking.deposit_amount,
-                    depositStatus: booking.deposit_status,
-                    createdAt: booking.created_at,
-                  }}
-                />
+                <a
+                  href={`/dashboard/bookings/${booking.id}/invoice`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full"
+                >
+                  <Button variant="outline" className="w-full justify-start">
+                    <Download className="h-4 w-4 mr-2 text-slate-500" />
+                    Download Invoice
+                  </Button>
+                </a>
 
                 <Separator className="my-2" />
 
@@ -1973,7 +2011,7 @@ export default function BookingDetailPage({
             </Card>
 
             {/* Deposit Card */}
-            {booking && operator && (
+            {booking && operator && !isCancelled && (
               <DepositCard
                 booking={booking as Parameters<typeof DepositCard>[0]["booking"]}
                 operator={operator as Parameters<typeof DepositCard>[0]["operator"]}
@@ -1989,7 +2027,7 @@ export default function BookingDetailPage({
             )}
 
             {/* Request Payment Card */}
-            {booking && operator && (
+            {booking && operator && !isCancelled && (
               <Card className="border-0 bg-white shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">

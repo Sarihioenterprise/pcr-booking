@@ -46,8 +46,13 @@ export function Step6Payment({ onNext, onBack }: Step6Props) {
         amount: state.grand_total,
       }),
     })
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json();
+        // 403 = Stripe Connect not set up → fall back to skip silently
+        if (r.status === 403) {
+          setPaymentType("skip");
+          return;
+        }
         if (data.error) throw new Error(data.error);
         setClientSecret(data.client_secret);
         dispatch({
@@ -60,7 +65,9 @@ export function Step6Payment({ onNext, onBack }: Step6Props) {
           },
         });
       })
-      .catch((err) => setError(err.message))
+      .catch((err: Error) => {
+        setError(err.message || "Failed to prepare payment");
+      })
       .finally(() => setLoadingIntent(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentType, state.booking_id]);
@@ -95,6 +102,15 @@ export function Step6Payment({ onNext, onBack }: Step6Props) {
     }
   }
 
+  async function confirmBooking() {
+    if (!state.booking_id) return;
+    await fetch(`/api/bookings/${state.booking_id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "confirmed" }),
+    }).catch(() => {});
+  }
+
   function handleSkip() {
     dispatch({
       type: "SET_PAYMENT",
@@ -105,6 +121,7 @@ export function Step6Payment({ onNext, onBack }: Step6Props) {
         payment_client_secret: null,
       },
     });
+    confirmBooking();
     onNext();
   }
 
@@ -178,6 +195,9 @@ export function Step6Payment({ onNext, onBack }: Step6Props) {
             {stripePromise && !loadingIntent && clientSecret && (
               <Elements stripe={stripePromise} options={{ clientSecret }}>
                 <StripePayForm
+                  amount={state.grand_total}
+                  bookingId={state.booking_id}
+                  paymentIntentId={state.payment_intent_id}
                   onSuccess={() => {
                     dispatch({
                       type: "SET_PAYMENT",
@@ -188,6 +208,7 @@ export function Step6Payment({ onNext, onBack }: Step6Props) {
                         payment_client_secret: clientSecret,
                       },
                     });
+                    confirmBooking();
                     onNext();
                   }}
                   onError={(msg) => setError(msg)}
@@ -301,9 +322,15 @@ function PayTypeButton({
 // ── Stripe PaymentElement inner form ──────────────────────────────────────
 
 function StripePayForm({
+  amount,
+  bookingId,
+  paymentIntentId,
   onSuccess,
   onError,
 }: {
+  amount: number;
+  bookingId: string | null;
+  paymentIntentId: string | null;
   onSuccess: () => void;
   onError: (msg: string) => void;
 }) {
@@ -322,9 +349,21 @@ function StripePayForm({
     if (error) {
       onError(error.message || "Payment failed");
       setPaying(false);
-    } else {
-      onSuccess();
+      return;
     }
+    // Record the payment in the ledger immediately (webhook is the backup)
+    if (bookingId) {
+      await fetch(`/api/bookings/${bookingId}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          method: "card",
+          stripe_payment_intent_id: paymentIntentId,
+        }),
+      }).catch(() => {});
+    }
+    onSuccess();
   }
 
   return (
@@ -341,7 +380,7 @@ function StripePayForm({
             Processing…
           </span>
         ) : (
-          `Pay $${""} Now`
+          `Pay $${amount.toFixed(2)} Now`
         )}
       </Button>
     </div>

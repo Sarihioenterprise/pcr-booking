@@ -401,6 +401,38 @@ export default function RenterDetailPage() {
                     {renter.drivers_license_expiry || "---"}
                   </p>
                 </div>
+                {renter.drivers_license_url && (
+                  <div>
+                    <p className="text-muted-foreground mb-1">License Photo</p>
+                    <button
+                      className="text-[#2EBD6B] text-xs hover:underline"
+                      onClick={async () => {
+                        const licensePath = renter.drivers_license_url!;
+                        if (licensePath.startsWith("http")) {
+                          window.open(licensePath, "_blank", "noopener,noreferrer");
+                          return;
+                        }
+                        try {
+                          const res = await fetch("/api/license/signed-url", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ path: licensePath }),
+                          });
+                          const data = await res.json();
+                          if (res.ok && data.signedUrl) {
+                            window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                          } else {
+                            alert(data.error || "Failed to open license");
+                          }
+                        } catch {
+                          alert("Failed to open license");
+                        }
+                      }}
+                    >
+                      View Uploaded License →
+                    </button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

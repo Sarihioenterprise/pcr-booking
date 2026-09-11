@@ -11,6 +11,7 @@ import { Car, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
 interface Step2Props {
   onNext: () => void;
   onBack: () => void;
+  operatorId?: string;
 }
 
 function calcRate(v: WizardVehicle, days: number): number {
@@ -19,22 +20,51 @@ function calcRate(v: WizardVehicle, days: number): number {
   return v.daily_rate;
 }
 
-export function Step2Vehicles({ onNext, onBack }: Step2Props) {
+function rangeOverlaps(start: string, end: string, ranges: { start: string; end: string }[]): boolean {
+  return ranges.some((r) => start < r.end && end > r.start);
+}
+
+export function Step2Vehicles({ onNext, onBack, operatorId }: Step2Props) {
   const { state, dispatch } = useWizard();
   const [vehicles, setVehicles] = useState<WizardVehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // vehicleId -> booked ranges (fetched for conflict display)
+  const [bookedRangesMap, setBookedRangesMap] = useState<Record<string, { start: string; end: string }[]>>({});
 
   useEffect(() => {
     setLoading(true);
     fetch("/api/vehicles")
       .then((r) => r.json())
-      .then((d) => {
+      .then(async (d) => {
         const all: WizardVehicle[] = d.vehicles ?? [];
-        setVehicles(all.filter((v) => v.status === "active"));
+        const active = all.filter((v) => v.status === "active");
+        setVehicles(active);
+
+        // Fetch availability for all active vehicles if dates are set
+        if (operatorId && state.start_date && state.end_date) {
+          const results = await Promise.all(
+            active.map(async (v) => {
+              try {
+                const res = await fetch(
+                  `/api/vehicles/availability?vehicle_id=${v.id}&operator_id=${operatorId}`
+                );
+                if (!res.ok) return { id: v.id, ranges: [] };
+                const data = await res.json();
+                return { id: v.id, ranges: data.bookedRanges ?? [] };
+              } catch {
+                return { id: v.id, ranges: [] };
+              }
+            })
+          );
+          const map: Record<string, { start: string; end: string }[]> = {};
+          for (const r of results) map[r.id] = r.ranges;
+          setBookedRangesMap(map);
+        }
       })
       .catch(() => setVehicles([]))
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Group by category
@@ -53,6 +83,17 @@ export function Step2Vehicles({ onNext, onBack }: Step2Props) {
   function handleNext() {
     if (!state.vehicle) {
       setError("Please select a vehicle to continue.");
+      return;
+    }
+    const ranges = bookedRangesMap[state.vehicle.id] ?? [];
+    if (
+      state.start_date &&
+      state.end_date &&
+      rangeOverlaps(state.start_date, state.end_date, ranges)
+    ) {
+      setError(
+        "This vehicle has a confirmed booking for the selected dates. Please choose different dates or a different vehicle."
+      );
       return;
     }
     setError("");
@@ -109,6 +150,11 @@ export function Step2Vehicles({ onNext, onBack }: Step2Props) {
                     const subtotal = rate * Math.max(1, state.duration_days);
                     const isWeekly = state.duration_days >= 7 && !!v.weekly_rate;
                     const isMonthly = state.duration_days >= 30 && !!v.monthly_rate;
+                    const ranges = bookedRangesMap[v.id] ?? [];
+                    const hasConflict =
+                      state.start_date &&
+                      state.end_date &&
+                      rangeOverlaps(state.start_date, state.end_date, ranges);
 
                     return (
                       <button
@@ -118,7 +164,9 @@ export function Step2Vehicles({ onNext, onBack }: Step2Props) {
                         className={`relative rounded-xl border-2 text-left transition-all overflow-hidden ${
                           isSelected
                             ? "border-[#2EBD6B] shadow-md"
-                            : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
+                            : hasConflict
+                              ? "border-amber-300 bg-amber-50/30"
+                              : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
                         }`}
                       >
                         {/* Photo */}
@@ -140,6 +188,17 @@ export function Step2Vehicles({ onNext, onBack }: Step2Props) {
                         {isSelected && (
                           <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#2EBD6B] shadow">
                             <Check className="h-3.5 w-3.5 text-white" />
+                          </div>
+                        )}
+                        {/* Conflict warning badge */}
+                        {hasConflict && !isSelected && (
+                          <div className="absolute top-2 left-2 rounded-md bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
+                            ⚠ Booked
+                          </div>
+                        )}
+                        {hasConflict && isSelected && (
+                          <div className="absolute top-2 left-2 rounded-md bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
+                            ⚠ Conflict
                           </div>
                         )}
 

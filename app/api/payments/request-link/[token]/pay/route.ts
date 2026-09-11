@@ -36,6 +36,9 @@ export async function POST(
       .from("payment_requests")
       .select(`
         id,
+        booking_id,
+        operator_id,
+        amount_cents,
         status,
         expires_at,
         stripe_payment_intent_id,
@@ -99,12 +102,14 @@ export async function POST(
       request.headers.get("x-real-ip") ??
       null;
 
+    const now = new Date().toISOString();
+
     // Mark payment_request as paid
     const { error: updateError } = await supabase
       .from("payment_requests")
       .update({
         status: "paid",
-        paid_at: new Date().toISOString(),
+        paid_at: now,
         payer_ip,
         // Clear the client_secret after use for security
         stripe_client_secret: null,
@@ -114,6 +119,24 @@ export async function POST(
     if (updateError) {
       console.error("payment_requests update error:", updateError);
       return NextResponse.json({ error: "Failed to record payment" }, { status: 500 });
+    }
+
+    // Record in payment_schedule so the booking ledger reflects this payment
+    if (pr.booking_id) {
+      const { error: schedErr } = await supabase.from("payment_schedule").insert({
+        booking_id: pr.booking_id,
+        operator_id: pr.operator_id,
+        amount: pr.amount_cents / 100,
+        due_date: now.split("T")[0],
+        status: "paid",
+        stripe_payment_intent_id: payment_intent_id,
+        method: "card",
+        paid_at: now,
+        created_at: now,
+      });
+      if (schedErr) {
+        console.error("[pay/route] payment_schedule insert failed:", schedErr);
+      }
     }
 
     return NextResponse.json({ success: true });

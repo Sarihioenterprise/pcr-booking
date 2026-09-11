@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, Clock, Eye, MapPin, Monitor } from "lucide-react";
 import Link from "next/link";
 import { AgreementActions } from "./agreement-actions";
+import { ClientDateTime } from "@/components/ui/client-date-time";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pcrbooking.com";
 
@@ -24,16 +25,6 @@ function formatDate(iso: string) {
   });
 }
 
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
 
 export default async function AgreementDetailPage({
   params,
@@ -163,7 +154,7 @@ export default async function AgreementDetailPage({
                         <div>
                           <span className="font-medium">Sent</span>
                           <span className="text-muted-foreground ml-2">
-                            {formatDateTime(agreement.sent_at)}
+                            <ClientDateTime iso={agreement.sent_at} />
                           </span>
                         </div>
                       </div>
@@ -176,7 +167,7 @@ export default async function AgreementDetailPage({
                         <div>
                           <span className="font-medium">Viewed by renter</span>
                           <span className="text-muted-foreground ml-2">
-                            {formatDateTime(agreement.viewed_at)}
+                            <ClientDateTime iso={agreement.viewed_at} />
                           </span>
                         </div>
                       </div>
@@ -189,7 +180,7 @@ export default async function AgreementDetailPage({
                         <div>
                           <span className="font-medium">Signed</span>
                           <span className="text-muted-foreground ml-2">
-                            {formatDateTime(agreement.signed_at)}
+                            <ClientDateTime iso={agreement.signed_at} />
                           </span>
                         </div>
                       </div>

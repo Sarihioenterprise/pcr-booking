@@ -1,0 +1,3 @@
+ALTER TABLE payment_schedule
+  ADD COLUMN IF NOT EXISTS method TEXT,
+  ADD COLUMN IF NOT EXISTS note TEXT;
