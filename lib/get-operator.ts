@@ -34,7 +34,7 @@ export async function getOperator(): Promise<Operator> {
 
   // ── Demo account hard bypass ────────────────────────────────────────────────
   // The demo@pcrbooking.com account is used for sales demos and must NEVER see
-  // a paywall, regardless of DB state. This bypass is intentional and permanent.
+  // a paywall or Stripe setup banner, regardless of DB state. Intentional and permanent.
   const DEMO_EMAILS = ["demo@pcrbooking.com", "hoor@pcrbooking.com"];
   const isDemoAccount = DEMO_EMAILS.includes(operator.business_email ?? "");
 
@@ -48,6 +48,13 @@ export async function getOperator(): Promise<Operator> {
   // stripe_subscription_id is set by the Stripe webhook on subscription creation/activation.
   if (!isDemoAccount && !isOwner && !operator.stripe_subscription_id) {
     redirect("/subscription-issue");
+  }
+
+  // Demo accounts bypass the Stripe readiness banner — they have a pre-configured
+  // test Connect account and the banner would confuse prospects during demos.
+  if (isDemoAccount || isOwner) {
+    (operator as any).charges_enabled = true;
+    (operator as any).payouts_enabled = true;
   }
 
   return operator as Operator;
