@@ -3,6 +3,39 @@ import { getOperator } from "@/lib/get-operator";
 import { resolveOperatorEmail } from "@/lib/notify-email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotification } from "@/lib/create-notification";
+import { getOperatorFromRequest } from "@/lib/get-operator-from-request";
+
+export async function GET(request: NextRequest) {
+  const result = await getOperatorFromRequest(request);
+  if (result.error) return result.error;
+  const { operator } = result;
+
+  const supabase = createAdminClient();
+
+  const url = new URL(request.url);
+  const status = url.searchParams.get("status");
+  const limit = parseInt(url.searchParams.get("limit") ?? "100", 10);
+  const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
+
+  let query = supabase
+    .from("bookings")
+    .select("*")
+    .eq("operator_id", operator.id)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data: bookings, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ bookings: bookings ?? [] });
+}
 
 export async function POST(request: NextRequest) {
   let operator;

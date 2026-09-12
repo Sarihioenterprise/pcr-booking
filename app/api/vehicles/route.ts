@@ -1,21 +1,15 @@
-import { NextResponse } from "next/server";
-import { getOperator } from "@/lib/get-operator";
+import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getOperatorFromRequest } from "@/lib/get-operator-from-request";
 
 /**
- * GET /api/vehicles — returns the authenticated operator's vehicles
+ * GET /api/vehicles — returns the authenticated operator's vehicles.
+ * Supports both cookie-based sessions and Bearer JWT auth.
  */
-export async function GET() {
-  let operator;
-  try {
-    operator = await getOperator();
-  } catch (err: unknown) {
-    const msg = (err as { digest?: string }).digest ?? "";
-    if (msg.startsWith("NEXT_REDIRECT")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    throw err;
-  }
+export async function GET(request: NextRequest) {
+  const result = await getOperatorFromRequest(request);
+  if (result.error) return result.error;
+  const { operator } = result;
 
   const supabase = createAdminClient();
   const { data: vehicles, error } = await supabase
